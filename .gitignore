@@ -1,0 +1,19 @@
+# Prevention .gitignore to avoid uploading not corresponding files
+
+## Python 
+__pycache__/
+
+## Workflow files
+*.xlsx
+*.xls
+*.xlsm
+*.txt
+
+## Build garbage (just in case)
+*.tmp
+*.log
+.env
+.vscode/
+.idea/
+dist/
+build/
