@@ -31,10 +31,10 @@ Version: 1.0.0
 
 Current features include:
 
-- Stock consolidation
-- Cost consolidation
-- Sales price consolidation
-- Automatic family classification
+✔ Stock consolidation
+✔ Cost consolidation
+✔ Sales price consolidation
+✔ Automatic family classification
 
 ---
 
@@ -125,9 +125,9 @@ Inventory Toolkit attempts to solve that problem by:
 Clone the repository
 
 ```bash
-git clone https://github.com/<your-user>/Sellers-Co-Inventory-Toolkit.git
+git clone https://github.com/<your-user>/Inventory-Toolkit.git
 
-cd Sellers-Co-Inventory-Toolkit
+cd Inventory-Toolkit
 ```
 
 Install dependencies
@@ -145,13 +145,13 @@ Current modules can be executed directly.
 Example
 
 ```bash
-python cruces.py
+python Cruces.py
 ```
 
 or
 
 ```bash
-python stocks.py
+python Stocks.py
 ```
 
 Future releases will include a unified interactive CLI.
