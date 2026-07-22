@@ -123,7 +123,7 @@ Inventory Toolkit attempts to solve that problem by:
 Clone the repository
 
 ```bash
-git clone https://github.com/<your-user>/Inventory-Toolkit.git
+git clone https://github.com/FPSensor/Inventory-Toolkit.git
 
 cd Inventory-Toolkit
 ```
