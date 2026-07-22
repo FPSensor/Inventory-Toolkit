@@ -1,0 +1,10 @@
+{
+    "columnas_esperadas": [
+        "Artículo", 
+        "Origen - Base de datos", 
+        "Precio"
+    ],
+    "mapeo_nombres": {
+        "Origen - Base de datos": "Base"
+    }
+}

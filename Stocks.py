@@ -1,7 +1,7 @@
 ﻿"""
 Inventory Toolkit
 
-Stock Processing Module
+Stock Processing Module (Fully Abstracted)
 
 Author: Gonzalo
 
@@ -17,75 +17,74 @@ import pandas as pd
 import numpy as np
 import argparse
 import sys
+import os
 from openpyxl.utils.dataframe import dataframe_to_rows
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill
 
-# =========================================================================
-# 0. CONFIGURACIÓN CENTRALIZADA
-# =========================================================================
-LOCALES = ["LIBERT.R", "PASO.R", "P.OESTE", "VIRREYES"]
-DEPOSITOS = {
-    "LIBERT.R": "DSLIBERT",
-    "PASO.R": "DSPASO.R",
-    "P.OESTE": "DSPOESTE"
-}
+# 1. Importamos nuestro nuevo servicio de configuración
+from core.configuration_manager import ConfigurationManager
 
-REGLAS_FAMILIAS = [
-    ("56005", "Bolsas"), ("0085", "Buzos C Capucha"), ("001", "Remeras"),
-    ("002", "Remeras"), ("003", "Remeras"), ("004", "Buzo Cuello redondo"),
-    ("0045", "Buzo C Capucha rustico"), ("0055", "Campera Capucha rustico"),
-    ("123", "Bermudas"), ("223", "Bermudas"), ("145", "Joggin Corto"),
-    ("245", "Joggin Corto"), ("185", "Buzos C Capucha"), ("195", "Camperas Capucha"),
-    ("008", "Buzos"), ("085", "Buzos C Capucha"), ("095", "Camperas Capucha"),
-    ("099", "Camperas Capucha"), ("015", "Musculosas"), ("025", "Musculosas"),
-    ("01", "Remeras"), ("O085", "Buzos C Capucha Orangutan"),
-    ("O08", "Buzos C Redondo Orangutan"), ("02", "Remeras"),
-    ("O03", "Camisetas Manga Larga Orangutan"), ("03", "Camisetas Manga Larga"),
-    ("04", "Camisetas Manga Larga"), ("055", "Chombas Manga Larga"),
-    ("05", "Chombas"), ("065", "Chombas Manga Larga"), ("06", "Chombas"),
-    ("07", "Buzos medio Cierre"), ("08", "Buzo Cuello Redondo"),
-    ("09", "Campera S Capucha"), ("10", "Camperas de abrigo"), ("11", "sweaters"),
-    ("12", "Trajes de baño"), ("13", "Jeans"), ("14", "Joggin"),
-    ("15", "Boxer"), ("16", "Buzos medio cierre"), ("17", "Camisas"),
-    ("18", "Buzo Cuello redondo"), ("19", "Campera S Capucha"),
-    ("20", "Camperas de Abrigo"), ("21", "sweaters"), ("22", "Trajes de baño"),
-    ("23", "Jeans"), ("24", "Joggin"), ("27", "Camisas"),
-    ("30", "Accesorios"), ("40", "Accesorios"), ("41", "Accesorios"),
-    ("80", "Accesorios"), ("C", "Calzado"), ("S", "Jeans De segunda")
-]
+# Por defecto cargará 'profile/demo/configs/'
+config = ConfigurationManager()
 
-def clasificar_familia(codigo):
-    codigo = str(codigo).strip()
-    for prefijo, familia in REGLAS_FAMILIAS:
+# =========================================================================
+# CORE FUNCTIONS
+# =========================================================================
+def clasificar_familia(codigo, familias_dict):
+    """Assigns a family category based on prefix matching from external config."""
+    codigo = str(codigo).strip().upper()
+    
+    # Aplanamos el diccionario { "Familia": ["prefijo1", "prefijo2"] } 
+    # a una lista de tuplas (prefijo, Familia)
+    reglas = []
+    for familia, prefijos in familias_dict.items():
+        for prefijo in prefijos:
+            reglas.append((str(prefijo).strip().upper(), familia))
+            
+    # Ordenamos por longitud del prefijo (de mayor a menor)
+    reglas.sort(key=lambda x: len(x[0]), reverse=True)
+    
+    for prefijo, familia in reglas:
         if codigo.startswith(prefijo):
             return familia
+            
     return "Otro"
 
-def procesar_precios(ruta_archivo):
+def procesar_precios(ruta_archivo, pricing_dict):
+    """Reads and processes pricing lists using dynamic column names."""
     try:
         df = pd.read_excel(ruta_archivo)
         df['Artículo'] = df['Artículo'].astype(str).str.split(' ').str[0]
-        columnas_necesarias = ['Artículo', 'Origen - Base de datos', 'Precio']
-        for col in columnas_necesarias:
+        
+        columnas_esperadas = pricing_dict.get("columnas_esperadas", [])
+        renombres = pricing_dict.get("mapeo_nombres", {})
+        
+        for col in columnas_esperadas:
             if col not in df.columns:
-                print(f"Advertencia: Falta la columna '{col}' en {ruta_archivo}.")
+                print(f"WARNING: Missing column '{col}' in {ruta_archivo}.")
                 return None
-        df = df[columnas_necesarias].rename(columns={'Origen - Base de datos': 'Base'})
+                
+        df = df[columnas_esperadas].rename(columns=renombres)
+        columna_base = list(renombres.values())[0] if renombres else "Base"
+        
         df_pivot = pd.pivot_table(
-            df, index='Artículo', columns='Base', values='Precio', aggfunc='mean'
+            df, index='Artículo', columns=columna_base, values='Precio', aggfunc='mean'
         ).reset_index()
         return df_pivot
     except Exception as e:
-        print(f"Error procesando {ruta_archivo}: {e}")
+        print(f"ERROR processing {ruta_archivo}: {e}")
         return None
 
 def calcular_margen(df, col_venta, col_costo):
+    """Calculates profit margin dynamically avoiding division by zero."""
     return np.where(df[col_venta] > 0, (df[col_venta] - df[col_costo]) / df[col_venta], 0)
 
 def dar_formato_excel(ws, is_summary=False):
+    """Applies styling, bold headers, and number formatting to the Excel sheet."""
     header_fill = PatternFill(start_color="D9D9D9", end_color="D9D9D9", fill_type="solid")
     header_font = Font(bold=True)
+    
     for cell in ws[1]:
         cell.font = header_font
         cell.fill = header_fill
@@ -109,17 +108,55 @@ def dar_formato_excel(ws, is_summary=False):
                     cell.number_format = '#,##0'
         ws.column_dimensions[col_letter].width = (max_length + 2)
 
+# =========================================================================
+# MAIN EXECUTION
+# =========================================================================
 def procesar_stock(args):
-    print("Iniciando procesamiento de Stock...")
+    archivos_requeridos = [args.stock, args.costo, args.venta]
+    for arc in archivos_requeridos:
+        if not os.path.exists(arc):
+            print(f"ERROR: Data file '{arc}' not found in the current directory.")
+            sys.exit(1)
+
+    print("Loading external configurations...")
+    
+    # 2. Instanciamos el manager centralizado
+    try:
+        cfg = ConfigurationManager("configs")
+        # cfg.check() # Descomentar para debug en consola si lo necesitás
+    except ConfigurationError as e:
+        print(f"\nCRITICAL CONFIGURATION ERROR:\n{e}")
+        sys.exit(1)
+
+    # 3. Asignación directa y elegante usando la notación de punto
+    # Usamos ._data en familias y databases porque tu código itera sobre ellos como diccionarios puros (.items())
+    familias_dict = cfg.familias._data
+    databases_dict = cfg.databases._data
+    pricing_dict = cfg.stocks.pricing
+    
+    locales_list = cfg.stocks.stores.get("locales_activos", [])
+    grupos_regionales = cfg.stocks.stores.get("grupos_regionales", {})
+    
+    unnecessary_cols = cfg.stocks.cleaning.get("columnas_a_eliminar", [])
+    text_cols_to_clean = cfg.stocks.cleaning.get("columnas_texto_a_limpiar", ["Artículo"])
+    stock_cols_to_clean = cfg.stocks.cleaning.get("columnas_a_formatear", [])
+    
+    orden_columnas_base = cfg.stocks.reports.get("orden_columnas_base", ["Artículo", "Familias"])
+    datos_sheet_name = cfg.stocks.reports.get("hoja_datos_crudos", "Datos")
+    resumenes = cfg.stocks.reports.get("resumenes", [])
+
+    print("Starting Stock processing...")
     df_stock = pd.read_excel(args.stock)
-    col_innecesarias = ["Grupo", "Artículo Descripción", "Color Descripción", "Talle Descripción", "CENTRAL", "DSELLERS", "SELLERS1", "DETROIT", "DSLOMAS"]
-    df_stock = df_stock.drop(columns=[col for col in col_innecesarias if col in df_stock.columns], errors='ignore')
+
+    # Limpieza de columnas innecesarias
+    df_stock = df_stock.drop(columns=[col for col in unnecessary_cols if col in df_stock.columns], errors='ignore')
     
-    for col in ['Artículo', 'Color', 'Talle']:
-        df_stock[col] = df_stock[col].astype(str).str.strip()
+    # Limpieza dinámica de espacios en columnas de texto base
+    for col in text_cols_to_clean:
+        if col in df_stock.columns:
+            df_stock[col] = df_stock[col].astype(str).str.strip()
     
-    columnas_stock = ["DSLIBERT", "DSPASO.R", "DSPOESTE", "LIBERT.R", "P.OESTE", "PASO.R", "VIRREYES"]
-    for col in columnas_stock:
+    for col in stock_cols_to_clean:
         if col in df_stock.columns:
             df_stock[col] = (
                 df_stock[col]
@@ -129,19 +166,21 @@ def procesar_stock(args):
             )
             df_stock[col] = pd.to_numeric(df_stock[col], errors='coerce').fillna(0).astype(int)
     
-    for local, deposito in DEPOSITOS.items():
+    for local, deposito in databases_dict.items():
         if local in df_stock.columns and deposito in df_stock.columns:
             df_stock[local] = df_stock[local] + df_stock[deposito]
             df_stock = df_stock.drop(columns=[deposito])
             
-    df_stock['Nrw'] = df_stock.get('LIBERT.R', 0) + df_stock.get('PASO.R', 0) + df_stock.get('P.OESTE', 0)
-    df_stock['Familias'] = df_stock['Artículo'].apply(clasificar_familia)
+    # Generación dinámica de sumatorias para grupos regionales
+    for grupo_nombre, sucursales in grupos_regionales.items():
+        df_stock[grupo_nombre] = sum(df_stock.get(loc, 0) for loc in sucursales)
+        
+    df_stock['Familias'] = df_stock['Artículo'].apply(lambda x: clasificar_familia(x, familias_dict))
     
-    print("Procesando archivos de precios...")
-    df_costo = procesar_precios(args.costo)
-    df_venta = procesar_precios(args.venta)
+    print("Processing pricing files...")
+    df_costo = procesar_precios(args.costo, pricing_dict)
+    df_venta = procesar_precios(args.venta, pricing_dict)
     
-    # Renombramos ANTES del merge para evitar el choque de columnas (_x, _y)
     if df_costo is not None:
         renombres_costo = {col: f"PrecioUnit.Costo.{col}" for col in df_costo.columns if col != 'Artículo'}
         df_costo = df_costo.rename(columns=renombres_costo)
@@ -155,92 +194,100 @@ def procesar_stock(args):
     cols_precios = [c for c in df_stock.columns if c.startswith('PrecioUnit.')]
     df_stock[cols_precios] = df_stock[cols_precios].fillna(-1).astype(float)
     
-    for local in LOCALES:
-        col_costo, col_venta = f"PrecioUnit.Costo.{local}", f"PrecioUnit.Venta.{local}"
-        if local in df_stock.columns:
-            df_stock[f"{local}.Costo"] = np.where(df_stock.get(col_costo, 0) <= 0, 0, df_stock[col_costo] * df_stock[local])
-            df_stock[f"{local}.Venta"] = np.where(df_stock.get(col_venta, 0) <= 0, 0, df_stock[col_venta] * df_stock[local])
-
-    df_stock['Nrw.Costo'] = df_stock.get('LIBERT.R.Costo', 0) + df_stock.get('PASO.R.Costo', 0) + df_stock.get('P.OESTE.Costo', 0)
-    df_stock['Nrw.Venta'] = df_stock.get('LIBERT.R.Venta', 0) + df_stock.get('PASO.R.Venta', 0) + df_stock.get('P.OESTE.Venta', 0)
+    # Cálculos de Costo y Venta Total para cada local y grupo
+    entidades_a_valorizar = locales_list + list(grupos_regionales.keys())
     
+    for entidad in entidades_a_valorizar:
+        # Para grupos regionales, sumamos los costos de sus sucursales en lugar de multiplicar por precio unitario
+        if entidad in grupos_regionales:
+            sucursales = grupos_regionales[entidad]
+            df_stock[f"{entidad}.Costo"] = sum(df_stock.get(f"{loc}.Costo", 0) for loc in sucursales)
+            df_stock[f"{entidad}.Venta"] = sum(df_stock.get(f"{loc}.Venta", 0) for loc in sucursales)
+        else:
+            col_costo = f"PrecioUnit.Costo.{entidad}"
+            col_venta = f"PrecioUnit.Venta.{entidad}"
+            if entidad in df_stock.columns:
+                df_stock[f"{entidad}.Costo"] = np.where(df_stock.get(col_costo, 0) <= 0, 0, df_stock[col_costo] * df_stock[entidad])
+                df_stock[f"{entidad}.Venta"] = np.where(df_stock.get(col_venta, 0) <= 0, 0, df_stock[col_venta] * df_stock[entidad])
+
     df_stock = df_stock.drop(columns=cols_precios, errors='ignore')
     
-    columnas_orden = ["Artículo", "Color", "Talle", "Familias"]
-    for local in LOCALES:
-        columnas_orden.extend([local, f"{local}.Costo", f"{local}.Venta"])
-    columnas_orden.extend(["Nrw", "Nrw.Costo", "Nrw.Venta"])
-    
+    # Orden dinámico de columnas generales
+    columnas_orden = orden_columnas_base.copy()
+    for entidad in entidades_a_valorizar:
+        columnas_orden.extend([entidad, f"{entidad}.Costo", f"{entidad}.Venta"])
+        
     df_stock = df_stock[[col for col in columnas_orden if col in df_stock.columns]]
 
-    print("Generando reportes y aplicando formato...")
+    print("Generating dynamic reports and applying formats...")
     wb = Workbook()
     wb.remove(wb.active)
     
-    if all(c in df_stock.columns for c in ['LIBERT.R', 'PASO.R', 'P.OESTE', 'Nrw']):
-        ws_nrw = wb.create_sheet("Nrw.I")
-        df_resumen_nrw = df_stock.groupby('Familias').agg({
-            'LIBERT.R': 'sum', 'LIBERT.R.Costo': 'sum', 'LIBERT.R.Venta': 'sum',
-            'PASO.R': 'sum', 'PASO.R.Costo': 'sum', 'PASO.R.Venta': 'sum',
-            'P.OESTE': 'sum', 'P.OESTE.Costo': 'sum', 'P.OESTE.Venta': 'sum',
-            'Nrw': 'sum', 'Nrw.Costo': 'sum', 'Nrw.Venta': 'sum'
-        }).reset_index()
+    # Motor dinámico de generación de hojas de resumen
+    for resumen in resumenes:
+        nombre_hoja = resumen.get("nombre_hoja", "Resumen")
+        locales_incluidos = resumen.get("locales_a_incluir", [])
+        titulos_finales = resumen.get("titulos", [])
+        
+        # Filtramos para usar solo entidades que existan en el DataFrame actual
+        entidades_validas = [loc for loc in locales_incluidos if loc in df_stock.columns]
+        
+        if not entidades_validas:
+            continue
+            
+        ws = wb.create_sheet(nombre_hoja)
+        
+        # Construcción dinámica del diccionario de agregación (suma)
+        agg_dict = {}
+        for entidad in entidades_validas:
+            agg_dict[entidad] = 'sum'
+            if f"{entidad}.Costo" in df_stock.columns:
+                agg_dict[f"{entidad}.Costo"] = 'sum'
+            if f"{entidad}.Venta" in df_stock.columns:
+                agg_dict[f"{entidad}.Venta"] = 'sum'
+                
+        df_resumen = df_stock.groupby('Familias').agg(agg_dict).reset_index()
 
-        df_resumen_nrw['Margen_Libertad'] = calcular_margen(df_resumen_nrw, 'LIBERT.R.Venta', 'LIBERT.R.Costo')
-        df_resumen_nrw['Margen_Paso'] = calcular_margen(df_resumen_nrw, 'PASO.R.Venta', 'PASO.R.Costo')
-        df_resumen_nrw['Margen_Plaza'] = calcular_margen(df_resumen_nrw, 'P.OESTE.Venta', 'P.OESTE.Costo')
-        df_resumen_nrw['Margen_Consolidado'] = calcular_margen(df_resumen_nrw, 'Nrw.Venta', 'Nrw.Costo')
+        # Cálculo dinámico de márgenes y armado del orden de columnas para este resumen
+        cols_export = ['Familias']
+        for entidad in entidades_validas:
+            col_costo = f"{entidad}.Costo"
+            col_venta = f"{entidad}.Venta"
+            col_margen = f"Margen_{entidad}"
+            
+            if col_venta in df_resumen.columns and col_costo in df_resumen.columns:
+                df_resumen[col_margen] = calcular_margen(df_resumen, col_venta, col_costo)
+                cols_export.extend([entidad, col_costo, col_venta, col_margen])
+            else:
+                cols_export.append(entidad)
+                
+        df_resumen = df_resumen[cols_export]
+        
+        # Inyección de los títulos amigables desde el JSON
+        if titulos_finales and len(titulos_finales) == len(df_resumen.columns):
+            df_resumen.columns = titulos_finales
+        else:
+            print(f"WARNING: Títulos mismatch en hoja {nombre_hoja}. Se usarán nombres originales.")
+            
+        for r in dataframe_to_rows(df_resumen, index=False, header=True):
+            ws.append(r)
+        dar_formato_excel(ws, is_summary=True)
 
-        cols_nrw = [
-            'Familias', 
-            'LIBERT.R', 'LIBERT.R.Costo', 'LIBERT.R.Venta', 'Margen_Libertad',
-            'PASO.R', 'PASO.R.Costo', 'PASO.R.Venta', 'Margen_Paso',
-            'P.OESTE', 'P.OESTE.Costo', 'P.OESTE.Venta', 'Margen_Plaza',
-            'Nrw', 'Nrw.Costo', 'Nrw.Venta', 'Margen_Consolidado'
-        ]
-        
-        nombres_amigables_nrw = [
-            'Familias', 
-            'Libertad', 'CTOTAL', 'VTOTAL', 'Margen',
-            'Paso', 'CTOTAL ', 'VTOTAL ', 'Margen ',
-            'Plaza', 'CTOTAL  ', 'VTOTAL  ', 'Margen  ',
-            'Consolidado', 'CTOTAL   ', 'VTOTAL   ', 'Margen   '
-        ]
-        
-        df_resumen_nrw = df_resumen_nrw[cols_nrw]
-        df_resumen_nrw.columns = nombres_amigables_nrw
-        
-        for r in dataframe_to_rows(df_resumen_nrw, index=False, header=True):
-            ws_nrw.append(r)
-        dar_formato_excel(ws_nrw, is_summary=True)
-
-    if 'VIRREYES' in df_stock.columns:
-        ws_vir = wb.create_sheet("Virreyes.I")
-        df_resumen_vir = df_stock.groupby('Familias').agg({
-            'VIRREYES': 'sum', 'VIRREYES.Costo': 'sum', 'VIRREYES.Venta': 'sum'
-        }).reset_index()
-        
-        df_resumen_vir['Margen'] = calcular_margen(df_resumen_vir, 'VIRREYES.Venta', 'VIRREYES.Costo')
-        df_resumen_vir.columns = ['Familia', 'Cantidad', 'CTOTAL', 'VTOTAL', 'Margen']
-        
-        for r in dataframe_to_rows(df_resumen_vir, index=False, header=True):
-            ws_vir.append(r)
-        dar_formato_excel(ws_vir, is_summary=True)
-
-    ws_datos = wb.create_sheet("Datos")
+    # Main Data Sheet
+    ws_datos = wb.create_sheet(datos_sheet_name)
     for r in dataframe_to_rows(df_stock, index=False, header=True):
         ws_datos.append(r)
     dar_formato_excel(ws_datos, is_summary=False)
 
     wb.save(args.out)
-    print(f"¡Proceso finalizado con éxito! Archivo guardado en: {args.out}")
+    print(f"SUCCESS: Process completed! File saved at: {args.out}")
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description="Procesamiento y valorización de Stock.")
-    parser.add_argument('-stock', required=True, help="Ruta al archivo Stock.xlsx")
-    parser.add_argument('-costo', required=True, help="Ruta al archivo Costo.xlsx")
-    parser.add_argument('-venta', required=True, help="Ruta al archivo Venta.xlsx")
-    parser.add_argument('-out', default="Stock_Final_Reporte.xlsx", help="Ruta de salida")
+    parser = argparse.ArgumentParser(description="Agnostic Stock Processing and Valuation Tool.")
+    parser.add_argument('-stock', required=True, help="Path to Stock.xlsx file")
+    parser.add_argument('-costo', required=True, help="Path to Costo.xlsx file")
+    parser.add_argument('-venta', required=True, help="Path to Venta.xlsx file")
+    parser.add_argument('-out', default="Stock_Final_Reporte.xlsx", help="Output file path")
     
     args = parser.parse_args()
     procesar_stock(args)

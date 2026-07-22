@@ -1,0 +1,7 @@
+{
+    "columna_articulo": "Artículo",
+    "columna_familia": "Familias",
+    "familia_por_defecto": "Otro",
+    "calcular_diferencias": true,
+    "prefijo_diferencia": "Dif_"
+}

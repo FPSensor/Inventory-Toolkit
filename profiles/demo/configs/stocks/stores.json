@@ -1,0 +1,6 @@
+{
+    "locales_activos": ["LIBERT.R", "PASO.R", "P.OESTE", "VIRREYES"],
+    "grupos_regionales": {
+        "NRW": ["LIBERT.R", "PASO.R", "P.OESTE"]
+    }
+}

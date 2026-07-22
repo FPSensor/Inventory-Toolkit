@@ -1,0 +1,22 @@
+{
+  "familias": {},
+  "databases": {},
+  "cleaning": {
+    "required": [
+      "columnas_a_eliminar",
+      "columnas_texto_a_limpiar",
+      "columnas_a_formatear"
+    ]
+  },
+  "stores": {
+    "required": [
+      "locales_activos"
+    ]
+  },
+  "settings": {
+    "required": [
+      "columna_articulo",
+      "columna_familia"
+    ]
+  }
+}

@@ -1,0 +1,33 @@
+{
+    "orden_columnas_base": [
+        "Artículo", 
+        "Color", 
+        "Talle", 
+        "Familias"
+    ],
+    "hoja_datos_crudos": "Datos",
+    "resumenes": [
+        {
+            "nombre_hoja": "Nrw.I",
+            "locales_a_incluir": ["LIBERT.R", "PASO.R", "P.OESTE", "NRW"],
+            "titulos": [
+                "Familias", 
+                "Libertad", "CTOTAL", "VTOTAL", "Margen",
+                "Paso", "CTOTAL ", "VTOTAL ", "Margen ",
+                "Plaza", "CTOTAL  ", "VTOTAL  ", "Margen  ",
+                "Consolidado", "CTOTAL   ", "VTOTAL   ", "Margen   "
+            ]
+        },
+        {
+            "nombre_hoja": "Virreyes.I",
+            "locales_a_incluir": ["VIRREYES"],
+            "titulos": [
+                "Familia", 
+                "Cantidad", 
+                "CTOTAL", 
+                "VTOTAL", 
+                "Margen"
+            ]
+        }
+    ]
+}
