@@ -31,10 +31,10 @@ Version: 1.0.0
 
 Current features include:
 
-✔ Stock consolidation
-✔ Cost consolidation
-✔ Sales price consolidation
-✔ Automatic family classification
+✔ Stock consolidation    
+✔ Cost consolidation    
+✔ Sales price consolidation    
+✔ Automatic family classification    
 
 ---
 
