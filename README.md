@@ -1,5 +1,10 @@
 # Inventory Toolkit
 
+```
+> ⚠️ Inventory Toolkit is under active development.
+> While the core processing engine is stable, the project structure and CLI are still evolving.
+```
+
 Inventory Toolkit is an open-source toolkit for inventory processing and reconciliation, designed to be configurable through external JSON files instead of hardcoded business rules.
 
 The project started as an internal tool but is evolving into a generic inventory processing framework that can be adapted to different companies through profiles and configuration files.
@@ -123,16 +128,3 @@ Planned improvements include:
 This project is released as Open Source.
 
 ```
-
----
-
-## Yo agregaría una sola nota más
-
-Como esta es tu **primera versión pública seria**, agregaría arriba del README algo como:
-
-```markdown
-> ⚠️ Inventory Toolkit is under active development.
-> While the core processing engine is stable, the project structure and CLI are still evolving.
-```
-
-Eso le avisa a cualquiera que vea el repositorio que la arquitectura todavía está creciendo y evita que alguien abra un Issue diciendo "¿por qué Cruces.py está en la raíz?". Además, cuando salga la 1.2.0 con `engine/` y el CLI modular, simplemente eliminás esa nota.
