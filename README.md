@@ -1,209 +1,138 @@
 # Inventory Toolkit
 
-> A toolkit for inventory reconciliation, stock consolidation and inventory workflow automation.
+Inventory Toolkit is an open-source toolkit for inventory processing and reconciliation, designed to be configurable through external JSON files instead of hardcoded business rules.
 
-Inventory Toolkit is an open-source project focused on simplifying repetitive inventory tasks through automation.
+The project started as an internal tool but is evolving into a generic inventory processing framework that can be adapted to different companies through profiles and configuration files.
 
-The project was born from a real business need: reducing hours of manual work, minimizing human error and documenting processes that traditionally depended on individual experience.
-
-Although initially developed around the workflow of a clothing retailer, the long-term objective is to evolve into a configurable inventory toolkit capable of adapting to different business environments.
+> **Current version:** 1.1.0
 
 ---
 
-## Current Modules
+# Features
 
-### Inventory Reconciliation (Stable)
-
-Version: 1.0.0
-
-✔ Complete inventory reconciliation    
-✔ Partial inventory reconciliation    
-✔ Intelligent article parser    
-✔ Automatic report generation    
-✔ Difference calculation    
-✔ Export to Excel    
+- 📦 Stock processing
+- 🔄 Inventory reconciliation
+- ⚙️ JSON-based configuration system
+- 👤 Profile support
+- 🧩 Business rules externalized from the source code
+- 📝 Example profile included
+- ❤️ Open Source
 
 ---
 
-### Stock Processing
+# Project Structure
 
-Version: 1.0.0
-
-✔ Stock consolidation    
-✔ Cost consolidation    
-✔ Sales price consolidation    
-✔ Automatic family classification    
-
----
-
-## Philosophy
-
-Inventory Toolkit is built around a simple idea:
-
-> Understand the process first. Automate it afterwards.
-
-Instead of replacing business knowledge, the project attempts to document it, simplify it and make it reproducible.
-
-Automation should reduce repetitive work—not hide how the process works.
-
----
-
-## Features
-
-- Inventory reconciliation
-- Stock consolidation
-- Intelligent parsing
-- Automatic family grouping
-- Excel report generation
-- CLI-first workflow
-- Extensive documentation
-- Open source
-
----
-
-## Roadmap
-
-### Version 1.x
-
-- [x] Inventory reconciliation
-- [x] Stock processing (Alpha)
-- [ ] Interactive CLI
-- [ ] Configuration files
-- [ ] Documentation
-
----
-
-### Version 2.x
-
-- [ ] Configuration wizard
-- [ ] Dynamic business configuration
-- [ ] Configurable article families
-- [ ] Configurable store mappings
-- [ ] Plugin architecture
-
----
-
-### Future
-
-- Web interface
-- REST API
-- Multi-company support
-- Adapter-based architecture
-- Automated testing
-
----
-
-## Why Inventory Toolkit?
-
-Many inventory processes rely on undocumented knowledge accumulated over years.
-
-Inventory Toolkit attempts to solve that problem by:
-
-- documenting workflows
-- standardizing repetitive tasks
-- reducing manual operations
-- making inventory processes reproducible
-
----
-
-## Project Status
-
-| Module                   | Status      |
-|--------------------------|-------------|
-| Inventory Reconciliation | Stable      |
-| Stock Processing         | Stable      |
-| CLI                      | Planned     |
-| Configuration System     | Planned     |
-| Documentation            | In Progress |
-
----
-
-## Installation
-
-Clone the repository
-
-```bash
-git clone https://github.com/FPSensor/Inventory-Toolkit.git
-
-cd Inventory-Toolkit
+```
+Inventory-Toolkit/
+│
+├── core/
+│   └── configuration_manager.py
+│
+├── profiles/
+│   └── demo/
+│       ├── profile.json
+│       ├── README.md
+│       └── configs/
+│           ├── familias.json
+│           ├── databases.json
+│           ├── schema.json
+│           ├── cruces/
+│           └── stocks/
+│
+├── Cruces.py
+├── Stocks.py
+├── CHANGELOG.md
+└── requirements.txt
 ```
 
-Install dependencies
+> **Note:** The processing scripts (`Cruces.py` and `Stocks.py`) are still located at the repository root. They will be moved into an `engine/` package in a future release once the CLI architecture is completed.
 
-```bash
-pip install -r requirements.txt
+---
+
+# Profiles
+
+Inventory Toolkit now supports profiles.
+
+A profile contains all business-specific configuration, allowing the same processing engine to work for different companies without modifying the source code.
+
+Each profile contains:
+
+- Company metadata
+- JSON configuration files
+- Processing rules
+- Store definitions
+- Product families
+- Database mappings
+
+The repository includes a demonstration profile:
+
+```
+profiles/demo/
+```
+
+This profile exists only as an example and contains no private company data.
+
+---
+
+# Configuration
+
+Almost every business rule is now stored as JSON.
+
+Examples include:
+
+- Product families
+- Cleaning rules
+- Pricing configuration
+- Store definitions
+- Report configuration
+- Reconciliation settings
+- Database mappings
+
+This makes the toolkit much easier to customize without modifying Python code.
+
+---
+
+# Philosophy
+
+The goal of Inventory Toolkit is to separate:
+
+- Processing Engine
+- Business Configuration
+- Company Profiles
+
+This allows the same engine to be reused across completely different inventory systems.
+
+---
+
+# Roadmap
+
+Planned improvements include:
+
+- Modular CLI
+- Engine package
+- Plugin architecture
+- Multiple profile support
+- Automatic profile selection
+- Interactive configuration wizard
+- Better documentation
+
+---
+
+# License
+
+This project is released as Open Source.
+
 ```
 
 ---
 
-## Usage
+## Yo agregaría una sola nota más
 
-Current modules can be executed directly.
+Como esta es tu **primera versión pública seria**, agregaría arriba del README algo como:
 
-Example
-
-```bash
-python Cruces.py
+```markdown
+> ⚠️ Inventory Toolkit is under active development.
+> While the core processing engine is stable, the project structure and CLI are still evolving.
 ```
 
-or
-
-```bash
-python Stocks.py
-```
-
-Future releases will include a unified interactive CLI.
-
----
-
-## Documentation
-
-Documentation is divided into two different manuals.
-
-### Operational Manual
-
-Designed for day-to-day use.
-
-Focuses on executing inventory tasks quickly.
-
-Coming Soon
-
----
-
-### Technical Manual
-
-Designed for understanding how Inventory Toolkit works internally.
-
-Includes:
-
-- Business rules
-- Design decisions
-- Parsing strategy
-- System architecture
-- Development notes
-
-Coming Soon
-
----
-
-## Contributing
-
-This project is currently maintained by a single developer.
-
-Suggestions, issues and ideas are always welcome.
-
----
-
-## License
-
-MIT License
-
-See the LICENSE file for details.
-
----
-
-## Author
-
-Developed by Gonzalo
-
-Started as an internal automation project and gradually evolving into a general-purpose inventory toolkit.
+Eso le avisa a cualquiera que vea el repositorio que la arquitectura todavía está creciendo y evita que alguien abra un Issue diciendo "¿por qué Cruces.py está en la raíz?". Además, cuando salga la 1.2.0 con `engine/` y el CLI modular, simplemente eliminás esa nota.
