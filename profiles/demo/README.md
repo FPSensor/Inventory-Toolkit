@@ -1,59 +1,72 @@
-# Inventory Toolkit - Example Profile
+# Demo Profile
 
-This repository contains the default example profile for **Inventory Toolkit**.
+This profile is included with Inventory Toolkit as a complete configuration example.
 
-Its purpose is to demonstrate how Inventory Toolkit is configured without exposing any private business information.
+Unlike a simplified template, this profile is based on a real production workflow used during the development of Inventory Toolkit.
 
-## What is included?
+It serves as a practical reference for creating new profiles.
 
-- Example configuration files
-- Family mapping
-- Database mapping
-- Report settings
-- Cleaning rules
-- Store definitions
+---
 
-This profile is intended to serve as a reference when creating new profiles for different companies or inventory systems.
+# Included Configuration
 
-## Directory Structure
+- Product Families
+- Cleaning Rules
+- Database Mapping
+- Store Definitions
+- Report Configuration
+- General Settings
+- Validation Schema
+
+---
+
+# Purpose
+
+The objective of this profile is to demonstrate how Inventory Toolkit is configured without requiring modifications to the processing engine.
+
+Users are encouraged to duplicate this profile when creating configurations for their own businesses.
+
+---
+
+# Example Files
+
+The spreadsheets used with this profile are located in:
+
+```
+examples/demo/
+```
+
+---
+
+# Creating a New Profile
+
+Simply duplicate this directory.
 
 ```
 profiles/
-└── example/
-    ├── configs/
-    │   ├── cleaning.json
-    │   ├── databases.json
-    │   ├── familias.json
-    │   ├── pricing.json
-    │   ├── reports.json
-    │   └── stores.json
-    └── README.md
+
+    demo/
+
+    my_company/
 ```
 
-## Creating your own profile
+Modify the JSON files according to your environment.
 
-1. Copy the `example` profile.
+Inventory Toolkit will detect the new profile automatically.
 
-```
-profiles/
-└── my_company/
-```
+---
 
-2. Modify the JSON files to match your environment.
+# Privacy
 
-3. Select the profile from Inventory Toolkit (future CLI support).
+The demo profile intentionally excludes:
 
-## Important
+- Personal information
+- Company contact information
+- Infrastructure details
+- Credentials
 
-The example profile intentionally does **not** include:
+The included configuration represents a real-world workflow while avoiding identifiable business information.
 
-- Real inventory data
-- Price lists
-- Company reports
-- Production spreadsheets
+---
 
-Only the configuration required to understand the project architecture is provided.
-
-## License
-
-Same license as Inventory Toolkit.
+See the main project README for additional documentation.

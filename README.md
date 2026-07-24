@@ -1,209 +1,133 @@
 # Inventory Toolkit
 
-> A toolkit for inventory reconciliation, stock consolidation and inventory workflow automation.
+![Python](https://img.shields.io/badge/Python-3.10+-blue)
+![Platform](https://img.shields.io/badge/Platform-Windows-blue)
+![License](https://img.shields.io/badge/License-MIT-green)
+![Version](https://img.shields.io/badge/Version-1.2.0-orange)
 
-Inventory Toolkit is an open-source project focused on simplifying repetitive inventory tasks through automation.
+Inventory Toolkit is an open-source toolkit for retail inventory processing.
 
-The project was born from a real business need: reducing hours of manual work, minimizing human error and documenting processes that traditionally depended on individual experience.
+It automates **Stock Processing** and **Inventory Reconciliation (Cruces)** using Microsoft Excel workbooks while keeping business rules outside the source code through a profile-based configuration system.
 
-Although initially developed around the workflow of a clothing retailer, the long-term objective is to evolve into a configurable inventory toolkit capable of adapting to different business environments.
-
----
-
-## Current Modules
-
-### Inventory Reconciliation (Stable)
-
-Version: 1.0.0
-
-✔ Complete inventory reconciliation    
-✔ Partial inventory reconciliation    
-✔ Intelligent article parser    
-✔ Automatic report generation    
-✔ Difference calculation    
-✔ Export to Excel    
+The project was originally developed to solve real-world inventory problems and has since evolved into a reusable toolkit.
 
 ---
 
-### Stock Processing
+# Features
 
-Version: 1.0.0
-
-✔ Stock consolidation    
-✔ Cost consolidation    
-✔ Sales price consolidation    
-✔ Automatic family classification    
-
----
-
-## Philosophy
-
-Inventory Toolkit is built around a simple idea:
-
-> Understand the process first. Automate it afterwards.
-
-Instead of replacing business knowledge, the project attempts to document it, simplify it and make it reproducible.
-
-Automation should reduce repetitive work—not hide how the process works.
+- 📦 Stock Processing
+- 🔄 Inventory Reconciliation (Cruces)
+- 👤 Multiple Profiles
+- ⚙ JSON-based Configuration
+- 🖥 Interactive Command Line Interface
+- 📂 Native File Picker
+- 📊 Automatic Excel Column Detection
+- 🪟 Windows Launcher Scripts
+- 🔧 Configuration Wizard
 
 ---
 
-## Features
+# Project Structure
 
-- Inventory reconciliation
-- Stock consolidation
-- Intelligent parsing
-- Automatic family grouping
-- Excel report generation
-- CLI-first workflow
-- Extensive documentation
-- Open source
-
----
-
-## Roadmap
-
-### Version 1.x
-
-- [x] Inventory reconciliation
-- [x] Stock processing (Alpha)
-- [ ] Interactive CLI
-- [ ] Configuration files
-- [ ] Documentation
-
----
-
-### Version 2.x
-
-- [ ] Configuration wizard
-- [ ] Dynamic business configuration
-- [ ] Configurable article families
-- [ ] Configurable store mappings
-- [ ] Plugin architecture
-
----
-
-### Future
-
-- Web interface
-- REST API
-- Multi-company support
-- Adapter-based architecture
-- Automated testing
-
----
-
-## Why Inventory Toolkit?
-
-Many inventory processes rely on undocumented knowledge accumulated over years.
-
-Inventory Toolkit attempts to solve that problem by:
-
-- documenting workflows
-- standardizing repetitive tasks
-- reducing manual operations
-- making inventory processes reproducible
-
----
-
-## Project Status
-
-| Module                   | Status      |
-|--------------------------|-------------|
-| Inventory Reconciliation | Stable      |
-| Stock Processing         | Stable      |
-| CLI                      | Planned     |
-| Configuration System     | Planned     |
-| Documentation            | In Progress |
-
----
-
-## Installation
-
-Clone the repository
-
-```bash
-git clone https://github.com/FPSensor/Inventory-Toolkit.git
-
-cd Inventory-Toolkit
 ```
+InventoryToolkit/
 
-Install dependencies
+cli/
+core/
+engine/
+profiles/
+examples/
 
-```bash
-pip install -r requirements.txt
+README.md
+CHANGELOG.md
+LICENSE
 ```
 
 ---
 
-## Usage
+# First Run
 
-Current modules can be executed directly.
+Inventory Toolkit includes two Windows launcher scripts.
 
-Example
+### 1. Setup Environment.bat
 
-```bash
-python Cruces.py
-```
+Run this **only once** after cloning the repository.
 
-or
+It will:
 
-```bash
-python Stocks.py
-```
+- create the Python virtual environment
+- install dependencies
+- prepare the project
 
-Future releases will include a unified interactive CLI.
+### 2. Inventory Toolkit.bat
 
----
+Launches Inventory Toolkit.
 
-## Documentation
-
-Documentation is divided into two different manuals.
-
-### Operational Manual
-
-Designed for day-to-day use.
-
-Focuses on executing inventory tasks quickly.
-
-Coming Soon
+This is the file intended for everyday use.
 
 ---
 
-### Technical Manual
+# Quick Start
 
-Designed for understanding how Inventory Toolkit works internally.
+1. Run **Setup Environment.bat** (first time only).
+2. Run **Inventory Toolkit.bat**.
+3. Create or select a profile.
+4. Choose:
 
-Includes:
+- Stock Processing
+- Inventory Reconciliation
 
-- Business rules
-- Design decisions
-- Parsing strategy
-- System architecture
-- Development notes
-
-Coming Soon
-
----
-
-## Contributing
-
-This project is currently maintained by a single developer.
-
-Suggestions, issues and ideas are always welcome.
+5. Select the required Excel files.
+6. Wait for processing to finish.
 
 ---
 
-## License
+# Profiles
+
+Inventory Toolkit separates business rules from the processing engine.
+
+Each company can have its own independent profile.
+
+Documentation:
+
+➡ **profiles/demo/README.md**
+
+---
+
+# Example Dataset
+
+A complete example dataset is included for testing.
+
+Documentation:
+
+➡ **examples/demo/README.md**
+
+---
+
+# Documentation
+
+Additional documentation is available inside each module.
+
+| Module | Description |
+|---------|-------------|
+| cli | User Interface |
+| core | Shared utilities |
+| engine | Processing engines |
+| profiles/demo | Example configuration profile |
+| examples/demo | Example spreadsheets |
+
+---
+
+# Roadmap
+
+- GUI
+- Additional documentation
+- Configuration templates
+- Engine improvements
+- Additional validation
+
+---
+
+# License
 
 MIT License
-
-See the LICENSE file for details.
-
----
-
-## Author
-
-Developed by Gonzalo
-
-Started as an internal automation project and gradually evolving into a general-purpose inventory toolkit.

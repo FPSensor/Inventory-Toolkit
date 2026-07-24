@@ -1,0 +1,17 @@
+{
+    "articulos_ignorados": [
+        "12060-142", 
+        "12102-142"
+    ],
+    "palabras_ignoradas": [
+        "Total general"
+    ],
+    "columnas_costo": {
+        "articulo": "Artículo",
+        "precio": "Precio"
+    },
+    "columnas_venta": {
+        "articulo": "Artículo",
+        "precio": "Precio"
+    }
+}

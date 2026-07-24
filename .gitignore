@@ -9,6 +9,10 @@ __pycache__/
 *.xlsm
 *.txt
 
+# Excepto los ejemplos
+!examples/demo/*.xlsx
+!examples/demo/*.xls
+
 ## Build garbage (just in case)
 *.tmp
 *.log

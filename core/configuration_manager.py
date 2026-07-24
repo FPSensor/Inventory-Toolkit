@@ -36,7 +36,8 @@ class ConfigNode:
 class ConfigurationManager:
     """Servicio encargado de escanear, cargar, indexar y validar la configuración por perfiles."""
     
-    def __init__(self, profile="demo", profiles_root="profile"):
+    # CORRECCIÓN: profiles_root ahora es "profiles" por defecto
+    def __init__(self, profile="demo", profiles_root="profiles"):
         # Se construye la ruta dinámica basada en el perfil
         self.profile = profile
         self.base_dir = Path(profiles_root) / self.profile / "configs"
@@ -125,3 +126,27 @@ class ConfigurationManager:
                 self._cache[key] = ConfigNode(val)
             return self._cache[key]
         return val
+
+    # =========================================================
+    # COMPATIBILIDAD CON ENGINE (Getters dinámicos O(1))
+    # =========================================================
+    def get_familias(self):
+        return self._index.get("familias", {})
+        
+    def get_databases(self):
+        return self._index.get("databases", {})
+        
+    def get_exclusions(self):
+        return self._index.get("exclusions", {})
+        
+    def get_settings(self):
+        return self._index.get("settings", {})
+        
+    def get_stores(self):
+        return self._index.get("stores", {})
+        
+    def get_cleaning_rules(self):
+        return self._index.get("cleaning", {})
+        
+    def get_reports(self):
+        return self._index.get("reports", {})
