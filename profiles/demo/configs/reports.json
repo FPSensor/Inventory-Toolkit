@@ -29,5 +29,20 @@
                 "Margen"
             ]
         }
-    ]
+    ],
+
+  "output_path": "analysis_report.xlsx",
+  "data_source": {
+    "date_column": "Fecha",
+    "quantity_column": "Cantidad",
+    "grouping_column": "Familias",
+    "item_column": "Articulo",
+    "branch_column": "Base"
+  },
+
+  "report_structures": {
+    "branch_group_1": ["LIBERT.R", "PASO.R", "P.OESTE"],
+    "branch_group_2": ["VIRREYES"]
+  }
+
 }
