@@ -7,7 +7,7 @@
 
 Inventory Toolkit is an open-source toolkit for retail inventory processing.
 
-It automates **Stock Processing** and **Inventory Reconciliation (Cruces)** using Microsoft Excel workbooks while keeping business rules outside the source code through a profile-based configuration system.
+It automates **Stock Processing**, **Inventory Reconciliation (Cruces)**, and **Year-over-Year (YoY) Sales Analysis** using Microsoft Excel workbooks while keeping business rules outside the source code through a profile-based configuration system.
 
 The project was originally developed to solve real-world inventory problems and has since evolved into a reusable toolkit.
 
@@ -17,9 +17,10 @@ The project was originally developed to solve real-world inventory problems and 
 
 - 📦 Stock Processing
 - 🔄 Inventory Reconciliation (Cruces)
+- 📊 Year-over-Year (YoY) Sales Reports with Monthly/Annual Segmentation
 - 👤 Multiple Profiles
 - ⚙ JSON-based Configuration
-- 🖥 Interactive Command Line Interface
+- 🖥 Interactive Command Line Interface (with Unicode/Emoji support)
 - 📂 Native File Picker
 - 📊 Automatic Excel Column Detection
 - 🪟 Windows Launcher Scripts
@@ -29,7 +30,6 @@ The project was originally developed to solve real-world inventory problems and 
 
 # Project Structure
 
-```
 InventoryToolkit/
 
 cli/
@@ -41,7 +41,6 @@ examples/
 README.md
 CHANGELOG.md
 LICENSE
-```
 
 ---
 
@@ -63,7 +62,7 @@ It will:
 
 Launches Inventory Toolkit.
 
-This is the file intended for everyday use.
+This is the file intended for everyday use, optimized with UTF-8 encoding support for terminal rendering.
 
 ---
 
@@ -76,8 +75,9 @@ This is the file intended for everyday use.
 
 - Stock Processing
 - Inventory Reconciliation
+- Generate YoY Sales Report
 
-5. Select the required Excel files.
+5. Select the required Excel files and parameters.
 6. Wait for processing to finish.
 
 ---
@@ -112,7 +112,7 @@ Additional documentation is available inside each module.
 |---------|-------------|
 | cli | User Interface |
 | core | Shared utilities |
-| engine | Processing engines |
+| engine | Processing engines (Stock, Cruces, YoY Reports) |
 | profiles/demo | Example configuration profile |
 | examples/demo | Example spreadsheets |
 
@@ -120,11 +120,12 @@ Additional documentation is available inside each module.
 
 # Roadmap
 
-- GUI
-- Additional documentation
-- Configuration templates
-- Engine improvements
-- Additional validation
+ - v1.3.0  Reports ✅    
+ - v1.3.1  English migration    
+ - v1.3.2  Stock/Cruces modularization    
+ - v1.3.3  Logging    
+ - v1.3.4  Testing    
+ - v1.3.5  Documentation    
 
 ---
 

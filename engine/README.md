@@ -1,10 +1,10 @@
 # Engine
 
-The `engine` package contains the core processing algorithms used by Inventory Toolkit.
+The `engine` package contains the core processing algorithms used by Inventory Toolkit[cite: 4].
 
-Unlike the CLI, the engine is completely independent from user interaction.
+Unlike the CLI, the engine is completely independent from user interaction[cite: 4].
 
-Its only responsibility is to transform input data into processed Excel files.
+Its only responsibility is to transform input data into processed Excel files[cite: 4].
 
 ---
 
@@ -12,18 +12,19 @@ Its only responsibility is to transform input data into processed Excel files.
 
 | Module | Description |
 |---------|-------------|
-| Stocks.py | Stock Processing |
-| Cruces.py | Inventory Reconciliation |
+| Stocks.py | Stock Processing[cite: 4] |
+| Cruces.py | Inventory Reconciliation[cite: 4] |
+| reports/ | Year-over-Year (YoY) Sales Analysis and Excel Generation |
 
 ---
 
 ## Responsibilities
 
-- Read Excel files
-- Apply business rules
-- Process inventory
-- Generate reports
-- Export results
+- Read Excel files[cite: 4]
+- Apply business rules[cite: 4]
+- Process inventory and sales[cite: 4]
+- Generate reports[cite: 4]
+- Export results[cite: 4]
 
 ---
 
@@ -31,13 +32,13 @@ Its only responsibility is to transform input data into processed Excel files.
 
 The engine should remain:
 
-- independent
-- reusable
-- deterministic
+- independent[cite: 4]
+- reusable[cite: 4]
+- deterministic[cite: 4]
 
-No module inside `engine` should request user input.
+No module inside `engine` should request user input[cite: 4].
 
-Configuration is provided externally through the selected profile.
+Configuration is provided externally through the selected profile[cite: 4].
 
 ---
 
@@ -45,14 +46,13 @@ Configuration is provided externally through the selected profile.
 
 Business rules are loaded from
 
-```
-profiles/<profile>/configs/
-```
+profiles//configs/
 
-This allows the same engine to work with completely different companies without modifying the source code.
+
+This allows the same engine to work with completely different companies without modifying the source code[cite: 4].
 
 ---
 
-## Future
+## Roaddmap
 
-The long-term objective is to completely isolate processing logic from configuration loading, allowing Inventory Toolkit to support additional interfaces beyond the CLI.
+- Improve logging

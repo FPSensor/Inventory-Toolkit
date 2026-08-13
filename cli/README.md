@@ -17,6 +17,7 @@ It is responsible for interacting with the user while keeping all business logic
 - User prompts
 - Launching Stock Processing
 - Launching Inventory Reconciliation
+- Launching YoY Sales Reports
 
 ---
 
@@ -30,6 +31,7 @@ It is responsible for interacting with the user while keeping all business logic
 | config_menu.py | Interactive JSON editor |
 | stocks.py | Stock Processing launcher |
 | cruces.py | Inventory Reconciliation launcher |
+| reports.py | YoY Sales Reports launcher |
 | utils.py | Shared CLI utilities |
 
 ---
@@ -51,7 +53,6 @@ All inventory logic belongs inside the engine.
 
 ## Workflow
 
-```
 User
 
 ↓
@@ -65,7 +66,6 @@ Engine
 ↓
 
 Excel Output
-```
 
 ---
 
@@ -74,5 +74,6 @@ Excel Output
 - Progress bars
 - Colored output
 - Better validation messages
+- Better logging
 - Linux support
 - macOS support
