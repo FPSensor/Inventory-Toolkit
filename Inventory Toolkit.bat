@@ -1,3 +1,8 @@
 @echo off
-:: Fuerza la codificacion a UTF-8 para los iconos y ejecuta el script en PowerShell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "[console]::InputEncoding = [console]::OutputEncoding = New-Object System.Text.UTF8Encoding; python cli.py"
+:: Fuerza el uso de UTF-8 en el proceso de la consola
+chcp 65001 > nul
+set PYTHONUTF8=1
+set PYTHONIOENCODING=utf-8
+
+:: Intenta lanzar Windows Terminal (la consola moderna), si falla, cae en el cmd clásico
+start wt.exe -d . python cli.py || python cli.py
