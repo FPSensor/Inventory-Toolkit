@@ -1,5 +1,36 @@
 # Changelog
 
+## [1.3.0] - 2026-08-14
+
+### Added
+
+- Year-over-Year (YoY) Sales Report generation
+- Interactive sales report workflow through the CLI
+- Sales comparison between current and previous-year periods
+- Report grouping by product family or individual item
+- Branch-level sales breakdowns
+- Automatic year-over-year percentage calculations
+- Monthly segmented sales reports
+- Configurable report structures through JSON
+- Configurable report output path
+- Excel report generation with formatted tables, totals, and YoY comparisons
+- Optional file browser for selecting sales data files
+
+### Changed
+
+- Added a dedicated Sales Reports workflow to the CLI
+- Separated report data processing, report generation, and Excel rendering into independent modules
+- Moved report configuration into the profile-based configuration system
+- Improved date-range handling for sales analysis
+- Added validation for interactive report options and date input
+- Improved handling of items with no previous-year sales
+
+### Notes
+
+This release introduces Sales Reports as a new major capability of Inventory Toolkit, extending the application beyond inventory processing and reconciliation into sales analysis and reporting.
+
+---
+
 ## [1.2.0] - 2026-07-24
 
 ### Added

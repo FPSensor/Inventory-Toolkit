@@ -29,7 +29,7 @@ def main():
         while True:
             limpiar_pantalla()
             print("========================================")
-            print("       INVENTORY TOOLKIT v1.2.0 CLI       ")
+            print("       INVENTORY TOOLKIT v1.3.0 CLI       ")
             print(f"       Perfil Activo: [{perfil_actual}]  ")
             print("========================================")
             print("¿Qué querés hacer hoy?\n")
