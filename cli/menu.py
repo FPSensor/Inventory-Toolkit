@@ -1,55 +1,67 @@
 import sys
-from cli.utils import limpiar_pantalla
-from cli.profiles import seleccionar_perfil
-from cli.config_menu import menu_configuracion
-from cli.cruces import ejecutar_cruce
-from cli.stocks import ejecutar_stock
-from cli.reports import menu_reports
-from cli.wizard import PANDAS_DISPONIBLE
+import argparse
+from cli.utils import clear_screen
+from cli.profiles import select_profile
+from cli.config_menu import configuration_menu
+from cli.cross_check_launcher import launch_cross_check
+from cli.stock_processing_launcher import launch_stock_processing
+from cli.yoy_reports_launcher import launch_yoy_reports
+from cli.wizard import PANDAS_AVAILABLE
 
 try:
-    from engine import Stocks
-    from engine import Cruces
-    MODULOS_CARGADOS = True
+    from engine import stock_processing
+    from engine import inventory_cross_check
+    MODULES_LOADED = True
 except ImportError as e:
-    MODULOS_CARGADOS = False
+    MODULES_LOADED = False
     error_msg = e
 
 def main():
-    if not PANDAS_DISPONIBLE:
-        print("⚠️ Advertencia: Pandas no está instalado.")
-    
-    if not MODULOS_CARGADOS:
-        print(f"⚠️ Advertencia: No se pudieron cargar los módulos base ({error_msg}).")
-        input("Presioná Enter para iniciar el menú en modo degradado...")
+    # Hidden arguments for debugging
+    parser = argparse.ArgumentParser(description="Inventory Toolkit CLI")
+    parser.add_argument('-debug_level', type=int, choices=[1, 2, 3], default=1, help=argparse.SUPPRESS)
+    args, unknown = parser.parse_known_args()
 
-    perfil_actual = seleccionar_perfil(None, inicio=True)
+    if not PANDAS_AVAILABLE:
+        print("⚠️ Warning: Pandas is not installed.")
+    
+    if not MODULES_LOADED:
+        print(f"⚠️ Warning: Could not load base modules ({error_msg}).")
+        input("Press Enter to start menu in degraded mode...")
+
+    from core.logger import setup_logger
+    log = setup_logger(args.debug_level)
+    
+    if args.debug_level > 1:
+        log.info(f"Starting Inventory Toolkit (Hidden Debug Level: {args.debug_level})...")
+
+    current_profile = select_profile(None, is_startup=True)
     
     try:
         while True:
-            limpiar_pantalla()
+            clear_screen()
             print("========================================")
-            print("       INVENTORY TOOLKIT v1.3.0 CLI       ")
-            print(f"       Perfil Activo: [{perfil_actual}]  ")
+            print("       INVENTORY TOOLKIT v1.3.1 CLI       ")
+            print(f"       Active Profile: [{current_profile}]  ")
             print("========================================")
-            print("¿Qué querés hacer hoy?\n")
-            print("  [C] 🔄 Cruce de Inventario")
-            print("  [S] 📦 Procesamiento de Stock")
-            print("  [R] 📊 Generate YoY Sales Report")
-            print("  [K] ⚙️ Configuraciones (JSON)")
-            print("  [P] 👤 Cambiar Perfil")
-            print("  [E] 🚪 Salir")
+            print("What do you want to do today?\n")
+            print("  [C] 🔄 Inventory Cross Check")
+            print("  [S] 📦 Stock Processing")
+            print("  [R] 📊 YoY Sales Report")
+            print("  [K] ⚙️ Configurations (JSON)")
+            print("  [P] 👤 Change Profile")
+            print("  [E] 🚪 Exit")
             print("========================================")
             
-            opcion = input("Elegí una opción: ").strip().upper()
+            option = input("Choose an option: ").strip().upper()
             
-            if opcion == 'C': ejecutar_cruce(perfil_actual)
-            elif opcion == 'S': ejecutar_stock(perfil_actual)
-            elif opcion == 'K': menu_configuracion(perfil_actual)
-            elif opcion == 'R': menu_reports(perfil_actual)
-            elif opcion == 'P': perfil_actual = seleccionar_perfil(perfil_actual)
-            elif opcion == 'E': sys.exit(0)
+            if option == 'C': launch_cross_check(current_profile)
+            elif option == 'S': launch_stock_processing(current_profile)
+            elif option == 'K': configuration_menu(current_profile)
+            elif option == 'R': launch_yoy_reports(current_profile)
+            elif option == 'P': current_profile = select_profile(current_profile)
+            elif option == 'E': sys.exit(0)
             
     except KeyboardInterrupt:
-        print("\n\n⚠️ Operación abortada. Saliendo de forma segura...")
+        print("\n\n⚠️ Operation aborted. Exiting safely...")
         sys.exit(0)

@@ -1,51 +1,8 @@
-# Core
+# Core Infrastructure
 
-The `core` package contains shared functionality used by the processing engine.
+The backbone of the application providing essential services to all other modules.
 
-While the CLI handles user interaction and the engine performs processing, the core package provides reusable utilities shared across the project.
-
----
-
-## Responsibilities
-
-Typical responsibilities include:
-
-- Configuration loading
-- Shared helper functions
-- Data normalization
-- Validation
-- Common processing routines
-
----
-
-## Philosophy
-
-Any code duplicated between processing modules should be moved into `core`.
-
-This keeps the engine focused on inventory processing while centralizing reusable logic.
-
----
-
-## Dependency Flow
-
-```
-CLI
- │
- ▼
-Engine
- │
- ▼
-Core
-```
-
-The dependency is intentionally one-directional.
-
-- CLI depends on Engine
-- Engine depends on Core
-- Core should not depend on CLI
-
----
-
-## Goal
-
-The purpose of `core` is to reduce duplicated code and provide a stable foundation for Inventory Toolkit as new processing modules are added.
+## Services
+*   **`configuration_manager.py`**: Safely loads, caches, and provides getter methods for all JSON configurations within the active profile.
+*   **`logger.py`**: Manages standard output and persistent file logging (`logs/session.log`) with dynamic debug levels.
+*   **`system_utils.py`**: Contains "Safe Savers" (`safe_pandas_to_excel`, `safe_openpyxl_save`) to prevent crashes when attempting to overwrite files currently opened by the user.

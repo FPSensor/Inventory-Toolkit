@@ -1,0 +1,31 @@
+{
+    "columnas_texto_a_limpiar": [
+        "Artículo",
+        "Color",
+        "Talle"
+    ],
+    "columnas_a_eliminar": [
+        "Grupo", 
+        "Artículo Descripción", 
+        "Color Descripción", 
+        "Talle Descripción", 
+        "CENTRAL", 
+        "DSELLERS", 
+        "SELLERS1", 
+        "DETROIT", 
+        "DSLOMAS",
+        "Costo Anterior",
+        "Proveedor"
+    ],
+    "columnas_a_formatear": [
+        "DSLIBERT", 
+        "DSPASO.R", 
+        "DSPOESTE", 
+        "LIBERT.R", 
+        "P.OESTE", 
+        "PASO.R", 
+        "VIRREYES",
+        "Stock",
+        "Precio"
+    ]
+}

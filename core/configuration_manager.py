@@ -78,7 +78,9 @@ class ConfigurationManager:
 
     def validate(self):
         """Valida dinámicamente usando el índice O(1) contra schema.json."""
-        schema_path = self.base_dir / "schema.json"
+        schema_path = self.base_dir / "general" / "schema.json"
+        if not schema_path.exists():
+            schema_path = self.base_dir / "schema.json"
         if not schema_path.exists():
             return 
             
@@ -150,3 +152,7 @@ class ConfigurationManager:
         
     def get_reports(self):
         return self._index.get("reports", {})
+
+    def get_config(self, name, default=None):
+        if default is None: default = {}
+        return self._index.get(name, default)

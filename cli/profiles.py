@@ -1,98 +1,96 @@
 import os
 import sys
-from cli.utils import limpiar_pantalla, cargar_json, preguntar_archivo, guardar_json, preguntar_si_no
-from cli.wizard import inicializar_archivos_perfil, asistente_mapeo_columnas
+from cli.utils import clear_screen, load_json, ask_file, save_json, ask_yes_no
+from cli.wizard import initialize_profile_files, auto_map_columns
 
-DIRECTORIO_PERFILES = "profiles"
+PROFILES_DIR = "profiles"
 
-def seleccionar_perfil(perfil_actual, inicio=False):
+def select_profile(current_profile, is_startup=False):
     while True:
-        limpiar_pantalla()
-        print("--- 👤 SELECCIÓN DE PERFIL ---")
-        if perfil_actual:
-            print(f"Perfil actual: [{perfil_actual}]\n")
+        clear_screen()
+        print("--- 👤 PROFILE SELECTION ---")
+        if current_profile:
+            print(f"Current profile: [{current_profile}]\n")
         else:
-            print("👋 ¡Bienvenido! Necesitás seleccionar o crear un perfil para empezar.\n")
+            print("👋 Welcome! Select or create a profile to begin.\n")
         
-        os.makedirs(DIRECTORIO_PERFILES, exist_ok=True)
-        carpetas_perfiles = [d for d in os.listdir(DIRECTORIO_PERFILES) if os.path.isdir(os.path.join(DIRECTORIO_PERFILES, d))]
+        os.makedirs(PROFILES_DIR, exist_ok=True)
+        profile_folders = [d for d in os.listdir(PROFILES_DIR) if os.path.isdir(os.path.join(PROFILES_DIR, d))]
         
-        if not carpetas_perfiles:
-            print("⚠️ No se encontraron perfiles. Por favor, creá uno nuevo.")
+        if not profile_folders:
+            print("⚠️ No profiles found. Please create a new one.")
             
-        print("Perfiles disponibles:")
-        for i, carpeta in enumerate(carpetas_perfiles, 1):
-            ruta_info = os.path.join(DIRECTORIO_PERFILES, carpeta, "profile.json")
-            nombre_mostrar, descripcion = carpeta, ""
+        print("Available profiles:")
+        for i, folder in enumerate(profile_folders, 1):
+            info_path = os.path.join(PROFILES_DIR, folder, "profile.json")
+            display_name, desc_text = folder, ""
             
-            if os.path.exists(ruta_info):
-                info = cargar_json(ruta_info)
+            if os.path.exists(info_path):
+                info = load_json(info_path)
                 if info:
-                    nombre_mostrar = info.get("name", carpeta)
+                    display_name = info.get("name", folder)
                     desc = info.get("description", "")
-                    descripcion = f" - {desc}" if desc else ""
+                    desc_text = f" - {desc}" if desc else ""
             
-            marcador = " 🟢 (Activo)" if carpeta == perfil_actual else ""
-            print(f"  [{i}] {nombre_mostrar}{descripcion}{marcador} (Dir: {carpeta})")
+            marker = " 🟢 (Active)" if folder == current_profile else ""
+            print(f"  [{i}] {display_name}{desc_text}{marker} (Dir: {folder})")
             
-        print("\nAcciones:")
-        print("  [N] Crear nuevo perfil")
-        if not inicio or perfil_actual:
-            print("  [0] Volver al menú principal")
-        elif inicio and not carpetas_perfiles:
-            print("  [S] Salir del programa")
+        print("\nActions:")
+        print("  [N] Create new profile")
+        if not is_startup or current_profile:
+            print("  [0] Return to main menu")
+        elif is_startup and not profile_folders:
+            print("  [E] Exit program")
             
-        opcion = input("\nElegí una opción: ").strip().upper()
+        option = input("\nChoose an option: ").strip().upper()
         
-        if opcion == '0' and (not inicio or perfil_actual):
-            return perfil_actual
-        elif opcion == 'S' and inicio and not carpetas_perfiles:
+        if option == '0' and (not is_startup or current_profile):
+            return current_profile
+        elif option == 'E' and is_startup and not profile_folders:
             sys.exit(0)
-        elif opcion == 'N':
-            nuevo_dir = input("Ingresá el nombre de la carpeta para el nuevo perfil (ej: mi_empresa): ").strip().lower().replace(" ", "_")
-            if nuevo_dir:
-                ruta_nuevo = os.path.join(DIRECTORIO_PERFILES, nuevo_dir)
-                ruta_configs = os.path.join(ruta_nuevo, "configs")
-                os.makedirs(ruta_configs, exist_ok=True)
+        elif option == 'N':
+            new_dir = input("Enter folder name for new profile (e.g. my_company): ").strip().lower().replace(" ", "_")
+            if new_dir:
+                new_path = os.path.join(PROFILES_DIR, new_dir)
+                configs_path = os.path.join(new_path, "configs")
+                os.makedirs(configs_path, exist_ok=True)
                 
-                print("\n--- 🛠️  SETUP WIZARD ---")
-                nombre_perfil = input("Nombre a mostrar del perfil: ").strip() or nuevo_dir
-                desc_perfil = input("Descripción del perfil: ").strip() or "Nuevo perfil"
+                print("\n--- 🛠️ SETUP WIZARD ---")
+                profile_name = input("Profile display name: ").strip() or new_dir
+                profile_desc = input("Profile description: ").strip() or "New profile"
                 
-                print("\n(Opcional) Proveer archivos de muestra acelera la configuración automática.")
-                archivo_stock = preguntar_archivo("Ruta del archivo de Stock de ejemplo", "")
-                archivo_sistema = preguntar_archivo("Ruta del archivo de Sistema (Cruces) de ejemplo", "")
+                print("\n(Optional) Providing sample files speeds up auto-configuration.")
+                stock_file = ask_file("Path to sample Stock file", "")
+                system_file = ask_file("Path to sample System file (Cross Check)", "")
                 
-                guardar_json(os.path.join(ruta_nuevo, "profile.json"), {
-                    "name": nombre_perfil,
-                    "description": desc_perfil,
-                    "version": "1.0",
+                save_json(os.path.join(new_path, "profile.json"), {
+                    "name": profile_name,
+                    "description": profile_desc,
+                    "version": "1.3.1",
                     "sample_files": {
-                        "stock": archivo_stock,
-                        "sistema": archivo_sistema
+                        "stock": stock_file,
+                        "system": system_file
                     }
                 })
                 
-                inicializar_archivos_perfil(ruta_configs)
-                perfil_actual = nuevo_dir
-                print(f"\n✅ Perfil '{nombre_perfil}' creado e inicializado exitosamente.")
+                initialize_profile_files(configs_path)
+                current_profile = new_dir
+                print(f"\n✅ Profile '{profile_name}' successfully created.")
                 
-                if archivo_stock and os.path.exists(archivo_stock):
-                    if preguntar_si_no("¿Querés que analicemos el archivo de Stock para autoconfigurar las columnas?"):
-                        asistente_mapeo_columnas(archivo_stock, ruta_nuevo)
+                if stock_file and os.path.exists(stock_file):
+                    if ask_yes_no("Do you want to analyze the Stock file to auto-configure columns?"):
+                        auto_map_columns(stock_file, new_path)
                 
-                if preguntar_si_no("¿Querés configurar el resto de los parámetros manualmente ahora mismo?"):
-                    from cli.config_menu import menu_configuracion
-                    menu_configuracion(perfil_actual)
+                if ask_yes_no("Do you want to configure the remaining parameters manually now?"):
+                    from cli.config_menu import configuration_menu
+                    configuration_menu(current_profile)
                 
-                if inicio:
-                    return perfil_actual
-        elif opcion.isdigit() and 1 <= int(opcion) <= len(carpetas_perfiles):
-            perfil_actual = carpetas_perfiles[int(opcion) - 1]
-            print(f"✅ Perfil cambiado exitosamente a '{perfil_actual}'.")
-            input("Presioná Enter para continuar...")
-            if inicio:
-                return perfil_actual
+                if is_startup: return current_profile
+        elif option.isdigit() and 1 <= int(option) <= len(profile_folders):
+            current_profile = profile_folders[int(option) - 1]
+            print(f"✅ Profile successfully changed to '{current_profile}'.")
+            input("Press Enter to continue...")
+            if is_startup: return current_profile
         else:
-            print("❌ Opción inválida.")
-            input("Presioná Enter para continuar...")
+            print("❌ Invalid option.")
+            input("Press Enter to continue...")

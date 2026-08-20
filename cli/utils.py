@@ -4,89 +4,82 @@ import json
 import subprocess
 import tkinter as tk
 from tkinter import filedialog
+from core.logger import log
 
-def limpiar_pantalla():
-    """Limpia la consola dependiendo del sistema operativo."""
+def clear_screen():
     os.system('cls' if os.name == 'nt' else 'clear')
 
-def preguntar_si_no(mensaje):
-    """Fuerza al usuario a responder S o N."""
+def ask_yes_no(message):
     while True:
-        respuesta = input(f"{mensaje} [S/N]: ").strip().upper()
-        if respuesta == 'S':
-            return True
-        if respuesta == 'N':
-            return False
-        print("❌ Opción inválida. Ingresá 'S' para Sí o 'N' para No.")
+        response = input(f"{message} [Y/N]: ").strip().upper()
+        if response == 'Y': return True
+        if response == 'N': return False
+        print("❌ Invalid option. Enter 'Y' for Yes or 'N' for No.")
 
-def preguntar_archivo(mensaje, valor_por_defecto, es_salida=False):
-    """Pide un archivo. Permite escribir, usar default o abrir explorador."""
-    respuesta = input(f"{mensaje} (Enter: '{valor_por_defecto}', 'B' para Explorador): ").strip()
+def ask_file(message, default_val, is_output=False):
+    response = input(f"{message} (Enter: '{default_val}', 'B' for Browser): ").strip()
     
-    if respuesta.upper() == 'B':
+    if response.upper() == 'B':
         root = tk.Tk()
         root.withdraw()
         root.attributes('-topmost', True)
         
-        if es_salida:
-            ruta = filedialog.asksaveasfilename(
-                title="Guardar resultado como...",
-                initialfile=valor_por_defecto,
+        if is_output:
+            path = filedialog.asksaveasfilename(
+                title="Save result as...",
+                initialfile=default_val,
                 defaultextension=".xlsx",
-                filetypes=[("Archivos Excel", "*.xlsx *.xls")]
+                filetypes=[("Excel Files", "*.xlsx *.xls")]
             )
         else:
-            ruta = filedialog.askopenfilename(
-                title="Seleccioná el archivo",
-                filetypes=[("Archivos Excel", "*.xlsx *.xls"), ("Todos los archivos", "*.*")]
+            path = filedialog.askopenfilename(
+                title="Select file",
+                filetypes=[("Excel Files", "*.xlsx *.xls"), ("All files", "*.*")]
             )
         root.destroy()
         
-        if ruta:
-            print(f"📁 Archivo seleccionado: {ruta}")
-            return ruta
+        if path:
+            print(f"📁 Selected file: {path}")
+            return path
         else:
-            print(f"⚠️ Selección cancelada. Se usará el valor por defecto.")
-            return valor_por_defecto
+            print(f"⚠️ Selection cancelled. Using default value.")
+            return default_val
+    return response if response else default_val
 
-    return respuesta if respuesta else valor_por_defecto
+def validate_files_exist(file_list):
+    all_exist = True
+    for file_path in file_list:
+        if file_path and not os.path.isfile(file_path):
+            log.error(f"File '{file_path}' does not exist.")
+            all_exist = False
+    return all_exist
 
-def validar_archivos_existen(lista_archivos):
-    """Verifica físicamente en el disco si los archivos existen."""
-    todos_existen = True
-    for archivo in lista_archivos:
-        if archivo and not os.path.isfile(archivo):
-            print(f"❌ Error: El archivo '{archivo}' no existe en esta ruta.")
-            todos_existen = False
-    return todos_existen
-
-def abrir_en_editor(ruta):
-    """Abre el archivo en el editor de texto predeterminado del sistema."""
-    print(f"Abriendo {os.path.basename(ruta)} en tu editor predeterminado...")
+def open_in_editor(path):
+    print(f"Opening {os.path.basename(path)} in default editor...")
     try:
         if sys.platform.startswith('darwin'):
-            subprocess.call(('open', ruta))
+            subprocess.call(('open', path))
         elif os.name == 'nt':
-            os.startfile(ruta)
+            os.startfile(path)
         elif os.name == 'posix':
-            subprocess.call(('xdg-open', ruta))
+            subprocess.call(('xdg-open', path))
     except Exception as e:
-        print(f"❌ No se pudo abrir el archivo automáticamente: {e}")
-    input("\nPresioná Enter cuando hayas terminado de editar y guardado los cambios...")
+        log.error(f"Could not open file automatically: {e}")
+    input("\nPress Enter when you have finished editing and saved your changes...")
 
-def cargar_json(ruta):
+def load_json(path):
     try:
-        with open(ruta, 'r', encoding='utf-8') as archivo:
-            return json.load(archivo)
+        with open(path, 'r', encoding='utf-8') as file:
+            return json.load(file)
     except FileNotFoundError:
         return None
     except json.JSONDecodeError:
-        print(f"❌ El archivo {ruta} está corrupto o no es un JSON válido.")
+        log.error(f"File {path} is corrupted or not valid JSON.")
         return None
 
-def guardar_json(ruta, datos):
+def save_json(path, data):
     try:
-        with open(ruta, 'w', encoding='utf-8') as archivo:
-            json.dump(datos, archivo, indent=4, ensure_ascii=False)
+        with open(path, 'w', encoding='utf-8') as file:
+            json.dump(data, file, indent=4, ensure_ascii=False)
     except Exception as e:
-        print(f"❌ Error al guardar el archivo: {e}")
+        log.error(f"Error saving file: {e}")
