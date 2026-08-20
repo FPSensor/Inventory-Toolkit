@@ -13,16 +13,84 @@ def initialize_profile_files(configs_path):
     os.makedirs(os.path.join(configs_path, "stock_processing"), exist_ok=True)
     os.makedirs(os.path.join(configs_path, "yoy_reports"), exist_ok=True)
 
+    # 1. Esquema oficial completo para evitar colisiones en ConfigurationManager
+    official_schema = {
+        "familias": {},
+        "databases": {},
+        "cleaning": {
+            "required": [
+                "columnas_a_eliminar",
+                "columnas_texto_a_limpiar",
+                "columnas_a_formatear"
+            ]
+        },
+        "stores": {
+            "required": [
+                "locales_activos"
+            ]
+        },
+        "settings": {
+            "required": [
+                "columna_articulo",
+                "columna_familia"
+            ]
+        }
+    }
+
     templates = {
-        "general/familias.json": {},
-        "stock_processing/cleaning.json": {"columnas_texto_a_limpiar": [], "columnas_a_eliminar": [], "columnas_a_formatear": []},
-        "general/settings.json": {"columna_articulo": "Artículo", "columna_familia": "Familias", "calcular_diferencias": True},
+        "general/schema.json": official_schema,
+        "general/familias.json": {
+            "REVISAR": ["REVISAR", "revisar"]
+        },
+        "general/settings.json": {
+            "columna_articulo": "Artículo",
+            "columna_familia": "Familias",
+            "familia_por_defecto": "Otro",
+            "calcular_diferencias": True,
+            "prefijo_diferencia": "Dif_"
+        },
+        "general/stores.json": {
+            "locales_activos": ["Central"],
+            "grupos_regionales": {}
+        },
         "general/databases.json": {},
-        "yoy_reports/reports.json": {"orden_columnas_base": [], "resumenes": []},
-        "general/stores.json": {"locales_activos": [], "grupos_regionales": {}},
-        "general/schema.json": {},
-        "cross_check/cross_check_settings.json": {"articulos_ignorados": [], "palabras_ignoradas": [], "columnas_costo": {"articulo": "Artículo", "precio": "Precio"}, "columnas_venta": {"articulo": "Artículo", "precio": "Precio"}},
-        "stock_processing/pricing.json": {"columnas_esperadas": ["Artículo", "Origen - Base de datos", "Precio"], "mapeo_nombres": {"Origen - Base de datos": "Base"}}
+        "stock_processing/cleaning.json": {
+            "columnas_texto_a_limpiar": ["Artículo"],
+            "columnas_a_eliminar": [],
+            "columnas_a_formatear": []
+        },
+        "stock_processing/pricing.json": {
+            "columnas_esperadas": ["Artículo", "Origen - Base de datos", "Precio"],
+            "mapeo_nombres": {
+                "Origen - Base de datos": "Base"
+            }
+        },
+        "cross_check/cross_check_settings.json": {
+            "articulos_ignorados": [],
+            "palabras_ignoradas": ["Total general"],
+            "columnas_costo": {
+                "articulo": "Artículo",
+                "precio": "Precio"
+            },
+            "columnas_venta": {
+                "articulo": "Artículo",
+                "precio": "Precio"
+            }
+        },
+        "yoy_reports/reports.json": {
+            "orden_columnas_base": ["Artículo", "Familias"],
+            "hoja_datos_crudos": "Datos",
+            "resumenes": [],
+            "output_path": "analysis_report.xlsx",
+            "data_source": {
+                "date_column": "Fecha",
+                "quantity_column": "Cantidad",
+                "grouping_column": "Familias",
+                "item_column": "Articulo",
+                "branch_column": "Base"
+            },
+            "report_structures": {}
+        }
     }
     
     for filename, structure in templates.items():
@@ -30,62 +98,78 @@ def initialize_profile_files(configs_path):
         if not os.path.exists(path):
             save_json(path, structure)
 
-def auto_map_columns(file_path, profile_dir):
-    if not PANDAS_AVAILABLE or not os.path.exists(file_path): return
-
-    print(f"\n--- 🧠 ANALYZING STRUCTURE: {os.path.basename(file_path)} ---")
-    try:
-        df = pd.read_excel(file_path, nrows=0)
-        real_columns = list(df.columns)
-    except Exception as e:
-        print(f"❌ Could not read file for auto-mapping: {e}")
+def auto_map_columns(stock_file, profile_dir):
+    if not PANDAS_AVAILABLE or not os.path.exists(stock_file):
         return
 
-    print("Detected columns:")
-    for i, col in enumerate(real_columns, 1):
-        print(f"  [{i}] {col}")
-    print("-" * 40)
+    print(f"\n--- 🧠 DEEP INSPECTION: {os.path.basename(stock_file)} ---")
+    try:
+        df_sample = pd.read_excel(stock_file, nrows=20)
+        real_columns = list(df_sample.columns)
+    except Exception as e:
+        print(f"❌ Inspection failed: {e}")
+        return
 
-    mappings_needed = {
-        "columna_articulo": {"desc": "Article / Product Code", "candidates": ["Artículo", "Articulo", "Cod", "Codigo", "SKU", "Art"]},
-        "columna_familia": {"desc": "Family / Category", "candidates": ["Familia", "Familias", "Rubro", "Categoria", "Línea"]}
+    print("Detected columns in spreadsheet:")
+    for i, col in enumerate(real_columns, 1):
+        sample_val = str(df_sample[col].dropna().iloc[0]) if not df_sample[col].dropna().empty else "empty"
+        print(f"  [{i:02d}] {col:<25} (Sample: {sample_val})")
+    print("-" * 60)
+
+    # 1. Article & Family Column Mapping
+    mappings = {
+        "columna_articulo": {"name": "Article / SKU", "hints": ["artículo", "articulo", "sku", "item", "codigo", "código"]},
+        "columna_familia": {"name": "Family / Category", "hints": ["familia", "familias", "rubro", "linea", "categoría", "categoria"]}
     }
 
     settings_path = os.path.join(profile_dir, "configs", "general", "settings.json")
-    current_settings = load_json(settings_path) or {}
+    settings = load_json(settings_path) or {}
 
-    for config_key, map_data in mappings_needed.items():
-        suggested_col = None
-        for candidate in map_data["candidates"]:
-            matches = [c for c in real_columns if candidate.lower() in str(c).lower()]
+    for cfg_key, meta in mappings.items():
+        found = None
+        for hint in meta["hints"]:
+            matches = [c for c in real_columns if hint in str(c).lower()]
             if matches:
-                suggested_col = matches[0]
+                found = matches[0]
                 break
         
-        if suggested_col:
-            print(f"\n💡 We think the column for '{map_data['desc']}' is: [{suggested_col}]")
-            is_correct = ask_yes_no("Is this correct?")
-            if is_correct:
-                current_settings[config_key] = str(suggested_col)
-                print(f"✅ Mapping saved: {config_key} = {suggested_col}")
+        if found:
+            print(f"💡 Auto-detected {meta['name']} -> [{found}]")
+            if ask_yes_no("Confirm mapping?"):
+                settings[cfg_key] = str(found)
                 continue
                 
-        print(f"\nWhich column represents '{map_data['desc']}'?")
-        for i, col in enumerate(real_columns, 1):
-            print(f"  [{i}] {col}")
-        print("  [0] Skip configuration for now")
-        
-        while True:
-            selection = input("Select the corresponding number: ").strip()
-            if selection == '0': break
-            elif selection.isdigit() and 1 <= int(selection) <= len(real_columns):
-                chosen_col = str(real_columns[int(selection) - 1])
-                current_settings[config_key] = chosen_col
-                print(f"✅ Manual mapping saved: {config_key} = {chosen_col}")
-                break
-            else:
-                print("❌ Invalid selection.")
+        print(f"\nSelect column for '{meta['name']}':")
+        for idx, c in enumerate(real_columns, 1):
+            print(f"  [{idx}] {c}")
+        choice = input("Column number (or 0 to skip): ").strip()
+        if choice.isdigit() and 1 <= int(choice) <= len(real_columns):
+            settings[cfg_key] = str(real_columns[int(choice) - 1])
 
-    save_json(settings_path, current_settings)
-    print("\n✅ File analysis and mapping complete.")
+    save_json(settings_path, settings)
+
+    # 2. Store Detection and Setup
+    numeric_cols = df_sample.select_dtypes(include='number').columns.tolist()
+    excluded = [settings.get("columna_articulo"), settings.get("columna_familia"), "Total", "Precio", "Costo", "Stock"]
+    potential_stores = [c for c in numeric_cols if c not in excluded and not any(x in str(c).lower() for x in ['ean', 'id', 'cod', 'barcode'])]
+    
+    stores_path = os.path.join(profile_dir, "configs", "general", "stores.json")
+    stores_data = load_json(stores_path) or {"locales_activos": [], "grupos_regionales": {}}
+
+    if potential_stores:
+        print(f"\n🏬 Detected potential store/branch columns: {potential_stores}")
+        if ask_yes_no("Auto-populate active stores list with these columns?"):
+            stores_data["locales_activos"] = potential_stores
+            save_json(stores_path, stores_data)
+            print("✅ Stores configuration populated.")
+    else:
+        print("\n🏬 Manual Store Configuration")
+        raw_stores = input("Enter your active store/branch names (comma-separated, e.g. Central, Sucursal1): ").strip()
+        if raw_stores:
+            stores_list = [s.strip() for s in raw_stores.split(',') if s.strip()]
+            stores_data["locales_activos"] = stores_list
+            save_json(stores_path, stores_data)
+            print(f"✅ Registered stores: {stores_list}")
+
+    print("\n✅ Auto-configuration completed successfully.")
     input("Press Enter to continue...")
