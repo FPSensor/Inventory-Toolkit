@@ -14,54 +14,105 @@ try:
     MODULES_LOADED = True
 except ImportError as e:
     MODULES_LOADED = False
-    error_msg = e
+    _import_error = e
+
+_VERSION = "1.3.1"
+
+_LOGO = r"""
+  ██╗███╗   ██╗██╗   ██╗███████╗███╗   ██╗████████╗ ██████╗ ██████╗ ██╗   ██╗
+  ██║████╗  ██║██║   ██║██╔════╝████╗  ██║╚══██╔══╝██╔═══██╗██╔══██╗╚██╗ ██╔╝
+  ██║██╔██╗ ██║██║   ██║█████╗  ██╔██╗ ██║   ██║   ██║   ██║██████╔╝ ╚████╔╝ 
+  ██║██║╚██╗██║╚██╗ ██╔╝██╔══╝  ██║╚██╗██║   ██║   ██║   ██║██╔══██╗  ╚██╔╝  
+  ██║██║ ╚████║ ╚████╔╝ ███████╗██║ ╚████║   ██║   ╚██████╔╝██║  ██║   ██║   
+  ╚═╝╚═╝  ╚═══╝  ╚═══╝  ╚══════╝╚═╝  ╚═══╝   ╚═╝    ╚═════╝ ╚═╝  ╚═╝   ╚═╝  
+                          T O O L K I T
+"""
+
+# Inner width (characters between the vertical borders) of the menu box.
+_BOX_WIDTH = 50
+
+
+def _row(text: str = "") -> str:
+    """Return a single menu row padded to the box width, with side borders.
+
+    Using a helper guarantees every row lines up regardless of the label
+    length, so the right-hand border never drifts out of alignment.
+    """
+    return "  ║" + text.ljust(_BOX_WIDTH) + "║"
+
+
+def _rule(left: str = "╠", right: str = "╣") -> str:
+    """Return a horizontal separator line for the menu box."""
+    return "  " + left + ("═" * _BOX_WIDTH) + right
+
+
+def _centered(text: str) -> str:
+    """Return a centered menu row."""
+    return _row(text.center(_BOX_WIDTH))
+
+
+def _draw_menu(current_profile: str) -> None:
+    clear_screen()
+    print(_LOGO)
+    print(_rule("╔", "╗"))
+    print(_centered(f"INVENTORY TOOLKIT  v{_VERSION}"))
+    print(_rule())
+    print(_row(f"   Active profile: [{current_profile}]"))
+    print(_rule())
+    print(_row())
+    print(_row("    C  ›  Inventory Cross Check"))
+    print(_row("    S  ›  Stock Processing"))
+    print(_row("    R  ›  YoY Sales Report"))
+    print(_row())
+    print(_rule())
+    print(_row("    K  ›  Configuration"))
+    print(_row("    P  ›  Change Profile"))
+    print(_row("    E  ›  Exit"))
+    print(_rule("╚", "╝"))
+    print()
+
 
 def main():
-    # Hidden arguments for debugging
     parser = argparse.ArgumentParser(description="Inventory Toolkit CLI")
-    parser.add_argument('-debug_level', type=int, choices=[1, 2, 3], default=1, help=argparse.SUPPRESS)
-    args, unknown = parser.parse_known_args()
+    parser.add_argument('-debug_level', type=int, choices=[1, 2, 3], default=1,
+                        help=argparse.SUPPRESS)
+    args, _ = parser.parse_known_args()
 
     if not PANDAS_AVAILABLE:
-        print("⚠️ Warning: Pandas is not installed.")
-    
+        print("  ⚠️  Warning: Pandas is not installed.")
+
     if not MODULES_LOADED:
-        print(f"⚠️ Warning: Could not load base modules ({error_msg}).")
-        input("Press Enter to start menu in degraded mode...")
+        print(f"  ⚠️  Warning: Could not load engine modules ({_import_error}).")
+        input("  Press Enter to continue in degraded mode...")
 
     from core.logger import setup_logger
     log = setup_logger(args.debug_level)
-    
+
     if args.debug_level > 1:
-        log.info(f"Starting Inventory Toolkit (Hidden Debug Level: {args.debug_level})...")
+        log.info(f"Inventory Toolkit {_VERSION} starting (debug level {args.debug_level})...")
 
     current_profile = select_profile(None, is_startup=True)
-    
+
     try:
         while True:
-            clear_screen()
-            print("========================================")
-            print("       INVENTORY TOOLKIT v1.3.1 CLI       ")
-            print(f"       Active Profile: [{current_profile}]  ")
-            print("========================================")
-            print("What do you want to do today?\n")
-            print("  [C] 🔄 Inventory Cross Check")
-            print("  [S] 📦 Stock Processing")
-            print("  [R] 📊 YoY Sales Report")
-            print("  [K] ⚙️ Configurations (JSON)")
-            print("  [P] 👤 Change Profile")
-            print("  [E] 🚪 Exit")
-            print("========================================")
-            
-            option = input("Choose an option: ").strip().upper()
-            
-            if option == 'C': launch_cross_check(current_profile)
-            elif option == 'S': launch_stock_processing(current_profile)
-            elif option == 'K': configuration_menu(current_profile)
-            elif option == 'R': launch_yoy_reports(current_profile)
-            elif option == 'P': current_profile = select_profile(current_profile)
-            elif option == 'E': sys.exit(0)
-            
+            _draw_menu(current_profile)
+            option = input("  Choose an option: ").strip().upper()
+
+            if option == "C":
+                launch_cross_check(current_profile)
+            elif option == "S":
+                launch_stock_processing(current_profile)
+            elif option == "R":
+                launch_yoy_reports(current_profile)
+            elif option == "K":
+                configuration_menu(current_profile)
+            elif option == "P":
+                current_profile = select_profile(current_profile)
+            elif option == "E":
+                clear_screen()
+                print("  Goodbye!\n")
+                sys.exit(0)
+
     except KeyboardInterrupt:
-        print("\n\n⚠️ Operation aborted. Exiting safely...")
+        print("\n\n  Operation interrupted. Exiting safely...")
         sys.exit(0)
