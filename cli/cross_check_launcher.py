@@ -1,56 +1,81 @@
+"""
+cross_check_launcher.py — Inventory Cross Check module launcher.
+
+Remembers file paths used in the previous run so the user does not
+have to retype them on every execution.
+"""
+
+import time
 from argparse import Namespace
-from cli.utils import clear_screen, ask_file, validate_files_exist
+
+from cli.utils import (
+    clear_screen, ask_file, validate_files_exist,
+    load_last_paths, save_last_paths,
+)
 from core.logger import log
 
-def launch_cross_check(active_profile):
+
+def launch_cross_check(active_profile: str) -> None:
     clear_screen()
-    print(f"--- 🔄 STARTING INVENTORY CROSS CHECK (Profile: {active_profile}) ---\n")
-    
-    system_file = ask_file("1. System Stock File", "cross_check_system_stock.xls")
-    count_file = ask_file("2. Physical Count File", "cross_check_physical_count.xlsx")
-    cost_file = ask_file("3. Cost List File", "shared_cost_list.xlsx")
-    sales_file = ask_file("4. Sales Price List File", "shared_sales_price_list.xlsx")
-    
+    print(f"  🔄  INVENTORY CROSS CHECK  —  Profile: [{active_profile}]\n")
+
+    last = load_last_paths(active_profile)
+    cc   = last.get("cross_check", {})
+
+    system_file = ask_file("1. System stock file",          cc.get("system", "cross_check_system_stock.xls"))
+    count_file  = ask_file("2. Physical count file",        cc.get("count",  "cross_check_physical_count.xlsx"))
+    cost_file   = ask_file("3. Cost price list",            cc.get("cost",   "shared_cost_list.xlsx"))
+    sales_file  = ask_file("4. Sales price list",           cc.get("sales",  "shared_sales_price_list.xlsx"))
+
     if not validate_files_exist([system_file, count_file, cost_file, sales_file]):
-        print("\n⚠️ Operation aborted. Missing required files.")
-        input("Press Enter to return to menu...")
+        print("\n  ⚠️  Operation cancelled — required files are missing.")
+        input("  Press Enter to return to the menu...")
         return
 
-    out_file = ask_file("\n5. Output file name", "Cross_Check_Results.xlsx", is_output=True)
-    if not out_file.endswith(('.xlsx', '.xls')):
+    out_file = ask_file("\n5. Output file name", cc.get("out", "Cross_Check_Results.xlsx"), is_output=True)
+    if not out_file.endswith((".xlsx", ".xls")):
         out_file += ".xlsx"
 
-    print("\n--- ⚙️ Cross Check Options ---")
-    resp_ds = input("Consolidate quantities from multiple databases? (Y/N) [N]: ").strip().upper()
-    flag_consolidate = True if resp_ds == 'Y' else False
+    save_last_paths(active_profile, {
+        "cross_check": {
+            "system": system_file,
+            "count":  count_file,
+            "cost":   cost_file,
+            "sales":  sales_file,
+            "out":    out_file,
+        }
+    })
 
-    resp_partial = input("Filter stock only by scanned articles (Partial Check)? (Y/N) [N]: ").strip().upper()
-    flag_partial = True if resp_partial == 'Y' else False
+    print("\n  ─ Cross Check options ─")
+    resp_ds      = input("  Consolidate quantities from multiple databases? [Y/N, default N]: ").strip().upper()
+    flag_consolidate = resp_ds == "Y"
 
-    print(f"\n🚀 Crossing data... (Output: {out_file})")
-    
+    resp_partial = input("  Filter by scanned articles only (partial count)? [Y/N, default N]: ").strip().upper()
+    flag_partial = resp_partial == "Y"
+
+    print(f"\n  🚀 Cross-checking data...  (Output: {out_file})")
+
     args = Namespace(
         cross_check_system=system_file,
-        cross_check_count=count_file, 
-        shared_cost=cost_file, 
-        shared_sales=sales_file, 
-        cross_check_out=out_file, 
+        cross_check_count=count_file,
+        shared_cost=cost_file,
+        shared_sales=sales_file,
+        cross_check_out=out_file,
         cross_check_profile=active_profile,
         cross_check_consolidate=flag_consolidate,
-        cross_check_partial=flag_partial
+        cross_check_partial=flag_partial,
     )
-    
+
     try:
-        import time
         from engine.inventory_cross_check.generator import run_cross_check
-        start_time = time.time()
+        start = time.time()
         final_out = run_cross_check(args)
         if final_out:
-            elapsed = time.time() - start_time
-            print(f"\n✅ Success: Cross Check generated in {elapsed:.2f} seconds and saved to {final_out}")
+            elapsed = time.time() - start
+            print(f"\n  ✅ Done in {elapsed:.2f}s  →  {final_out}")
     except ImportError as e:
-        log.error(f"Cannot execute: Missing modules ({e}).")
+        log.error(f"Missing modules: {e}")
     except Exception as e:
         log.error(f"Critical error: {e}")
-        
-    input("\nPress Enter to return to menu...")
+
+    input("\n  Press Enter to return to the menu...")

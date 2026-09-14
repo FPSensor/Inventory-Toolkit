@@ -9,6 +9,7 @@ __pycache__/
 *.xls
 *.xlsm
 *.txt
+profiles/*/last_paths.json
 
 # Excepto los ejemplos
 !examples/demo/*.xlsx
