@@ -876,7 +876,7 @@ class NewProfileModal(BaseToplevel):
         save_json(os.path.join(target_dir, "profile.json"), {
             "name":        self.prof_name.get().strip() or raw_id,
             "description": self.prof_desc.get().strip(),
-            "version":     "1.3.1",
+            "version":     "1.4.0",
         })
         initialize_profile_files(configs_path)
         self.callback(raw_id)
@@ -891,7 +891,7 @@ class InventoryToolkitGUI(BaseWindow):
 
     def __init__(self):
         super().__init__()
-        self.title("Inventory Toolkit v1.3.1")
+        self.title("Inventory Toolkit v1.4.0")
         self.geometry("980x740")
         self.minsize(880, 620)
 

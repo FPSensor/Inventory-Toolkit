@@ -1,4 +1,4 @@
-# 📚 Inventory Toolkit: Master Technical Codex (v1.3.1)
+# 📚 Inventory Toolkit (v1.4.0)
 
 > **System Status:** Production Ready & Bulletproof  
 > **Target Audience:** Core Maintainers, System Analysts, and Data Engineers.

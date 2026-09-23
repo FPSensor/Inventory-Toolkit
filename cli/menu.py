@@ -16,7 +16,7 @@ except ImportError as e:
     MODULES_LOADED = False
     _import_error = e
 
-_VERSION = "1.3.1"
+_VERSION = "1.4.0"
 
 _LOGO = r"""
   ██╗███╗   ██╗██╗   ██╗███████╗███╗   ██╗████████╗ ██████╗ ██████╗ ██╗   ██╗

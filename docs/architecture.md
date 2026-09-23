@@ -3,7 +3,7 @@
 ## Why Decoupling Matters
 In early versions of Inventory Toolkit, data logic and CLI interfaces were tightly intertwined. This created massive friction: changing how an Excel sheet was formatted risked breaking user inputs. 
 
-In v1.3.1, we adopted a strict separation of concerns inspired by modern data engineering pipelines:
+In v1.2.0, we adopted a strict separation of concerns inspired by modern data engineering pipelines:
 1. **Presentation Layer (`cli/`)**: Never touches dataframes directly; only gathers parameters and validates input presence.
 2. **Business Logic Layer (`engine/`)**: Pure computational and rendering engines. Completely headless. Can be executed programmatically via custom Python scripts without a terminal.
 3. **Infrastructure Layer (`core/`)**: Cross-cutting utilities (logging, system safety bounds, configuration managers).
