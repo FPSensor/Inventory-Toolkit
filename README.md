@@ -1,15 +1,15 @@
 # Inventory Toolkit
 
 ![Python](https://img.shields.io/badge/Python-3.10+-blue)
-![Platform](https://img.shields.io/badge/Platform-Windows-blue)
+![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux%20%7C%20macOS-blue)
 ![License](https://img.shields.io/badge/License-MIT-green)
-![Version](https://img.shields.io/badge/Version-1.3.1-orange)
+![Version](https://img.shields.io/badge/Version-1.4.0-orange)
 
 Inventory Toolkit is an open-source toolkit for retail inventory processing.
 
 It automates **Stock Processing**, **Inventory Cross Check (formerly Cruces)**, and **Year-over-Year (YoY) Sales Analysis** using Microsoft Excel workbooks while keeping business rules outside the source code through a profile-based configuration system.
 
-The project was originally developed to solve real-world inventory problems and has since evolved into a reusable toolkit.
+The project was originally developed to solve real-world inventory problems and has since evolved into a reusable toolkit, usable either from an interactive command-line interface or from a native desktop GUI, and runs on Windows, Linux, and macOS.
 
 ---
 
@@ -17,17 +17,20 @@ The project was originally developed to solve real-world inventory problems and 
 
 - 📦 Stock Processing (`engine/stock_processing/`)
 - 🔄 Inventory Cross Check (`engine/inventory_cross_check/`)
-- 📊 Year-over-Year (YoY) Sales Reports with Monthly/Annual Segmentation (`engine/yoy_reports/`)
+- 📊 Year-over-Year (YoY) Sales Reports with Monthly/Annual Segmentation and optional Size Breakdown (`engine/yoy_reports/`)
+- 🖥️ Native Desktop GUI (`gui/app.py`), Tkinter/CustomTkinter based, as a full alternative to the CLI
+- 🐧 Cross-Platform: Windows, Linux, and macOS launchers
 - 👤 Multiple Profiles with Isolated Config Folders
-- ⚙ JSON-based Configuration Subdirectories
+- ⚙ JSON-based Configuration Subdirectories, validated against Pydantic schemas (`core/config_schemas.py`)
 - 🖥 Interactive Command Line Interface (Internationalized in English)
+- 🗂️ Persistent Per-Profile File Path Memory (pre-fills the last files used)
 - 📂 Native File Picker
 - 📊 Automatic Excel Column Detection
-- 🪟 Windows Launcher Scripts
-- 🔧 Configuration Wizard
+- 🔧 8-Step Guided Configuration Wizard
+- 🚀 Vectorized SKU/Family Classification for large datasets
 - 🛡️ APB Protocol Validations & PermissionError Safe Savers
 - 📝 Persistent Dual-Channel Logging (`logs/session.log`)
-- 🧪 Automated Unit Testing with Pytest
+- 🧪 Automated Unit Testing with Pytest, plus Integrity Check and Stress Test diagnostic tools (`tools/`)
 
 ---
 
@@ -44,9 +47,12 @@ InventoryToolkit/
 │   ├── wizard.py    
 │   └── yoy_reports_launcher.py    
 ├── core/    
+│   ├── config_schemas.py    
 │   ├── configuration_manager.py    
+│   ├── data_sanitizer.py    
 │   ├── logger.py    
-│   └── system_utils.py    
+│   ├── system_utils.py    
+│   └── telemetry.py    
 ├── docs/    
 │   ├── architecture.md    
 │   ├── cli.md    
@@ -75,23 +81,30 @@ InventoryToolkit/
 │       └── generator.py    
 ├── examples/    
 │   └── demo/    
+├── gui/    
+│   └── app.py    
 ├── logs/    
 ├── profiles/    
 │   └── demo/    
-│       └── configs/    
-│           ├── cross_check/    
-│           ├── general/    
-│           ├── stock_processing/    
-│           └── yoy_reports/    
+│       ├── configs/    
+│       │   ├── cross_check/    
+│       │   ├── general/    
+│       │   ├── stock_processing/    
+│       │   └── yoy_reports/    
+│       └── last_paths.json    
 ├── tests/    
 │   ├── test_config.py    
 │   ├── test_inventory_cross_check.py    
 │   └── test_stock_processing.py    
+├── tools/    
+│   ├── IntegrityCheck.py    
+│   └── StressTests.py    
 ├── CHANGELOG.md    
 ├── LICENSE    
 ├── README.md    
 ├── requirements.txt    
 ├── Inventory Toolkit.bat    
+├── Inventory Toolkit.sh    
 └── Setup Environment.bat    
 
 ---
@@ -115,6 +128,18 @@ It will:
 Launches Inventory Toolkit.
 
 This is the file intended for everyday use, optimized with UTF-8 encoding support for terminal rendering.
+
+On Linux and macOS, use **Inventory Toolkit.sh** instead (`./Inventory\ Toolkit.sh`).
+
+---
+
+# Desktop GUI
+
+In addition to the CLI, Inventory Toolkit ships a native desktop GUI (`gui/app.py`) covering the same three workflows — Inventory Cross Check, Stock Processing, and YoY Sales Reports — plus a graphical Configuration Hub. It runs on Windows, Linux, and macOS, and uses [CustomTkinter](https://github.com/TomSchimansky/CustomTkinter) when available, falling back to plain Tkinter/ttk otherwise.
+
+```bash
+python gui/app.py
+```
 
 ---
 
@@ -170,11 +195,7 @@ Run the automated test suite using `pytest`:
 
 ```bash
 pytest tests/
-```
-
-# Roadmap    
- - v1.3.0 Reports ✅    
- - v1.3.1 Full Core Refactor (Migration, Modularization, APB, Logging, Testing, Docs) ✅    
+``` 
 
 # License    
 MIT License

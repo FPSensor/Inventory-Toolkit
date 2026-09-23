@@ -1,5 +1,44 @@
 # Changelog
 
+## [1.4.0] - 2026-09-23
+
+### Added
+
+- Native desktop GUI (`gui/app.py`) built on Tkinter/CustomTkinter, providing Cross Check, Stock Processing, and YoY Sales Report tabs plus a full graphical Configuration Hub as an alternative to the CLI
+- Linux/macOS shell launcher (`Inventory Toolkit.sh`)
+- Pydantic-based configuration schemas (`core/config_schemas.py`) for families, stores, cleaning rules, pricing, cross-check settings, and YoY reports, with automatic fallback to safe defaults on validation errors
+- Centralized SKU/article sanitization module (`core/data_sanitizer.py`) exposing `clean_sku_series()` and `sanitize_dataframe()`
+- Vectorized, regex-based family classification (`vectorize_assign_families`) for large datasets, replacing row-by-row `apply()`/`lambda` matching
+- Execution-timer utility (`core/telemetry.py`) for per-stage elapsed-time logging
+- Repository diagnostic tool (`tools/IntegrityCheck.py`) validating family rules, margin logic, date-offset/leap-year math, and running an end-to-end simulation against the demo profile
+- Performance benchmarking tool (`tools/StressTests.py`) comparing legacy vs. vectorized family classification on 50,000 synthetic SKUs, plus profile and environment audits
+- Persistent "last used paths" per profile (`profiles/<profile>/last_paths.json`), pre-filling file prompts on subsequent runs of Cross Check, Stock Processing, and YoY Reports
+- Optional "Include size breakdown" toggle for YoY Sales Reports
+- Consolidated "Global" (all-branches) comparison column block per family group in YoY Sales Reports, shown whenever a group spans more than one store
+- Expanded interactive Setup Wizard (`cli/wizard.py`), now covering active stores, columns to delete, YoY data-source columns, pricing columns, and Cross Check columns across 8 guided steps, each individually skippable
+- Fully redesigned Configuration Hub (`cli/config_menu.py`) with in-app search/filter, sub-dictionary support, and structured in-app editors for `reports.json` and `pricing.json` (no external editor required anymore)
+- Redesigned main menu with a boxed layout and ASCII-art logo (`cli/menu.py`)
+- Linear, guided "Create new profile" flow, with profile descriptions shown in the profile selector
+
+### Changed
+
+- `ConfigurationManager` rewritten to recursively index every `*.json` file under a profile by filename stem and validate it against Pydantic models, replacing the previous hand-rolled `schema.json` validation and `ConfigNode` dual dot/dict-access wrapper
+- `tkinter` is now an optional dependency across the CLI; file-browser prompts degrade gracefully when it is unavailable
+- `open_in_editor()` is now genuinely cross-platform, adding a dedicated Linux (`xdg-open`) branch
+- Inventory Cross Check and Stock Processing launchers now remember and pre-fill the last file paths used per profile
+- `.gitignore` updated to exclude `profiles/*/last_paths.json`
+
+### Fixed
+
+- Inefficient row-by-row family assignment replaced with vectorized matching, reducing processing time on large datasets
+- Duplicate `safe_pandas_to_excel` import removed from `engine/inventory_cross_check/generator.py`
+
+### Notes
+
+This release focuses on usability, cross-platform reach, and performance: it introduces a full graphical interface as an alternative to the CLI, adds native Linux/macOS launcher support, and replaces ad-hoc JSON validation with a proper Pydantic schema layer. Family classification is now vectorized for large inventories, and both the Setup Wizard and the Configuration Hub have been substantially expanded.
+
+---
+
 ## [1.3.1] - 2026-08-20
 
 ### Added
