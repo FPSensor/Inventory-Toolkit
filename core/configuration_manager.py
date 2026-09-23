@@ -1,65 +1,101 @@
+"""configuration_manager.py — Central config loader for Inventory Toolkit.
+
+Loads all JSON files under profiles/<profile>/configs/ recursively and indexes
+them by filename stem for fast lookup.
+"""
+
 import json
 from pathlib import Path
+from typing import Any, Dict
+
+from core.config_schemas import (
+    CleaningConfig,
+    CrossCheckSettings,
+    FamiliasConfig,
+    PricingConfig,
+    StoresConfig,
+    YoYReportsConfig,
+)
 from core.logger import log
 
-DEFAULT_SCHEMA = {
-    "cleaning": {"required": ["columnas_a_eliminar", "columnas_texto_a_limpiar", "columnas_a_formatear"]},
-    "stores": {"required": ["locales_activos"]},
-    "settings": {"required": ["columna_articulo", "columna_familia"]}
-}
 
 class ConfigurationManager:
-    def __init__(self, profile="demo"):
-        self.profile = profile
-        self.base_dir = Path("profiles") / profile / "configs"
-        self._index = {}
-        self.load_all()
 
-    def load_all(self):
-        if not self.base_dir.exists():
-            log.warning(f"Profile directory not found: {self.base_dir}")
-            return
+  def __init__(self, profile: str = 'demo'):
+    self.profile = profile
+    self.base_dir = Path('profiles') / profile / 'configs'
+    self._index: Dict[str, Any] = {}
+    self._load_all()
 
-        for path in self.base_dir.rglob("*.json"):
-            key = path.stem
-            try:
-                with open(path, "r", encoding="utf-8") as f:
-                    self._index[key] = json.load(f)
-            except Exception as e:
-                log.error(f"Error loading {path}: {e}")
+  # ── Loading ──────────────────────────────────────────────────────────────
 
-        self.validate()
+  def _load_all(self) -> None:
+    """Recursively load every *.json under the profile's configs directory."""
+    if not self.base_dir.exists():
+      log.warning(f'Profile config dir not found: {self.base_dir}')
+      return
 
-    def validate(self):
-        schema_path = self.base_dir / "general" / "schema.json"
-        if not schema_path.exists():
-            schema_path = self.base_dir / "schema.json"
-            
-        schema = DEFAULT_SCHEMA
-        if schema_path.exists():
-            try:
-                with open(schema_path, "r", encoding="utf-8") as f:
-                    loaded_schema = json.load(f)
-                    if loaded_schema:
-                        schema = loaded_schema
-            except Exception:
-                schema = DEFAULT_SCHEMA
+    for json_file in self.base_dir.rglob('*.json'):
+      try:
+        with open(json_file, 'r', encoding='utf-8') as f:
+          self._index[json_file.stem] = json.load(f)
+      except Exception as e:
+        log.error(f'Error loading {json_file.name}: {e}')
+        if json_file.stem not in self._index:
+          self._index[json_file.stem] = {}
 
-        for section, rules in schema.items():
-            required_keys = rules.get("required", [])
-            section_data = self._index.get(section, {})
-            for rk in required_keys:
-                if rk not in section_data:
-                    log.warning(f"Validation Warning: '{section}.json' is missing required key '{rk}'.")
+  # ── Raw access ───────────────────────────────────────────────────────────
 
-    def get_config(self, name, default=None):
-        if default is None:
-            default = {}
-        return self._index.get(name, default)
+  def get_config(self, name: str, default: Any = None) -> Any:
+    """Return the raw parsed JSON for *name* (filename stem)."""
+    return self._index.get(name, default if default is not None else {})
 
-    def get_familias(self): return self.get_config("familias")
-    def get_databases(self): return self.get_config("databases")
-    def get_settings(self): return self.get_config("settings")
-    def get_stores(self): return self.get_config("stores")
-    def get_cleaning_rules(self): return self.get_config("cleaning")
-    def get_reports(self): return self.get_config("reports")
+  # ── Validated access ─────────────────────────────────────────────────────
+
+  def _safe_validate(self, model_class, config_name: str):
+    """Validate raw config against a Pydantic model; fall back to defaults on error."""
+    raw = self.get_config(config_name)
+    try:
+      validated = model_class.model_validate(raw)
+      return (
+          validated.model_dump()
+          if hasattr(validated, 'model_dump')
+          else validated.root
+      )
+    except Exception as e:
+      log.error(
+          f"ValidationError in '{config_name}.json': {e}. Using safe fallback."
+      )
+      fallback = model_class()
+      return (
+          fallback.model_dump()
+          if hasattr(fallback, 'model_dump')
+          else fallback.root
+      )
+
+  # ── Typed accessors (used by engines) ────────────────────────────────────
+
+  def get_familias(self) -> Dict[str, list]:
+    return self._safe_validate(FamiliasConfig, 'familias')
+
+  def get_stores(self) -> dict:
+    return self._safe_validate(StoresConfig, 'stores')
+
+  def get_cleaning_rules(self) -> dict:
+    return self._safe_validate(CleaningConfig, 'cleaning')
+
+  def get_pricing_rules(self) -> dict:
+    return self._safe_validate(PricingConfig, 'pricing')
+
+  def get_cross_check_settings(self) -> dict:
+    return self._safe_validate(CrossCheckSettings, 'cross_check_settings')
+
+  def get_yoy_settings(self) -> dict:
+    return self._safe_validate(YoYReportsConfig, 'reports')
+
+  # Raw dicts — no Pydantic overhead needed for these
+  def get_databases(self) -> dict:
+    return self.get_config('databases')
+
+  def get_settings(self) -> dict:
+    return self.get_config('settings')
