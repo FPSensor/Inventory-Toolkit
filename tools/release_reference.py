@@ -12,6 +12,7 @@ from __future__ import annotations
 import hashlib
 import json
 import zipfile
+import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable
@@ -178,9 +179,39 @@ def _is_semantic_part(name: str) -> bool:
     return name.endswith(".xml") and name.startswith(_SEMANTIC_PREFIXES)
 
 
+def _xml_semantic_signature(element: ET.Element) -> list[Any]:
+    """Return a serializer-independent XML tree representation.
+
+    OOXML produced by OpenPyXL can be byte-different depending on whether the
+    optional ``lxml`` backend is available. Namespace prefixes, attribute order,
+    indentation, XML declarations, and self-closing syntax are serialization
+    details rather than workbook semantics. ElementTree exposes expanded
+    namespace names, so the resulting tree stays stable across both serializers.
+    """
+    children = list(element)
+    text = element.text or ""
+    if children and not text.strip():
+        text = ""
+    return [
+        element.tag,
+        [[key, value] for key, value in sorted(element.attrib.items())],
+        text,
+        [_xml_semantic_signature(child) for child in children],
+    ]
+
+
 def _canonical_xml(payload: bytes) -> bytes:
-    """Return inner XLSX XML bytes; ZIP container metadata is ignored separately."""
-    return payload
+    """Canonicalize OOXML independently of the XML serializer implementation."""
+    try:
+        root = ET.fromstring(payload)
+    except ET.ParseError:
+        return payload
+    signature = _xml_semantic_signature(root)
+    return json.dumps(
+        signature,
+        ensure_ascii=False,
+        separators=(",", ":"),
+    ).encode("utf-8")
 
 
 def _semantic_parts(path: Path) -> dict[str, bytes]:

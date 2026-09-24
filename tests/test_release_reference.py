@@ -82,6 +82,57 @@ def test_release_reference_ignores_xlsx_zip_timestamps(tmp_path):
     assert workbook_semantic_sha256(expected) == workbook_semantic_sha256(repacked)
 
 
+def test_release_reference_ignores_equivalent_ooxml_serializer_syntax(tmp_path):
+    import xml.etree.ElementTree as ET
+    import zipfile
+
+    expected = tmp_path / "expected.xlsx"
+    alternate = tmp_path / "alternate_serializer.xlsx"
+    _save_sample(expected)
+
+    # Re-serialize OOXML through ElementTree. This intentionally changes
+    # namespace prefixes/formatting in the same way that OpenPyXL's optional
+    # lxml and stdlib XML backends can produce byte-different workbooks.
+    with zipfile.ZipFile(expected, "r") as source, zipfile.ZipFile(alternate, "w") as target:
+        for name in source.namelist():
+            payload = source.read(name)
+            if name.endswith((".xml", ".rels")):
+                try:
+                    payload = ET.tostring(
+                        ET.fromstring(payload),
+                        encoding="utf-8",
+                        xml_declaration=True,
+                    )
+                except ET.ParseError:
+                    pass
+            target.writestr(name, payload)
+
+    result = compare_workbooks(expected, alternate)
+
+    assert result.matches
+    assert result.differences == ()
+    assert workbook_semantic_sha256(expected) == workbook_semantic_sha256(alternate)
+
+
+def test_release_reference_still_detects_real_style_change(tmp_path):
+    from openpyxl import load_workbook
+    from openpyxl.styles import Font
+
+    expected = tmp_path / "expected.xlsx"
+    actual = tmp_path / "actual.xlsx"
+    _save_sample(expected)
+    _save_sample(actual)
+
+    workbook = load_workbook(actual)
+    workbook["Demo"]["A1"].font = Font(bold=True, color="FF0000")
+    workbook.save(actual)
+    workbook.close()
+
+    result = compare_workbooks(expected, actual)
+
+    assert not result.matches
+    assert any("styles.xml" in difference or "sheet1.xml" in difference for difference in result.differences)
+
 def test_json_fixture_fingerprint_is_semantic_and_line_ending_independent(tmp_path):
     lf_json = tmp_path / "lf.json"
     crlf_json = tmp_path / "crlf.json"
