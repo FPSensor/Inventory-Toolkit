@@ -5,7 +5,7 @@ from openpyxl.styles import Font, PatternFill
 from openpyxl.utils.dataframe import dataframe_to_rows
 
 from core.business_schema import COST_COLUMN, FAMILY_COLUMN, MARGIN_PREFIX, SALES_VALUE_LABEL
-from core.logger import log
+from core.logger import log, log_debug_event
 from core.system_utils import safe_openpyxl_save
 from engine.stock_processing.data_processor import calculate_margin
 
@@ -59,6 +59,14 @@ def render_stock_excel(
     interactive=True,
 ):
     log.info("Generating dynamic reports and applying formats...")
+    log_debug_event(
+        "stock_render_start",
+        output_file=output_file,
+        data_shape=stock_frame.shape,
+        summary_count=len(summaries),
+        raw_data_sheet=raw_data_sheet,
+        interactive=interactive,
+    )
     workbook = Workbook()
     workbook.remove(workbook.active)
 
@@ -69,8 +77,20 @@ def render_stock_excel(
 
         valid_entities = [entity for entity in included_entities if entity in stock_columns]
         if not valid_entities:
+            log_debug_event(
+                "stock_summary_skipped",
+                sheet_name=sheet_name,
+                requested_entities=included_entities,
+                reason="no_entities_present",
+            )
             continue
 
+        log_debug_event(
+            "stock_summary_render",
+            sheet_name=sheet_name,
+            requested_entities=included_entities,
+            valid_entities=valid_entities,
+        )
         worksheet = workbook.create_sheet(sheet_name)
         aggregations = {}
         for entity in valid_entities:
@@ -114,10 +134,27 @@ def render_stock_excel(
         for row in dataframe_to_rows(summary_frame, index=False, header=True):
             worksheet.append(row)
         apply_excel_formatting(worksheet, is_summary=True)
+        log_debug_event(
+            "stock_summary_ready",
+            sheet_name=sheet_name,
+            row_count=worksheet.max_row,
+            column_count=worksheet.max_column,
+        )
 
     data_worksheet = workbook.create_sheet(raw_data_sheet)
     for row in dataframe_to_rows(stock_frame, index=False, header=True):
         data_worksheet.append(row)
     apply_excel_formatting(data_worksheet, is_summary=False)
-
-    return safe_openpyxl_save(workbook, output_file, interactive=interactive)
+    log_debug_event(
+        "stock_raw_sheet_ready",
+        sheet_name=raw_data_sheet,
+        row_count=data_worksheet.max_row,
+        column_count=data_worksheet.max_column,
+    )
+    final_path = safe_openpyxl_save(workbook, output_file, interactive=interactive)
+    log_debug_event(
+        "stock_render_saved",
+        output_file=final_path,
+        sheets=list(workbook.sheetnames),
+    )
+    return final_path

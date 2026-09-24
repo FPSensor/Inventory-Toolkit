@@ -10,11 +10,12 @@ import pandas as pd
 
 from cli.utils import ask_file, load_last_paths, save_last_paths
 from core.configuration_manager import ConfigurationManager
-from core.logger import log
+from core.logger import log, log_debug_event, log_exception
 
 
 def launch_yoy_reports(active_profile: str) -> None:
     print("\n  📊  YEAR-OVER-YEAR SALES REPORT\n")
+    log_debug_event("yoy_cli_open", profile=active_profile)
 
     profile = active_profile or "demo"
     config = ConfigurationManager(profile=profile)
@@ -135,6 +136,19 @@ def launch_yoy_reports(active_profile: str) -> None:
         profile,
         {"yoy_reports": {"file": sales_file, "out": output_path}},
     )
+    log_debug_event(
+        "yoy_cli_parameters",
+        profile=profile,
+        sales_file=sales_file,
+        output_file=output_path,
+        grouping_column=grouping_column,
+        grouping_mode=grouping_option,
+        has_families=has_families,
+        segmented=segmented,
+        include_sizes=include_sizes,
+        start=str(start_date),
+        end=str(end_date),
+    )
 
     try:
         from engine.yoy_reports.generator import generate_sales_report
@@ -156,9 +170,10 @@ def launch_yoy_reports(active_profile: str) -> None:
         if final_output:
             elapsed = time.time() - started_at
             log.info("Report generated: %s", final_output)
+            log_debug_event("yoy_cli_complete", output=final_output, elapsed_seconds=round(elapsed, 4))
             print(f"\n  ✅ Done in {elapsed:.2f}s  →  {final_output}")
     except Exception as exc:
-        log.error("Error generating report: %s", exc)
+        log_exception("Error generating report: %s", exc)
         print(f"\n  ❌ Critical error: {exc}")
 
     input("\n  Press Enter to return to the main menu...")

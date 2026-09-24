@@ -23,7 +23,7 @@ try:
 except ImportError:
     TKINTER_AVAILABLE = False
 
-from core.logger import log
+from core.logger import log, log_debug_event, log_exception
 
 PROFILES_DIR = "profiles"
 _LAST_PATHS_FILE = "last_paths.json"
@@ -59,6 +59,13 @@ def ask_file(message: str, default_val: str, is_output: bool = False) -> str:
         hint += ", 'B' to browse"
 
     resp = input(f"  {message} ({hint}): ").strip()
+    log_debug_event(
+        "file_prompt_response",
+        prompt=message,
+        used_default=not bool(resp),
+        requested_browser=resp.upper() == "B",
+        is_output=is_output,
+    )
 
     if resp.upper() == "B" and TKINTER_AVAILABLE:
         root = tk.Tk()
@@ -81,11 +88,14 @@ def ask_file(message: str, default_val: str, is_output: bool = False) -> str:
 
         if path:
             print(f"  File selected: {path}")
+            log_debug_event("file_browser_selected", prompt=message, path=path, is_output=is_output)
             return path
         print("  Selection cancelled — using default value.")
         return default_val
 
-    return resp if resp else default_val
+    selected = resp if resp else default_val
+    log_debug_event("file_prompt_resolved", prompt=message, path=selected, is_output=is_output)
+    return selected
 
 
 # ── Path persistence ──────────────────────────────────────────────────────────
@@ -93,7 +103,9 @@ def ask_file(message: str, default_val: str, is_output: bool = False) -> str:
 def load_last_paths(profile: str) -> dict:
     """Load the saved file paths for *profile*. Returns {} if none saved yet."""
     path = os.path.join(PROFILES_DIR, profile, _LAST_PATHS_FILE)
-    return load_json(path) or {}
+    payload = load_json(path) or {}
+    log_debug_event("last_paths_loaded", profile=profile, path=path, sections=sorted(payload.keys()))
+    return payload
 
 
 def save_last_paths(profile: str, paths: dict) -> None:
@@ -102,16 +114,25 @@ def save_last_paths(profile: str, paths: dict) -> None:
     existing = load_last_paths(profile)
     existing.update(paths)
     save_json(path, existing)
+    log_debug_event("last_paths_saved", profile=profile, path=path, sections=sorted(paths.keys()))
 
 
 # ── File validation ───────────────────────────────────────────────────────────
 
 def validate_files_exist(file_list: list) -> bool:
     all_ok = True
+    missing = []
     for fp in file_list:
         if fp and not os.path.isfile(fp):
             log.error(f"File not found: '{fp}'")
+            missing.append(fp)
             all_ok = False
+    log_debug_event(
+        "file_validation",
+        requested=len(file_list),
+        missing=missing,
+        ok=all_ok,
+    )
     return all_ok
 
 
@@ -131,7 +152,7 @@ def open_in_editor(path: str) -> None:
         else:
             subprocess.call(("xdg-open", path))
     except Exception as e:
-        log.error(f"Could not open file automatically: {e}")
+        log_exception("Could not open file automatically: %s", e)
     input("\n  Press Enter when you have saved the file...")
 
 
@@ -140,8 +161,11 @@ def open_in_editor(path: str) -> None:
 def load_json(path: str):
     try:
         with open(path, "r", encoding="utf-8") as f:
-            return json.load(f)
+            payload = json.load(f)
+        log_debug_event("json_loaded", path=path, payload_type=type(payload).__name__)
+        return payload
     except FileNotFoundError:
+        log_debug_event("json_missing", path=path)
         return None
     except json.JSONDecodeError:
         log.error(f"File {path} is corrupted or contains invalid JSON.")
@@ -152,8 +176,9 @@ def save_json(path: str, data) -> None:
     try:
         with open(path, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=4, ensure_ascii=False)
+        log_debug_event("json_saved", path=path, payload_type=type(data).__name__)
     except Exception as e:
-        log.error(f"Error saving file: {e}")
+        log_exception("Error saving file: %s", e)
 
 
 # ── Output helpers ────────────────────────────────────────────────────────────

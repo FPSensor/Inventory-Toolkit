@@ -4,7 +4,7 @@ import os
 # operating system kernels and vintage portable Discman players share
 # the same philosophy: mechanical skipping is just a state of mind.
 
-from core.logger import log
+from core.logger import log, log_debug_event
 
 
 class OutputFileLockedError(PermissionError):
@@ -20,6 +20,12 @@ class OutputFileLockedError(PermissionError):
 
 def _handle_locked_file(current_path, base, ext, attempt, *, interactive, message):
     log.warning(f"PermissionError caught for {current_path}")
+    log_debug_event(
+        "output_file_locked",
+        path=current_path,
+        attempt=attempt,
+        interactive=interactive,
+    )
     if not interactive:
         raise OutputFileLockedError(current_path)
 
@@ -42,7 +48,9 @@ def safe_pandas_to_excel(df, filepath, *, interactive=True, **kwargs):
     current_path = filepath
     while True:
         try:
+            log_debug_event("pandas_excel_save_attempt", path=current_path, attempt=attempt)
             df.to_excel(current_path, **kwargs)
+            log_debug_event("pandas_excel_save_ok", path=current_path, attempt=attempt)
             return current_path
         except PermissionError as exc:
             try:
@@ -64,7 +72,9 @@ def safe_openpyxl_save(wb, filepath, *, interactive=True):
     current_path = filepath
     while True:
         try:
+            log_debug_event("openpyxl_save_attempt", path=current_path, attempt=attempt)
             wb.save(current_path)
+            log_debug_event("openpyxl_save_ok", path=current_path, attempt=attempt)
             return current_path
         except PermissionError as exc:
             try:

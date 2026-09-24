@@ -16,10 +16,11 @@ from core.business_schema import (
     QUANTITY_COLUMN,
     SALES_TOTAL_COLUMN,
     SYSTEM_STOCK_COLUMN,
+    REVIEW_PREFIX,
 )
 from core.configuration_manager import ConfigurationManager
 from core.data_sanitizer import clean_sku_series
-from core.logger import log
+from core.logger import log, log_debug_event
 from core.system_utils import safe_pandas_to_excel
 from core.telemetry import execution_timer
 from engine.inventory_cross_check.data_processor import (
@@ -35,6 +36,18 @@ _SCAN_COUNT_COLUMN = "__scan_count"
 
 def run_cross_check(args):
     interactive = not getattr(args, "non_interactive", False)
+    log_debug_event(
+        "cross_check_start",
+        profile=args.cross_check_profile,
+        system_file=args.cross_check_system,
+        count_file=args.cross_check_count,
+        cost_file=args.shared_cost,
+        sales_file=args.shared_sales,
+        output_file=args.cross_check_out,
+        consolidate=args.cross_check_consolidate,
+        partial=args.cross_check_partial,
+        interactive=interactive,
+    )
     required_files = [
         args.cross_check_system,
         args.cross_check_count,
@@ -61,6 +74,16 @@ def run_cross_check(args):
     cost_price_column = cost_columns.get("price_column", PRICE_COLUMN)
     sales_article_column = sales_columns.get("article_column", ARTICLE_COLUMN)
     sales_price_column = sales_columns.get("price_column", PRICE_COLUMN)
+    log_debug_event(
+        "cross_check_config_loaded",
+        family_rule_count=len(family_rules),
+        ignored_article_count=len(ignored_articles),
+        ignored_term_count=len(ignored_terms),
+        cost_article_column=cost_article_column,
+        cost_price_column=cost_price_column,
+        sales_article_column=sales_article_column,
+        sales_price_column=sales_price_column,
+    )
 
     with execution_timer("Read and Validate Spreadsheets"):
         system_frame = pd.read_excel(args.cross_check_system)
@@ -79,6 +102,16 @@ def run_cross_check(args):
         )
         cost_frame = pd.read_excel(args.shared_cost)
         sales_frame = pd.read_excel(args.shared_sales)
+        log_debug_event(
+            "cross_check_inputs_loaded",
+            system_shape=system_frame.shape,
+            count_shape=count_frame.shape,
+            cost_shape=cost_frame.shape,
+            sales_shape=sales_frame.shape,
+            system_columns=list(system_frame.columns),
+            cost_columns=list(cost_frame.columns),
+            sales_columns=list(sales_frame.columns),
+        )
 
     with execution_timer("Data Transformation & Matching"):
         system_frame[ARTICLE_COLUMN] = clean_sku_series(system_frame[ARTICLE_COLUMN])
@@ -88,6 +121,11 @@ def run_cross_check(args):
         ).fillna(0)
         master_articles = system_frame[ARTICLE_COLUMN].unique().tolist()
         master_set = {str(article).upper().strip() for article in master_articles}
+        log_debug_event(
+            "cross_check_master_catalog",
+            system_rows=len(system_frame),
+            unique_articles=len(master_articles),
+        )
 
         cost_frame.rename(
             columns={cost_article_column: ARTICLE_COLUMN, cost_price_column: COST_COLUMN},
@@ -109,6 +147,15 @@ def run_cross_check(args):
         count_frame[_SCAN_COUNT_COLUMN] = 1
         count_frame[ARTICLE_COLUMN] = count_frame[_SCAN_READING_COLUMN].apply(
             lambda reading: normalize_article(reading, master_articles, master_set)
+        )
+        review_count = int(
+            count_frame[ARTICLE_COLUMN].astype(str).str.startswith(REVIEW_PREFIX).sum()
+        )
+        log_debug_event(
+            "cross_check_scanner_normalization",
+            raw_readings=len(count_frame),
+            unique_normalized_articles=count_frame[ARTICLE_COLUMN].nunique(dropna=False),
+            review_count=review_count,
         )
 
         if args.cross_check_consolidate:
@@ -138,6 +185,14 @@ def run_cross_check(args):
             on=ARTICLE_COLUMN,
             how=merge_mode,
         ).fillna(0)
+        rows_before_filters = len(reconciliation)
+        log_debug_event(
+            "cross_check_consolidation",
+            merge_mode=merge_mode,
+            system_rows=len(system_consolidated),
+            count_rows=len(count_consolidated),
+            reconciliation_rows=rows_before_filters,
+        )
 
         if ignored_articles:
             reconciliation = reconciliation[
@@ -149,6 +204,13 @@ def run_cross_check(args):
                 .astype(str)
                 .str.contains(ignored_term, case=False, na=False)
             ]
+
+        log_debug_event(
+            "cross_check_filters_applied",
+            rows_before=rows_before_filters,
+            rows_after=len(reconciliation),
+            rows_removed=rows_before_filters - len(reconciliation),
+        )
 
         reconciliation[DIFFERENCE_COLUMN] = [
             calculate_difference(system_stock, physical_count)
@@ -185,6 +247,15 @@ def run_cross_check(args):
             SALES_TOTAL_COLUMN,
         ]
         result = result[output_columns].sort_values(by=[FAMILY_COLUMN, ARTICLE_COLUMN])
+        log_debug_event(
+            "cross_check_result_ready",
+            difference_rows=len(result),
+            family_count=result[FAMILY_COLUMN].nunique(dropna=False),
+            positive_differences=int((result[DIFFERENCE_COLUMN] > 0).sum()),
+            negative_differences=int((result[DIFFERENCE_COLUMN] < 0).sum()),
+            zero_cost_total_rows=int((result[COST_TOTAL_COLUMN] == 0).sum()),
+            zero_sales_total_rows=int((result[SALES_TOTAL_COLUMN] == 0).sum()),
+        )
 
     with execution_timer("Excel Rendering & Formatting"):
         final_path = safe_pandas_to_excel(
@@ -199,4 +270,10 @@ def run_cross_check(args):
     gc.collect()
 
     log.info("Reconciliation completed successfully: %s", final_path)
+    log_debug_event(
+        "cross_check_complete",
+        output_file=final_path,
+        output_size_bytes=os.path.getsize(final_path) if final_path and os.path.exists(final_path) else None,
+        garbage_collected=True,
+    )
     return final_path

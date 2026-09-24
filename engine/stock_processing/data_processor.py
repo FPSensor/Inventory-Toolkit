@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 
 from core.business_schema import ARTICLE_COLUMN
-from core.logger import log
+from core.logger import log, log_debug_event, log_exception
 
 _ARTICLE_FALLBACKS = [ARTICLE_COLUMN, "Articulo", "SKU", "Codigo", "Item"]
 _DATABASE_FALLBACKS = ["Origen - Base de datos", "Sucursal", "Base", "Local", "Origen", "Tienda"]
@@ -22,10 +22,17 @@ def _first_existing(columns, candidates):
 def process_pricing(file_path, pricing_config=None):
     """Load and pivot a price list while preserving the historical fallbacks."""
     if not file_path or not os.path.exists(file_path):
+        log_debug_event("pricing_skipped", file_path=file_path, reason="missing_file")
         return None
 
     try:
         dataframe = pd.read_excel(file_path)
+        log_debug_event(
+            "pricing_loaded",
+            file_path=file_path,
+            shape=dataframe.shape,
+            columns=list(dataframe.columns),
+        )
         pricing_config = pricing_config or {}
         configured_columns = pricing_config.get("columns", {})
 
@@ -49,6 +56,11 @@ def process_pricing(file_path, pricing_config=None):
         if not database_column:
             database_column = "Base_General"
             dataframe[database_column] = "General"
+            log_debug_event(
+                "pricing_database_fallback",
+                file_path=file_path,
+                synthetic_column=database_column,
+            )
 
         value_candidates = [configured_columns.get("price"), *_VALUE_FALLBACKS]
         value_column = _first_existing(
@@ -68,6 +80,13 @@ def process_pricing(file_path, pricing_config=None):
                 return None
             value_column = available_columns[-1]
 
+        log_debug_event(
+            "pricing_columns_resolved",
+            file_path=file_path,
+            article_column=article_column,
+            database_column=database_column,
+            value_column=value_column,
+        )
         pivot = pd.pivot_table(
             dataframe,
             index=ARTICLE_COLUMN,
@@ -76,9 +95,15 @@ def process_pricing(file_path, pricing_config=None):
             aggfunc="mean",
         ).reset_index()
         pivot.columns.name = None
+        log_debug_event(
+            "pricing_pivot_ready",
+            file_path=file_path,
+            shape=pivot.shape,
+            columns=list(pivot.columns),
+        )
         return pivot
     except Exception as exc:
-        log.error("Processing %s: %s", file_path, exc)
+        log_exception("Processing %s: %s", file_path, exc)
         return None
 
 

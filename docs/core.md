@@ -16,9 +16,14 @@ Debug diagnostics and the guarded retirement process are documented in `legacy_c
 <!-- END LEGACY_COMPATIBILITY -->
 
 ## 4. `logger.py`
-Manages dual-channel logging:
-* **Console Stream Handler:** Respects the hidden `-debug_level` argument (1 for Errors only, 2 for Warnings, 3 for Info).
-* **Persistent File Handler:** Always writes a clean, timestamped audit trail to `logs/session.log`, allowing remote debugging (Magoya's best friend).
+Manages runtime-reconfigurable dual-channel logging. The CLI accepts the historical hidden `-debug_level`/`--debug-level` startup flag, but the normal developer workflow is now to type the hidden command `debug` in the main menu and select the verbosity without restarting.
+
+* **Level 1 — Operator:** errors only.
+* **Level 2 — Diagnostics:** operational milestones, warnings, timing information, and compatibility notices.
+* **Level 3 — Forensic:** DEBUG-level structured events including profile/config resolution, input workbook dimensions and columns, cleaning/merge decisions, normalization review counts, result sizes, generated sheets, save attempts, developer-tool commands, and exception tracebacks. Raw spreadsheet rows are intentionally not dumped to the log.
+* **Persistent File Handler:** writes the current session to `logs/session.log` using timestamp, process/thread, source module, and line-number metadata. The level-3 Developer Console can display the current log tail directly.
+
+Changing levels at runtime reuses the existing handlers, so enabling forensic mode does not truncate the current session log.
 
 ## 5. `system_utils.py` (The Bulletproof Safe Saver)
 Retail workers constantly keep generated Excel reports open while trying to regenerate them. Standard Python throws a violent `PermissionError` and crashes. 

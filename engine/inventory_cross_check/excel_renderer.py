@@ -1,4 +1,4 @@
-from core.logger import log
+from core.logger import log, log_debug_event
 from core.system_utils import safe_openpyxl_save
 
 try:
@@ -10,6 +10,11 @@ except ImportError:
     sys.exit(1)
 
 def apply_excel_formatting(output_file, interactive=True):
+    log_debug_event(
+        "cross_check_format_start",
+        output_file=output_file,
+        interactive=interactive,
+    )
     wb = load_workbook(output_file)
     ws = wb.active
     thin_border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
@@ -30,4 +35,11 @@ def apply_excel_formatting(output_file, interactive=True):
                     elif cell.value > 0: cell.fill = green_fill
                 if col_name in ['CTOTAL', 'VTOTAL']:
                     cell.number_format = '#,##0.00'
-    return safe_openpyxl_save(wb, output_file, interactive=interactive)
+    final_path = safe_openpyxl_save(wb, output_file, interactive=interactive)
+    log_debug_event(
+        "cross_check_format_saved",
+        output_file=final_path,
+        row_count=ws.max_row,
+        column_count=ws.max_column,
+    )
+    return final_path

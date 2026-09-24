@@ -3,6 +3,7 @@
 import openpyxl
 import pandas as pd
 
+from core.logger import log_debug_event
 from core.system_utils import safe_openpyxl_save
 from engine.yoy_reports.sheet_renderer import render_report_sheet
 
@@ -20,6 +21,16 @@ def render_yoy_sales_excel(
     include_sizes=False,
     interactive=True,
 ):
+    log_debug_event(
+        "yoy_render_start",
+        output_path=output_path,
+        current_shape=current_frame.shape,
+        previous_shape=previous_frame.shape,
+        grouping_column=grouping_column,
+        segmented=segmented,
+        include_sizes=include_sizes,
+        interactive=interactive,
+    )
     workbook = openpyxl.Workbook()
     workbook.remove(workbook.active)
 
@@ -32,6 +43,11 @@ def render_yoy_sales_excel(
 
     if segmented and not clean_current_frame.empty:
         periods = sorted(clean_current_frame[date_column].dt.to_period("M").unique())
+        log_debug_event(
+            "yoy_render_period_plan",
+            period_count=len(periods),
+            periods=[str(period) for period in periods],
+        )
         for period in periods:
             current_mask = current_frame[date_column].dt.to_period("M") == period
             period_current = current_frame[current_mask]
@@ -51,6 +67,14 @@ def render_yoy_sales_excel(
                 period_end = end_date
             period_previous_start = period_start - pd.DateOffset(years=1)
 
+            log_debug_event(
+                "yoy_render_period",
+                sheet=period.strftime("%m-%y"),
+                current_rows=len(period_current),
+                previous_rows=len(period_previous),
+                period_start=str(period_start),
+                period_end=str(period_end),
+            )
             render_report_sheet(
                 worksheet,
                 period_current,
@@ -121,4 +145,11 @@ def render_yoy_sales_excel(
             include_sizes,
         )
 
-    return safe_openpyxl_save(workbook, output_path, interactive=interactive)
+    log_debug_event(
+        "yoy_render_workbook_ready",
+        sheet_count=len(workbook.sheetnames),
+        sheets=list(workbook.sheetnames),
+    )
+    final_path = safe_openpyxl_save(workbook, output_path, interactive=interactive)
+    log_debug_event("yoy_render_saved", output_path=final_path)
+    return final_path

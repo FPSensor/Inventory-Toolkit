@@ -12,11 +12,12 @@ from cli.utils import (
     clear_screen, ask_file, validate_files_exist,
     load_last_paths, save_last_paths,
 )
-from core.logger import log
+from core.logger import log, log_debug_event, log_exception
 
 
 def launch_cross_check(active_profile: str) -> None:
     clear_screen()
+    log_debug_event("cross_check_cli_open", profile=active_profile)
     print(f"  🔄  INVENTORY CROSS CHECK  —  Profile: [{active_profile}]\n")
 
     last = load_last_paths(active_profile)
@@ -53,6 +54,17 @@ def launch_cross_check(active_profile: str) -> None:
     resp_partial = input("  Filter by scanned articles only (partial count)? [Y/N, default N]: ").strip().upper()
     flag_partial = resp_partial == "Y"
 
+    log_debug_event(
+        "cross_check_cli_parameters",
+        profile=active_profile,
+        system_file=system_file,
+        count_file=count_file,
+        cost_file=cost_file,
+        sales_file=sales_file,
+        output_file=out_file,
+        consolidate=flag_consolidate,
+        partial=flag_partial,
+    )
     print(f"\n  🚀 Cross-checking data...  (Output: {out_file})")
 
     args = Namespace(
@@ -72,10 +84,11 @@ def launch_cross_check(active_profile: str) -> None:
         final_out = run_cross_check(args)
         if final_out:
             elapsed = time.time() - start
+            log_debug_event("cross_check_cli_complete", output=final_out, elapsed_seconds=round(elapsed, 4))
             print(f"\n  ✅ Done in {elapsed:.2f}s  →  {final_out}")
     except ImportError as e:
-        log.error(f"Missing modules: {e}")
+        log_exception("Missing modules: %s", e)
     except Exception as e:
-        log.error(f"Critical error: {e}")
+        log_exception("Critical Cross Check error: %s", e)
 
     input("\n  Press Enter to return to the menu...")

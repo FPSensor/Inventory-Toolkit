@@ -12,11 +12,12 @@ from cli.utils import (
     clear_screen, ask_file, validate_files_exist,
     load_last_paths, save_last_paths,
 )
-from core.logger import log
+from core.logger import log, log_debug_event, log_exception
 
 
 def launch_stock_processing(active_profile: str) -> None:
     clear_screen()
+    log_debug_event("stock_processing_cli_open", profile=active_profile)
     print(f"  📦  STOCK PROCESSING  —  Profile: [{active_profile}]\n")
 
     last = load_last_paths(active_profile)
@@ -44,6 +45,14 @@ def launch_stock_processing(active_profile: str) -> None:
         }
     })
 
+    log_debug_event(
+        "stock_processing_cli_parameters",
+        profile=active_profile,
+        stock_file=stock_file,
+        cost_file=cost_file,
+        sales_file=sales_file,
+        output_file=out_file,
+    )
     print(f"\n  🚀 Processing inventory...  (Output: {out_file})")
 
     args = Namespace(
@@ -60,10 +69,11 @@ def launch_stock_processing(active_profile: str) -> None:
         final_out = run_stock_processing(args)
         if final_out:
             elapsed = time.time() - start
+            log_debug_event("stock_processing_cli_complete", output=final_out, elapsed_seconds=round(elapsed, 4))
             print(f"\n  ✅ Done in {elapsed:.2f}s  →  {final_out}")
     except ImportError as e:
-        log.error(f"Missing modules in 'engine/': {e}")
+        log_exception("Missing modules in 'engine/': %s", e)
     except Exception as e:
-        log.error(f"Critical error: {e}")
+        log_exception("Critical Stock Processing error: %s", e)
 
     input("\n  Press Enter to return to the menu...")
