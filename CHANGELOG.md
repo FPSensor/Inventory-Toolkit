@@ -10,6 +10,7 @@
 - Upgraded the modular profile schema to v3, translating Stock summary keys and YoY metric identifiers to English with automatic v2-to-v3 migration.
 - Centralized external workbook labels in `core/business_schema.py` and isolated pre-modular serialized keys in `core/legacy_config.py`.
 - Split YoY worksheet/formula construction into `engine/yoy_reports/sheet_renderer.py`, leaving workbook segmentation and saving in `excel_renderer.py`.
+- Split YoY worksheet rendering further into current-period, comparison, style, and orchestration modules without changing workbook formulas or output contracts.
 - Added intentionally hidden CLI (`42`) and GUI (`Ctrl+Shift+I`) easter eggs; neither affects generated business output.
 
 

@@ -79,10 +79,13 @@ InventoryToolkit/
 │   │   ├── excel_renderer.py
 │   │   └── generator.py
 │   └── yoy_reports/
+│       ├── comparison_renderer.py
+│       ├── current_sales_renderer.py
 │       ├── data_processor.py
 │       ├── excel_renderer.py
+│       ├── generator.py
 │       ├── sheet_renderer.py
-│       └── generator.py
+│       └── styles.py
 ├── examples/
 │   └── demo/
 ├── gui/

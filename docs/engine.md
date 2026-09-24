@@ -1,6 +1,6 @@
 # 🧠 Engine Subsystems Reference (`/engine`)
 
-Engine modules are split only where a responsibility boundary is useful. Cross Check and Stock Processing use the compact processor/renderer/generator pattern; YoY has an additional worksheet renderer because workbook orchestration and worksheet/formula construction are independently complex.
+Engine modules are split only where a responsibility boundary is useful. Cross Check and Stock Processing use the compact processor/renderer/generator pattern. YoY is further split because current-period rendering, comparison rendering, styling, workbook orchestration, and data preparation are independently complex.
 
 ## 1. Inventory Cross Check (`inventory_cross_check/`)
 
@@ -17,7 +17,10 @@ Engine modules are split only where a responsibility boundary is useful. Cross C
 ## 3. YoY Sales Reports (`yoy_reports/`)
 
 - **`data_processor.py`** — date filtering and optional family generation.
-- **`sheet_renderer.py`** — a single report sheet, formulas, group blocks, totals, and optional size breakdowns.
+- **`current_sales_renderer.py`** — current-period branch totals and optional size breakdowns.
+- **`comparison_renderer.py`** — YoY branch/group comparison blocks and formulas.
+- **`styles.py`** — worksheet cell styling primitives shared by both renderers.
+- **`sheet_renderer.py`** — worksheet-level orchestration only.
 - **`excel_renderer.py`** — workbook-level time segmentation, sheet naming, and safe saving.
 - **`generator.py`** — orchestration.
 
