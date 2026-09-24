@@ -1,10 +1,49 @@
-# 👤 Profiles & Configurations (`/profiles`)
+# 👤 Profiles & Configuration v2 (`/profiles`)
 
-Profiles allow the exact same codebase to serve multiple retail clients or branches simultaneously without cross-contaminating datasets.
+Profiles keep business rules outside the engines, so the same Inventory Toolkit build can serve different companies, datasets, or test environments without hard-coded forks.
 
-## Structure Inside `profiles/<name>/`
-* `profile.json`: Metadata, profile description, and sample file pointers.
-* `configs/general/`: Shared definitions (`familias.json`, `stores.json`, `databases.json`, `schema.json`, `settings.json`).
-* `configs/cross_check/`: Specific rules for reconciliation (`cross_check_settings.json`).
-* `configs/stock_processing/`: Cleaning rules and pricing schemas (`cleaning.json`, `pricing.json`).
-* `configs/yoy_reports/`: Time-series and layout structures (`reports.json`).
+## Configuration tree
+
+Each profile now uses a **module-oriented v2 layout**:
+
+```text
+profiles/<name>/
+├── profile.json
+├── configs/
+│   ├── general/
+│   │   ├── catalog.json       # core article/family columns and fallback family
+│   │   ├── families.json      # family → SKU-prefix rules
+│   │   └── network.json       # active stores, regional groups, raw DB columns
+│   ├── stock_processing/
+│   │   └── settings.json      # cleaning, pricing input, Stock output layout
+│   ├── cross_check/
+│   │   └── settings.json      # exclusions and cost/sales price-list columns
+│   └── yoy_reports/
+│       └── settings.json      # YoY input mapping, output options, report groups
+└── last_paths.json
+```
+
+The important rule is **ownership**: Stock Processing settings live under Stock Processing; YoY settings live under YoY. The old `yoy_reports/reports.json` mixed Stock output layout and YoY configuration in one file and has been removed from v2.
+
+## Editing configuration
+
+For normal use, prefer **Configuration Hub** or the **Guided Setup**. The JSON files remain intentionally readable and version-control friendly, but users should not need to understand the filesystem layout just to configure a profile.
+
+The Guided Setup is module-oriented rather than a fixed eight-step sequence. Each workflow can use the Excel sample that actually belongs to it:
+
+- Stock Processing can inspect a raw stock file and a separate price-list sample.
+- Cross Check can inspect its own Cost and Sales list samples.
+- YoY can inspect the historical sales file.
+- Catalog and Network can be configured independently.
+
+Progress is saved after each module, and the setup dashboard shows which modules are ready.
+
+## Legacy v1 migration
+
+`ConfigurationManager` can read a legacy profile and create equivalent v2 files automatically. Configuration Hub also provides **Migrate/archive legacy config**, which moves the old JSON files to:
+
+```text
+configs/_legacy_v1_backup/
+```
+
+The engines continue receiving their established configuration contracts through compatibility accessors, so migration changes configuration storage—not business behavior.

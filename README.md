@@ -26,7 +26,7 @@ The project was originally developed to solve real-world inventory problems and 
 - 🗂️ Persistent Per-Profile File Path Memory (pre-fills the last files used)
 - 📂 Native File Picker
 - 📊 Automatic Excel Column Detection
-- 🔧 8-Step Guided Configuration Wizard
+- 🔧 Module-oriented Guided Setup with per-workflow Excel auto-detection and readiness dashboard
 - 🧭 Shared SKU/Family Classification with parity and performance diagnostics
 - 🛡️ APB Protocol Validations & PermissionError Safe Savers
 - 📝 Persistent Dual-Channel Logging (`logs/session.log`)
@@ -85,10 +85,10 @@ InventoryToolkit/
 ├── profiles/    
 │   └── demo/    
 │       ├── configs/    
-│       │   ├── cross_check/    
-│       │   ├── general/    
-│       │   ├── stock_processing/    
-│       │   └── yoy_reports/    
+│       │   ├── general/            # catalog.json, families.json, network.json
+│       │   ├── stock_processing/   # settings.json
+│       │   ├── cross_check/        # settings.json
+│       │   └── yoy_reports/        # settings.json
 │       └── last_paths.json    
 ├── tests/    
 │   ├── test_config.py    
@@ -165,7 +165,7 @@ CustomTkinter is optional and is not installed by `requirements.txt`; the standa
 
 Inventory Toolkit separates business rules from the processing engine.
 
-Each company can have its own independent profile located inside `profiles/<profile_name>/configs/` with isolated subfolders for general, cross-check, stock processing, and YoY report settings.
+Each company can have its own independent profile under `profiles/<profile_name>/configs/`. Configuration v2 is module-oriented: shared catalog/network rules live under `general/`, while Stock Processing, Cross Check, and YoY each own a cohesive `settings.json`. The Configuration Hub and Guided Setup are the recommended editing surfaces.
 
 Documentation:
 

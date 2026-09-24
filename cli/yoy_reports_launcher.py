@@ -24,7 +24,7 @@ def launch_yoy_reports(active_profile: str) -> None:
 
     if not yoy_config or "data_source" not in yoy_config:
         log.error(f"No valid report configuration found for profile '{profile}'.")
-        print("  ❌ Check the file yoy_reports/reports.json in your profile.")
+        print("  ❌ Check YoY Reports in the Configuration Hub (yoy_reports/settings.json).")
         input("  Press Enter to return...")
         return
 
@@ -68,7 +68,7 @@ def launch_yoy_reports(active_profile: str) -> None:
         if missing:
             log.error(f"APB — Missing columns: {missing}")
             print(f"\n  ❌ APB Error: required columns are missing: {missing}")
-            print("  Check that you selected the correct file, or that reports.json is configured correctly.")
+            print("  Check that you selected the correct file, or verify YoY input columns in Configuration Hub.")
             input("  Press Enter to return...")
             return
     except Exception as e:

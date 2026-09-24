@@ -110,14 +110,14 @@ class ConfigHubWindow(BaseToplevel):
     """
 
     _REGISTRY = {
-        "Product Families":         ("general/familias.json",              "dict_list"),
-        "General Settings":          ("general/settings.json",              "key_value"),
-        "Active Stores & Groups":    ("general/stores.json",               "stores"),
-        "Database Aliases":          ("general/databases.json",             "key_value"),
-        "Stock Cleaning Rules":      ("stock_processing/cleaning.json",     "dict_list"),
-        "Pricing Rules":             ("stock_processing/pricing.json",      "pricing"),
-        "Cross Check Exclusions":    ("cross_check/cross_check_settings.json", "dict_list"),
-        "YoY Report Structure":      ("yoy_reports/reports.json",           "yoy_reports"),
+        "Product Families":         ("general/families.json",              "dict_list"),
+        "General Settings":          ("general/catalog.json",               "key_value"),
+        "Active Stores & Groups":    ("general/network.json",               "stores"),
+        "Database Aliases":          ("general/network.json",               "key_value"),
+        "Stock Cleaning Rules":      ("stock_processing/settings.json",     "dict_list"),
+        "Pricing Rules":             ("stock_processing/settings.json",     "pricing"),
+        "Cross Check Exclusions":    ("cross_check/settings.json",          "dict_list"),
+        "YoY Report Structure":      ("yoy_reports/settings.json",          "yoy_reports"),
     }
 
     def __init__(self, parent, active_profile: str):
@@ -176,7 +176,7 @@ class ConfigHubWindow(BaseToplevel):
     def _reload(self):
         for w in self._workspace.winfo_children():
             w.destroy()
-        self.current_data = load_json(self._filepath()) or {}
+        self.current_data = self._load_editor_data()
         _, kind = self._REGISTRY[self._active_key]
         dispatch = {
             "dict_list":  self._render_dict_list,
@@ -187,8 +187,96 @@ class ConfigHubWindow(BaseToplevel):
         }
         dispatch.get(kind, self._render_key_value)()
 
+    def _load_editor_data(self):
+        """Adapt the v2 module-oriented JSON to the existing experimental editors."""
+        raw = load_json(self._filepath()) or {}
+        key = self._active_key
+        if key == "Product Families":
+            return raw.get("rules", {})
+        if key == "General Settings":
+            cols = raw.get("columns", {})
+            return {"columna_articulo": cols.get("article", "Artículo"),
+                    "columna_familia": cols.get("family", "Familias"),
+                    "familia_por_defecto": raw.get("default_family", "Otro")}
+        if key == "Active Stores & Groups":
+            return {"locales_activos": raw.get("active", []),
+                    "grupos_regionales": raw.get("regional_groups", {})}
+        if key == "Database Aliases":
+            return raw.get("stock_database_columns", {})
+        if key == "Stock Cleaning Rules":
+            c = raw.get("cleaning", {})
+            return {"columnas_texto_a_limpiar": c.get("text_columns", []),
+                    "columnas_a_eliminar": c.get("drop_columns", []),
+                    "columnas_a_formatear": c.get("numeric_columns", [])}
+        if key == "Pricing Rules":
+            p = raw.get("pricing", {}); cols = p.get("columns", {})
+            return {"columnas_esperadas": [cols.get("article", "Artículo"),
+                                             cols.get("database", "Origen - Base de datos"),
+                                             cols.get("price", "Precio")],
+                    "mapeo_nombres": p.get("aliases", {})}
+        if key == "Cross Check Exclusions":
+            f = raw.get("filters", {}); pl = raw.get("price_lists", {})
+            def old(side):
+                m = pl.get(side, {})
+                return {"articulo": m.get("article_column", "Artículo"),
+                        "precio": m.get("price_column", "Precio")}
+            return {"articulos_ignorados": f.get("ignored_articles", []),
+                    "palabras_ignoradas": f.get("ignored_terms", []),
+                    "columnas_costo": old("cost"), "columnas_venta": old("sales")}
+        if key == "YoY Report Structure":
+            stock_path = os.path.join(PROFILES_DIR, self.profile, "configs", "stock_processing", "settings.json")
+            stock = load_json(stock_path) or {}; so = stock.get("output", {})
+            inp = raw.get("input", {}); out = raw.get("output", {})
+            return {"data_source": {k: inp.get(k, "") for k in
+                    ("date_column","quantity_column","grouping_column","item_column","branch_column")},
+                    "output_path": out.get("default_path", "analysis_report.xlsx"),
+                    "metricas_salida": out.get("metrics", []),
+                    "comparacion_anual": out.get("annual_comparison", True),
+                    "incluir_talles": out.get("include_sizes", False),
+                    "columna_talle": inp.get("size_column", "Talle"),
+                    "report_structures": raw.get("groups", {}),
+                    "hoja_datos_crudos": so.get("raw_data_sheet", "Datos"),
+                    "orden_columnas_base": so.get("base_columns", []),
+                    "resumenes": so.get("summaries", [])}
+        return raw
+
     def _save(self, data=None):
-        save_json(self._filepath(), data if data is not None else self.current_data)
+        data = data if data is not None else self.current_data
+        raw = load_json(self._filepath()) or {"version": 2}
+        key = self._active_key
+        if key == "Product Families": raw["rules"] = data
+        elif key == "General Settings":
+            raw["columns"] = {"article": data.get("columna_articulo", "Artículo"),
+                              "family": data.get("columna_familia", "Familias")}
+            raw["default_family"] = data.get("familia_por_defecto", "Otro")
+        elif key == "Active Stores & Groups":
+            raw["active"] = data.get("locales_activos", []); raw["regional_groups"] = data.get("grupos_regionales", {})
+        elif key == "Database Aliases": raw["stock_database_columns"] = data
+        elif key == "Stock Cleaning Rules":
+            raw["cleaning"] = {"text_columns": data.get("columnas_texto_a_limpiar", []),
+                               "drop_columns": data.get("columnas_a_eliminar", []),
+                               "numeric_columns": data.get("columnas_a_formatear", [])}
+        elif key == "Pricing Rules":
+            cols = data.get("columnas_esperadas", [])
+            raw["pricing"] = {"columns": {"article": cols[0] if len(cols)>0 else "Artículo",
+                                             "database": cols[1] if len(cols)>1 else "Origen - Base de datos",
+                                             "price": cols[2] if len(cols)>2 else "Precio"},
+                              "aliases": data.get("mapeo_nombres", {})}
+        elif key == "Cross Check Exclusions":
+            def new(m): return {"article_column": m.get("articulo", "Artículo"), "price_column": m.get("precio", "Precio")}
+            raw["filters"] = {"ignored_articles": data.get("articulos_ignorados", []), "ignored_terms": data.get("palabras_ignoradas", [])}
+            raw["price_lists"] = {"cost": new(data.get("columnas_costo", {})), "sales": new(data.get("columnas_venta", {}))}
+        elif key == "YoY Report Structure":
+            ds=data.get("data_source",{}); raw["input"]={**raw.get("input",{}), **ds, "size_column": data.get("columna_talle","Talle")}
+            raw["output"]={"default_path": data.get("output_path","analysis_report.xlsx"), "metrics": data.get("metricas_salida",[]),
+                           "annual_comparison": data.get("comparacion_anual",True), "include_sizes": data.get("incluir_talles",False)}
+            raw["groups"] = data.get("report_structures", {})
+            stock_path=os.path.join(PROFILES_DIR,self.profile,"configs","stock_processing","settings.json")
+            stock=load_json(stock_path) or {"version":2}; so=stock.setdefault("output",{})
+            so["raw_data_sheet"]=data.get("hoja_datos_crudos","Datos"); so["base_columns"]=data.get("orden_columnas_base",[]); so["summaries"]=data.get("resumenes",[])
+            save_json(stock_path,stock)
+        else: raw=data
+        save_json(self._filepath(), raw)
 
     # ── A. Dict-list editor ───────────────────────────────────────────────────
 
@@ -1243,7 +1331,7 @@ class InventoryToolkitGUI(BaseWindow):
         if not cfg or "data_source" not in cfg:
             messagebox.showerror("Config Error",
                                  f"YoY config missing for profile '{self.active_profile.get()}'.\n"
-                                 "Run the Setup Wizard or edit reports.json.", parent=self)
+                                 "Run the Setup Wizard or edit YoY Reports in Config Hub.", parent=self)
             return
 
         ds      = cfg["data_source"]
