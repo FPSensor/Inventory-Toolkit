@@ -65,6 +65,7 @@ InventoryToolkit/
 │   ├── engine.md
 │   ├── index.md
 │   ├── profiles.md
+│   ├── legacy_compatibility.md
 │   └── testing_and_examples.md
 ├── engine/
 │   ├── inventory_cross_check/
@@ -101,6 +102,7 @@ InventoryToolkit/
 │   └── test_stock_processing.py
 ├── tools/
 │   ├── IntegrityCheck.py
+│   ├── RetireLegacyCompatibility.py
 │   └── StressTests.py
 ├── CHANGELOG.md
 ├── LICENSE

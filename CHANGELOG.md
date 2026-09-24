@@ -27,6 +27,7 @@
 
 ### Testing
 
+- Added `tools/RetireLegacyCompatibility.py`, a guarded read-only audit / optional removal-and-commit workflow for eventually deleting pre-v3 compatibility.
 - Added regression coverage ensuring compatibility diagnostics remain silent normally, warn only in debug mode, and point legacy profiles toward migration.
 - Added explicit regression coverage for variable-length scanned article normalization, longest-prefix matching, exact matches, and `REVISAR |` fallback behavior.
 - Added Safe Saver tests for non-interactive locked-file handling and preserved CLI copy behavior.

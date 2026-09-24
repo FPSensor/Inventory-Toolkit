@@ -1,8 +1,4 @@
-"""Current Inventory Toolkit profile configuration schema and helpers.
-
-Historical profile decoding lives in ``core.legacy_profile_migration`` so the
-current configuration model stays free of pre-v3 serialized vocabulary.
-"""
+"""Current Inventory Toolkit profile configuration schema and helpers."""
 
 from __future__ import annotations
 

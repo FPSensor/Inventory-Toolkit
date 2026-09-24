@@ -48,4 +48,5 @@ configs/_legacy_v1_backup/
 ```
 
 Legacy v1 and v2 keys are decoded only at the migration boundary. Built-in engines use the native English configuration API; migration changes storage and implementation vocabulary, not business behavior.
+See `legacy_compatibility.md` for debug warnings, retirement readiness, and the removal tool.
 <!-- END LEGACY_COMPATIBILITY -->

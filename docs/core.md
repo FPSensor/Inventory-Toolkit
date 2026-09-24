@@ -12,6 +12,7 @@ Centralizes external workbook vocabulary such as `Artículo`, `Familias`, `Costo
 <!-- BEGIN LEGACY_COMPATIBILITY -->
 ## 3. `legacy_config.py` and `profile_config.py`
 Isolate historical v1/v2 serialized keys and migrate them into the current v3 module-oriented schema. Built-in modules do not consume the legacy Spanish configuration API.
+Debug diagnostics and the guarded retirement process are documented in `legacy_compatibility.md`.
 <!-- END LEGACY_COMPATIBILITY -->
 
 ## 4. `logger.py`
