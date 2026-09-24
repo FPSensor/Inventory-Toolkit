@@ -1,0 +1,37 @@
+{
+    "fixtures": {
+        "examples/demo/cross_check_physical_count.xlsx": "794fdb075051a56cc7060ba8ff27dc162ad17ee22d8c879e741dbb7161d7bbc7",
+        "examples/demo/cross_check_system_stock.xls": "2a0fbd3fd38192182aac0b70bed7f9218ddb5965aa8a3d816024037319bb5e62",
+        "examples/demo/shared_cost_list.xlsx": "641744486d3223a09c48033f00570a7885a6bfd15dc2b206298923f5dd631d6e",
+        "examples/demo/shared_sales_price_list.xlsx": "0a2344f998c09d027000698bc9de3bbe09bc52bb1dc4ff00dee0ae84b9b2f0d4",
+        "examples/demo/stock_processing_raw_stock.xlsx": "960c5d5d0e337fbf50a6c1235b1d836c279f8b33c8b127038fc684fbe1efb3d8",
+        "examples/demo/yoy_sales_history.xlsx": "1cc7927a00b79c39ceaf0a090282c4e9c8f3d88b6e7ba89fd765dbca95b49d20",
+        "profiles/demo/configs/cross_check/settings.json": "8a0f2bc26d6ba8f0396cf3aa206228f79f635654a699ecdbd300b0b0075f227c",
+        "profiles/demo/configs/general/catalog.json": "d3014d11d19a5e40796d5da256d12eca9affa5b65cded67e7010fd5b966c19ed",
+        "profiles/demo/configs/general/families.json": "a6f74b69dc18d89877b6e6a23134fe148bcf0bf734390bd123785cbf2b7548f0",
+        "profiles/demo/configs/general/network.json": "08a76893fdefbe56ffab1c4b8e8009a94d0e35f914abc6b732f5494a7f22cd94",
+        "profiles/demo/configs/stock_processing/settings.json": "9ded9c313ffeecefb420672595031357173cde02a76c0bcf1728dea8f46dd1b0",
+        "profiles/demo/configs/yoy_reports/settings.json": "b33c1df6e6c0552f6729d3e5da11794f330e8ac51bc80dbd97ed2829c767ee44",
+        "profiles/demo/profile.json": "09df8120a4b5a794a1671977033c3a4060d0ddcdda4921d0399c1fff906aaabd"
+    },
+    "profile": "demo",
+    "references": {
+        "cross": {
+            "file": "workbooks/cross_check.xlsx",
+            "semantic_sha256": "ebdaae4e5ebba9799d5c0dc6c41a1562d044d093aef2a15c32c298102b67d667",
+            "sha256": "bc9b8122956639b2efe58c90129107a5286ee72348915cb4d2298a371bf76736"
+        },
+        "stock": {
+            "file": "workbooks/stock_processing.xlsx",
+            "semantic_sha256": "6282f08e961bc1a0da2fc983610de549c65756c1e981e8ebf0b8d6f13645b696",
+            "sha256": "5b64b72197657b275e3f93c2cf929063fe8b60c3030e133bc9abd6487eee24d0"
+        },
+        "yoy": {
+            "file": "workbooks/yoy_reports.xlsx",
+            "semantic_sha256": "51ce0a5e62846925d8e3a9f86071e3a8f5e4760ef620709bf6a9cc29696d7f9f",
+            "sha256": "6ebab567ae5028653c0855eb5f50f302c5dfd4c2d23e6fcbc49ec0170bf0560a"
+        }
+    },
+    "schema_version": 1,
+    "source_revision": "99d707363a4f067b4a38e99cd89c908cf0119a3e"
+}

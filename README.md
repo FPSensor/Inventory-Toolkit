@@ -100,12 +100,15 @@ InventoryToolkit/
 │       │   └── yoy_reports/        # settings.json
 │       └── last_paths.json
 ├── tests/
+│   ├── release_reference/       # approved demo golden-master workbooks + manifest
 │   ├── test_config.py
 │   ├── test_inventory_cross_check.py
+│   ├── test_release_reference.py
 │   └── test_stock_processing.py
 ├── tools/
 │   ├── IntegrityCheck.py
 │   ├── ReleaseCheck.py
+│   ├── release_reference.py
 │   ├── RetireLegacyCompatibility.py
 │   └── StressTests.py
 ├── CHANGELOG.md
@@ -209,6 +212,14 @@ Run the automated test suite using `pytest`:
 ```bash
 pytest tests/
 ```
+
+Run the complete pre-release certification, including all three demo workflows and semantic comparison against the approved golden-master workbooks:
+
+```bash
+python tools/ReleaseCheck.py --release
+```
+
+Temporary output files are removed automatically. When an intentional business/demo change requires new expected output, regenerate the references with `python tools/ReleaseCheck.py --update-reference` and review the resulting Git diff before committing it. See [docs/testing_and_examples.md](docs/testing_and_examples.md) for the full workflow.
 
 # License
 MIT License

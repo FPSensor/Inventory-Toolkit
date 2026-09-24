@@ -7,6 +7,7 @@ from cli.cross_check_launcher import launch_cross_check
 from cli.stock_processing_launcher import launch_stock_processing
 from cli.yoy_reports_launcher import launch_yoy_reports
 from cli.wizard import PANDAS_AVAILABLE
+from cli.debug_menu import developer_tools_menu
 
 try:
     from engine import stock_processing
@@ -51,7 +52,7 @@ def _centered(text: str) -> str:
     return _row(text.center(_BOX_WIDTH))
 
 
-def _draw_menu(current_profile: str) -> None:
+def _draw_menu(current_profile: str, debug_level: int = 1) -> None:
     clear_screen()
     print(_LOGO)
     print(_rule("╔", "╗"))
@@ -67,6 +68,8 @@ def _draw_menu(current_profile: str) -> None:
     print(_rule())
     print(_row("    K  ›  Configuration"))
     print(_row("    P  ›  Change Profile"))
+    if debug_level == 3:
+        print(_row("    D  ›  Developer / Release Tools"))
     print(_row("    E  ›  Exit"))
     print(_rule("╚", "╝"))
     print()
@@ -111,7 +114,7 @@ def main():
 
     try:
         while True:
-            _draw_menu(current_profile)
+            _draw_menu(current_profile, args.debug_level)
             option = input("  Choose an option: ").strip().upper()
 
             if option == "C":
@@ -124,6 +127,8 @@ def main():
                 configuration_menu(current_profile)
             elif option == "P":
                 current_profile = select_profile(current_profile)
+            elif option == "D" and args.debug_level == 3:
+                developer_tools_menu()
             elif option == "42":
                 _show_easter_egg()
             elif option == "E":

@@ -30,6 +30,9 @@
 
 ### Testing
 
+- Added golden-master pre-release certification for all three demo workflows, including semantic XLSX comparison, fixture/config fingerprints, cell-level mismatch diagnostics, and automatic temporary-output cleanup.
+- Added guarded golden-master regeneration for intentional business/demo changes; all candidates are generated and repository-validated before rollback-protected reference installation.
+- Added a debug-level 3 Developer / Release Tools menu exposing quick checks, demo smoke tests, strict release certification, and explicit reference updates from inside the CLI.
 - Added a reproducible `tools/ReleaseCheck.py` gate for compilation, pytest, logical integrity, profile validation, compatibility readiness, and optional end-to-end demo workflows.
 - Added pytest path configuration so both `pytest` and `python -m pytest` collect the repository consistently.
 - Added `tools/RetireLegacyCompatibility.py`, a guarded read-only audit / optional removal-and-commit workflow for eventually deleting pre-v3 compatibility.
