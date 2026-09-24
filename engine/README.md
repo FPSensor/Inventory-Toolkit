@@ -1,17 +1,18 @@
-# Data Processing Engine
+# `engine/` — Business Processing
 
-This directory contains Inventory Toolkit's analytical modules. Responsibilities are split when that boundary improves testing or readability; files are not fragmented merely to enforce a fixed pattern.
+Inventory Toolkit's analytical/workbook-generation layer.
 
-## Structure
+## Modules
 
-- **`inventory_cross_check/`** — physical vs. system stock reconciliation.
-- **`stock_processing/`** — inventory valuation and dynamic summaries.
-- **`yoy_reports/`** — Year-over-Year sales comparisons. Worksheet construction is isolated in `sheet_renderer.py` because formula/layout logic is substantial.
-- **`shared/`** — common business rules such as family classification.
+- `inventory_cross_check/` — physical vs system reconciliation, variable-length article normalization, valuation, discrepancy workbook.
+- `stock_processing/` — cleanup, store/region consolidation, family classification, pricing, valuation, summaries.
+- `yoy_reports/` — current vs previous-year reporting, monthly segmentation, formulas, optional size breakdown.
+- `shared/` — cross-workflow business algorithms such as family prefix classification.
 
-## Typical responsibilities
+## Design rule
 
-- **`data_processor.py`** — dataframe transformations and calculations.
-- **`excel_renderer.py`** — workbook orchestration and/or OpenPyXL output concerns.
-- **`sheet_renderer.py`** — used by YoY for per-sheet layout and formula generation.
-- **`generator.py`** — orchestration and module-level workflow.
+Modules are split when a responsibility is independently complex/testable. YoY therefore has more renderer files than Cross Check or Stock Processing; the project does not enforce an arbitrary identical template.
+
+Engines must remain callable without CLI prompts so both CLI and GUI can use the same business logic.
+
+See [`../docs/engine.md`](../docs/engine.md).

@@ -1,30 +1,119 @@
-# ⚙️ Core Infrastructure Reference (`/core`)
+# Core Infrastructure Reference
 
-The `/core` directory contains the foundational bricks that prevent the engine from crashing under hostile production environments.
+`core/` contains services shared by presentation and engine layers. It should remain business-workflow agnostic except for centralized external vocabulary/contracts.
 
-## 1. `configuration_manager.py`
-Responsible for multi-tenant profile isolation. It reads JSON files inside `profiles/<name>/configs/` and caches them in memory during execution to avoid disk I/O bottlenecks.
+## `business_schema.py`
 
+Centralizes external workbook vocabulary used across modules, including labels such as `Artículo`, `Familias`, `Cantidad`, `Costo`, `Venta`, `Talle`, the raw-data sheet name, default family, and `REVISAR` marker.
 
-## 2. `business_schema.py`
-Centralizes external workbook vocabulary such as `Artículo`, `Familias`, `Costo`, and `REVISAR |`. These labels remain Spanish where required by real business files while implementation identifiers stay English.
+The purpose is to keep implementation identifiers English while acknowledging that external workbooks and approved outputs may use Spanish business labels.
+
+## `config_schemas.py`
+
+Pydantic models for configuration schema v3.
+
+The current schema requires version `3`, not merely an arbitrary integer. This matters after legacy migration is eventually removed: obsolete profiles should fail clearly rather than being interpreted as current.
+
+## `configuration_manager.py`
+
+Main typed configuration access layer.
+
+Responsibilities:
+
+- resolve `profiles/<profile>/configs/`;
+- ensure the profile can be consumed through the current schema;
+- load/cache configuration documents by logical path;
+- validate through Pydantic;
+- expose current English accessors such as:
+  - `get_catalog()`;
+  - `get_family_config()` / `get_family_rules()`;
+  - `get_network_config()`;
+  - `get_stock_processing_config()`;
+  - `get_cross_check_config()`;
+  - `get_yoy_reports_config()`.
+
+Old short-name projections are compatibility-only and should not be used by new built-in code.
+
+## `profile_config.py`
+
+Defines:
+
+- `CONFIG_VERSION = 3`;
+- default configuration structure;
+- logical config paths;
+- missing-file initialization;
+- profile readiness summaries used by Setup/Configuration Hub.
+
+Configuration ownership is described in [profiles.md](profiles.md).
 
 <!-- BEGIN LEGACY_COMPATIBILITY -->
-## 3. `legacy_config.py` and `profile_config.py`
-Isolate historical v1/v2 serialized keys and migrate them into the current v3 module-oriented schema. Built-in modules do not consume the legacy Spanish configuration API.
-Debug diagnostics and the guarded retirement process are documented in `legacy_compatibility.md`.
+## `compatibility.py`, `legacy_config.py`, `legacy_profile_migration.py`
+
+Temporary transition boundary for older Inventory Toolkit profiles/callers.
+
+- `compatibility.py` emits deduplicated deprecation diagnostics when debug level 2/3 is enabled.
+- `legacy_profile_migration.py` recognizes/migrates pre-v3 storage.
+- `legacy_config.py` isolates old serialized key projections.
+
+Built-in current modules should not depend on these contracts.
+
+See [legacy_compatibility.md](legacy_compatibility.md) before modifying or removing them.
 <!-- END LEGACY_COMPATIBILITY -->
 
-## 4. `logger.py`
-Manages runtime-reconfigurable dual-channel logging. The CLI accepts the historical hidden `-debug_level`/`--debug-level` startup flag, but the normal developer workflow is now to type the hidden command `debug` in the main menu and select the verbosity without restarting.
+## `logger.py`
 
-* **Level 1 — Operator:** errors only.
-* **Level 2 — Diagnostics:** operational milestones, warnings, timing information, and compatibility notices.
-* **Level 3 — Forensic:** DEBUG-level structured events including profile/config resolution, input workbook dimensions and columns, cleaning/merge decisions, normalization review counts, result sizes, generated sheets, save attempts, developer-tool commands, and exception tracebacks. Raw spreadsheet rows are intentionally not dumped to the log.
-* **Persistent File Handler:** writes the current session to `logs/session.log` using timestamp, process/thread, source module, and line-number metadata. The level-3 Developer Console can display the current log tail directly.
+Runtime-configurable dual-channel logging.
 
-Changing levels at runtime reuses the existing handlers, so enabling forensic mode does not truncate the current session log.
+### Level 1 — Operator
 
-## 5. `system_utils.py` (The Bulletproof Safe Saver)
-Retail workers constantly keep generated Excel reports open while trying to regenerate them. Standard Python throws a violent `PermissionError` and crashes. 
-Our `safe_pandas_to_excel` and `safe_openpyxl_save` intercept this error. CLI callers keep the A.P.B. retry/copy prompt (`_copy1.xlsx`), while non-interactive callers such as the GUI receive an `OutputFileLockedError` instead of blocking on terminal input.
+Errors only.
+
+### Level 2 — Diagnostics
+
+Operational milestones, stage timings, warnings, and compatibility diagnostics.
+
+### Level 3 — Forensic
+
+Detailed structured events, including where available:
+
+- profile/config resolution;
+- input workbook paths, shapes, and columns;
+- configuration/rule counts;
+- cleaning/filter row counts;
+- scanner normalization review counts;
+- merge/valuation/report-generation details;
+- output sheet names/sizes;
+- save attempts;
+- Developer Console commands;
+- exception tracebacks.
+
+The logger intentionally avoids dumping entire raw datasets into `session.log`.
+
+### Persistent log
+
+`logs/session.log` includes timestamp, severity, process ID, thread, logger/source location, and message/context. The session log is initialized once and subsequent processes append, allowing developer subprocesses such as pytest to share the same session without truncating one another.
+
+The level-3 Developer Console can display the current log tail.
+
+## `telemetry.py`
+
+Provides the `execution_timer()` context manager. It emits structured stage start/finish events and logs elapsed wall-clock time.
+
+This is diagnostic timing, not production telemetry collection or remote analytics.
+
+## `data_sanitizer.py`
+
+Shared normalization helpers for values coming from Excel/scanners. Keep sanitization semantics covered by tests because seemingly harmless string/number conversions can affect article matching.
+
+## `system_utils.py`
+
+Cross-platform/system helpers and safe workbook saving.
+
+### Safe savers
+
+`safe_pandas_to_excel()` and `safe_openpyxl_save()` handle output files that are locked/open elsewhere.
+
+- Interactive CLI callers can retry or save a numbered copy.
+- Non-interactive callers receive `OutputFileLockedError` and decide how to present recovery in their own interface.
+
+Infrastructure must not assume a terminal exists merely because the CLI was the first frontend.

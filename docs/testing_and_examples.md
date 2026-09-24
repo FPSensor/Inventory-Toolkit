@@ -1,63 +1,144 @@
-# 🧪 Testing Suite & Demo Datasets
+# Testing, Demo Fixtures, and Golden Masters
 
-## Automated Tests (`/tests`)
-We use `pytest` to guarantee mathematical and structural integrity. 
-* `test_inventory_cross_check.py`: Validates sorting algorithms for prefix priority and difference calculations (handling negative system stocks correctly).
-* `test_stock_processing.py`: Validates margin formulas and fallback zero-handling.
+Inventory Toolkit uses several layers of verification because no single test style can protect a workbook-processing application.
 
-## Demo Dataset (`/examples/demo`)
-Sanitized, structure-preserving mock spreadsheets designed to let users test all three core modules out of the box without real corporate data exposure.
+## 1. Pytest — `tests/`
 
-## Reproducible release gate
+Run:
 
-Run the lightweight verification used before packaging changes:
+```bash
+pytest -q
+```
+
+Coverage includes configuration, core utilities, logger/debug tooling, business edge cases, compatibility behavior while present, and golden-master comparator behavior.
+
+Important examples include:
+
+- exact/longest-prefix article normalization;
+- `REVISAR |` fallback;
+- difference arithmetic including negative stock cases;
+- stock margin/zero handling;
+- config schema/migration behavior;
+- logger/runtime-debug behavior;
+- release-reference semantic comparison.
+
+Tests should target stable behavior rather than implementation trivia where possible.
+
+## 2. IntegrityCheck — `tools/IntegrityCheck.py`
+
+A focused logical diagnostic suite covering core invariants and representative calculations.
+
+Run:
+
+```bash
+python tools/IntegrityCheck.py
+```
+
+It complements pytest; it does not replace it and should not claim universal correctness beyond the checks it actually runs.
+
+## 3. StressTests — `tools/StressTests.py`
+
+Diagnostic/performance checks for classification and other stress-sensitive operations.
+
+Performance output is evidence, not a guarantee: a measured speedup below `1.0x` means the candidate was slower and should be treated accordingly.
+
+## 4. Demo fixture — `examples/demo/`
+
+Sanitized, structure-preserving workbooks cover all three workflows:
+
+| File | Used by |
+| --- | --- |
+| `cross_check_system_stock.xls` | Cross Check system master |
+| `cross_check_physical_count.xlsx` | Cross Check scanner count |
+| `shared_cost_list.xlsx` | Cross Check + Stock Processing |
+| `shared_sales_price_list.xlsx` | Cross Check + Stock Processing |
+| `stock_processing_raw_stock.xlsx` | Stock Processing |
+| `yoy_sales_history.xlsx` | YoY Reports |
+
+The demo profile under `profiles/demo/` supplies the corresponding schema-v3 rules.
+
+## 5. Quick repository gate
 
 ```bash
 python tools/ReleaseCheck.py
 ```
 
-It compiles the source tree, runs pytest, executes `IntegrityCheck.py`, audits legacy-compatibility retirement readiness while that layer still exists, and validates every checked-in profile through the typed configuration API.
+Runs the lightweight pre-release repository checks, including compilation/tests/integrity/profile validation and compatibility audit while relevant.
 
-For an end-to-end demo smoke test of Cross Check, Stock Processing, and YoY Reports:
+Use during normal development.
+
+## 6. Demo workflow smoke test
 
 ```bash
 python tools/ReleaseCheck.py --demo
 ```
 
-The demo mode writes only to a temporary directory. The legacy `.xls` Cross Check fixture requires the `xlrd` dependency from `requirements.txt`; `--cross-system PATH` can point to an equivalent `.xlsx` fixture during development.
+Runs Cross Check, Stock Processing, and YoY against the demo fixture. It verifies that each workflow completes and produces plausible expected structure.
 
-## Golden-master pre-release certification
+Generated outputs live in temporary storage and are deleted after the run.
 
-The strict release gate executes the complete repository checks plus all three demo workflows and compares their generated workbooks against approved references in `tests/release_reference/`:
+## 7. Strict golden-master certification
 
 ```bash
 python tools/ReleaseCheck.py --release
 ```
 
-The comparison is semantic rather than a raw XLSX-file hash. It covers workbook/sheet structure, values and formulas, styles, merges, filters, frozen panes, dimensions, and other meaningful worksheet XML while ignoring ZIP-container timestamps. On a mismatch, the fast semantic digest falls back to human-readable workbook diagnostics including worksheet/cell coordinates and expected/actual values.
+This is the preferred final pre-release test.
 
-The reference manifest fingerprints the complete demo fixture: all demo inputs, `profile.json`, and every JSON configuration file in the demo profile. If those inputs change, certification stops and explains that the golden masters are stale instead of silently blessing a new result. Generated candidate files live in a temporary directory and are removed automatically.
+It:
 
-### Deliberately updating approved references
+1. fingerprints demo/profile inputs;
+2. rejects stale reference data before certifying output;
+3. executes all three workflows in isolated subprocesses;
+4. compares generated workbooks with approved references under `tests/release_reference/`;
+5. runs the repository gate;
+6. removes temporary generated workbooks.
 
-When a business-rule change, demo dataset change, new database/store mapping, or approved output-layout change intentionally changes the expected result, regenerate the references only after reviewing that change:
+Workflows can run concurrently. Use `--jobs 1` if a constrained machine needs serial execution.
+
+### Why comparison is semantic
+
+`.xlsx` is a ZIP container. Byte-for-byte file hashes can change because ZIP timestamps or non-business packaging metadata changed.
+
+The release-reference comparator canonicalizes meaningful workbook XML and checks values/formulas, structure, styles, merges, filters, frozen panes, dimensions, and relevant row/column metadata.
+
+On a digest mismatch it can open the workbooks and report human-readable differences such as sheet/cell coordinates and expected vs actual values.
+
+## 8. Reference manifest
+
+`tests/release_reference/manifest.json` fingerprints:
+
+- all files under the demo input fixture;
+- demo profile metadata;
+- demo configuration JSON.
+
+If a store/database/config/demo input changes, `--release` reports the reference as stale instead of silently accepting old expected output.
+
+## 9. Updating golden masters
+
+Only after an **intentional and reviewed** change:
 
 ```bash
 python tools/ReleaseCheck.py --update-reference
 ```
 
-This is intentionally guarded by an `UPDATE REFERENCES` confirmation. All three candidate workbooks must generate successfully and the repository gate must pass before any committed reference is replaced. The installation is rollback-protected so a partial copy failure cannot leave a mixed reference set. Review the resulting XLSX/manifest Git diff before committing it.
+The command requires an explicit confirmation and generates all three candidates before replacing any approved reference. Installation is rollback-protected.
 
-Updating references merely because `--release` failed defeats the protection provided by golden-master testing.
+Afterward:
 
-### Hidden debug console
+1. inspect the new workbook outputs manually;
+2. inspect `manifest.json` changes;
+3. run `--release` again;
+4. commit the references only if the new behavior is truly intended.
 
-The startup flag is no longer required for normal developer use. From the main menu, type the intentionally undisplayed command:
+Never update golden masters merely because a test failed.
 
-```text
-debug
-```
+## Development override for legacy `.xls`
 
-Then select level 1, 2, or 3. Level 3 exposes the **Developer Console**, which can run pytest directly, quick repository verification, demo smoke workflows, strict golden-master certification, approved-reference regeneration, and a live tail of `logs/session.log`. While legacy compatibility still exists, the same console also exposes its guarded audit/retirement lifecycle.
+The official Cross Check demo uses `.xls` and therefore requires `xlrd`.
 
-The original `-debug_level 3` (and `--debug-level 3`) startup form remains supported for automation.
+During development, `--cross-system PATH` can point release/demo execution at an equivalent system-stock workbook. This override is intentionally forbidden when **updating** approved references so the committed manifest and committed golden masters cannot describe different fixtures.
+
+## Reference directory
+
+See [`../tests/release_reference/README.md`](../tests/release_reference/README.md) for the local golden-master contract.

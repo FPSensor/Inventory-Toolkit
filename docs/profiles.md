@@ -1,52 +1,171 @@
-# 👤 Profiles & Configuration v3 (`/profiles`)
+# Profiles and Configuration Schema v3
 
-Profiles keep business rules outside the engines, so the same Inventory Toolkit build can serve different companies, datasets, or test environments without hard-coded forks.
+Profiles separate deployment/business differences from engine source code.
 
-## Configuration tree
+A profile may represent a company, environment, test fixture, or alternate workflow configuration. New built-in code should consume the current typed configuration API rather than hard-coded values or legacy projections.
 
-Each profile now uses a **module-oriented v3 layout**:
+## Profile tree
 
 ```text
 profiles/<name>/
 ├── profile.json
 ├── configs/
 │   ├── general/
-│   │   ├── catalog.json       # core article/family columns and fallback family
-│   │   ├── families.json      # family → SKU-prefix rules
-│   │   └── network.json       # active stores, regional groups, raw DB columns
+│   │   ├── catalog.json
+│   │   ├── families.json
+│   │   └── network.json
 │   ├── stock_processing/
-│   │   └── settings.json      # cleaning, pricing input, Stock output layout
+│   │   └── settings.json
 │   ├── cross_check/
-│   │   └── settings.json      # exclusions and cost/sales price-list columns
+│   │   └── settings.json
 │   └── yoy_reports/
-│       └── settings.json      # YoY input mapping, output options, report groups
-└── last_paths.json
+│       └── settings.json
+└── last_paths.json               # local runtime convenience state, not required
 ```
 
-The important rule is **ownership**: Stock Processing settings live under Stock Processing; YoY settings live under YoY. The old `yoy_reports/reports.json` mixed Stock output layout and YoY configuration in one file and has been removed from the modular schema.
+Every current configuration document uses:
 
-## Editing configuration
+```json
+{
+    "version": 3
+}
+```
 
-For normal use, prefer **Configuration Hub** or the **Guided Setup**. The JSON files remain intentionally readable and version-control friendly, but users should not need to understand the filesystem layout just to configure a profile.
+plus its domain-specific fields.
 
-The Guided Setup is module-oriented rather than a fixed eight-step sequence. Each workflow can use the Excel sample that actually belongs to it:
+## Ownership model
 
-- Stock Processing can inspect a raw stock file and a separate price-list sample.
-- Cross Check can inspect its own Cost and Sales list samples.
-- YoY can inspect the historical sales file.
-- Catalog and Network can be configured independently.
+### `general/catalog.json`
 
-Progress is saved after each module, and the setup dashboard shows which modules are ready.
+Cross-workflow catalog vocabulary:
+
+```json
+{
+    "version": 3,
+    "columns": {
+        "article": "Artículo",
+        "family": "Familias"
+    },
+    "default_family": "Otro"
+}
+```
+
+### `general/families.json`
+
+Family → article-prefix rules:
+
+```json
+{
+    "version": 3,
+    "rules": {
+        "Example Family": ["001", "01"],
+        "REVISAR": ["REVISAR", "revisar"]
+    }
+}
+```
+
+Overlapping prefixes are valid. Longest-prefix matching is preserved by the shared classifier.
+
+### `general/network.json`
+
+Store/network structure:
+
+```json
+{
+    "version": 3,
+    "active": ["STORE_A", "STORE_B"],
+    "regional_groups": {
+        "REGION": ["STORE_A", "STORE_B"]
+    },
+    "stock_database_columns": {
+        "STORE_A": "DS_STORE_A"
+    }
+}
+```
+
+### `stock_processing/settings.json`
+
+Owns:
+
+- cleaning text/numeric/drop-column rules;
+- price-list column mapping/aliases;
+- raw-data sheet name;
+- base output columns;
+- configured summary sheets/entities/titles.
+
+This configuration belongs to Stock Processing; it must not be hidden in YoY configuration.
+
+### `cross_check/settings.json`
+
+Owns:
+
+- ignored articles;
+- ignored text terms;
+- cost-list article/price columns;
+- sales-list article/price columns.
+
+### `yoy_reports/settings.json`
+
+Owns:
+
+- input date/quantity/family/article/branch/size mapping;
+- default output path;
+- enabled metrics;
+- annual-comparison/size options;
+- report groups.
+
+## `profile.json`
+
+Human-facing profile metadata such as name/description/version. It is separate from processing schema version 3.
+
+## Editing profiles
+
+### Recommended: Configuration Hub
+
+Open `K` in the CLI. The hub is domain-oriented and provides dedicated editors for Catalog/Families, Stores/Network, Stock Processing, Cross Check, and YoY.
+
+### Guided Setup
+
+The setup wizard uses module-specific sample files rather than assuming one spreadsheet contains columns for every workflow.
+
+The readiness dashboard reports whether each domain has enough configuration to proceed.
+
+### Direct JSON editing
+
+Supported for maintainers and deployments that prefer source-controlled configuration. After editing:
+
+```bash
+python tools/ReleaseCheck.py
+```
+
+or validate from the CLI Configuration Hub.
+
+## Creating a profile
+
+The CLI can create/select profiles. The demo profile may also be used as a structural reference, but blindly copying its business values is not recommended.
+
+A new profile's missing current-schema files are initialized from defaults without overwriting existing values.
+
+## Last-path state
+
+`last_paths.json` remembers previously selected files for convenience. It is local runtime state, not business configuration, and should not be treated as part of the schema-v3 contract.
 
 <!-- BEGIN LEGACY_COMPATIBILITY -->
-## Legacy v1 migration
+## Legacy profile migration
 
-`ConfigurationManager` can read a legacy profile and create equivalent current-schema files automatically. Configuration Hub also provides **Migrate/archive legacy config**, which moves the old JSON files to:
+Inventory Toolkit temporarily recognizes pre-v3 storage and old serialized Spanish keys.
+
+Configuration Hub exposes a migration/archive path. Legacy JSON is converted to the current modular schema and archived under:
 
 ```text
 configs/_legacy_v1_backup/
 ```
 
-Legacy v1 and v2 keys are decoded only at the migration boundary. Built-in engines use the native English configuration API; migration changes storage and implementation vocabulary, not business behavior.
-See `legacy_compatibility.md` for debug warnings, retirement readiness, and the removal tool.
+Current built-in engines use native schema-v3 accessors after migration.
+
+Debug level 2/3 reports compatibility usage so maintainers can identify remaining callers/profiles. See [legacy_compatibility.md](legacy_compatibility.md).
 <!-- END LEGACY_COMPATIBILITY -->
+
+## Versioning rule
+
+Schema version is intentionally strict. A future schema change should include an explicit migration strategy or explicit failure; it should not silently treat an older version as current.

@@ -1,15 +1,35 @@
-# Command Line Interface (CLI)
+# `cli/` — Command-Line Interface
 
-The interactive presentation layer of Inventory Toolkit. It bridges the user's inputs with the internal engine.
+Inventory Toolkit's primary presentation layer.
 
-## Components
-*   **`menu.py`**: The main entry point and routing hub.
-*   **Launchers (`cross_check_launcher.py`, etc.)**: Gather files, options, and parameters via interactive prompts before triggering the engine.
-*   **`config_menu.py`**: Interactive JSON editor for modifying profiles without leaving the terminal.
-*   **`wizard.py`**: Auto-detects Excel columns and generates boilerplate configurations for new profiles.
-*   **`utils.py`**: Helper functions for screen clearing, file dialogs (Tkinter), and JSON I/O.
+The CLI gathers user intent and files, manages profiles/configuration, then delegates processing to `engine/`. Business calculations should not be implemented here.
 
+## Files
 
-## Hidden debug console
+- `menu.py` — main menu, active-profile routing, hidden `debug` selector and `42` easter egg.
+- `profiles.py` — profile discovery/selection.
+- `config_menu.py` — domain-oriented Configuration Hub and validation/migration entry points.
+- `wizard.py` — module-oriented Guided Setup and Excel-column autodetection.
+- `debug_menu.py` — level-3 Developer Console.
+- `cross_check_launcher.py` — Cross Check prompts/pre-flight + engine invocation.
+- `stock_processing_launcher.py` — Stock Processing prompts/pre-flight + engine invocation.
+- `yoy_reports_launcher.py` — YoY prompts/pre-flight + engine invocation.
+- `utils.py` — presentation/file-dialog helpers.
 
-Typing `debug` in the main menu opens the runtime verbosity selector without requiring a restart. Level 3 exposes the Developer Console for pytest, repository/release checks, golden-master maintenance, session-log inspection, and (while present) guarded legacy-compatibility retirement. The hidden startup flags remain supported for automation.
+## Debug workflow
+
+From the main menu, type the intentionally hidden command:
+
+```text
+debug
+```
+
+Level 3 exposes `D › Developer / Release Tools`, including pytest, repository gates, demo/golden-master certification, reference maintenance, log tail, and legacy retirement while available.
+
+Startup flags remain supported for automation:
+
+```bash
+python cli.py --debug-level 3
+```
+
+See [`../docs/cli.md`](../docs/cli.md) for the full reference.

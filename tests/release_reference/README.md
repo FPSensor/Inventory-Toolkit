@@ -1,33 +1,57 @@
-# Release reference workbooks
+# Approved Release Reference Workbooks
 
-This directory contains the approved **golden-master outputs** for the `demo`
-profile. They are used by `tools/ReleaseCheck.py --release` to certify that a
-candidate release still produces the expected Cross Check, Stock Processing,
-and YoY workbooks.
+This directory contains the committed golden-master outputs for the `demo` profile.
 
-The reference files are compared semantically, not byte-for-byte. The checker
-verifies worksheet order, dimensions, values/formulas, relevant formatting,
-merged ranges, filters, frozen panes, and row/column presentation metadata.
-Temporary workbooks created during certification are deleted automatically.
+They answer a stronger question than a smoke test:
 
-`manifest.json` fingerprints every `examples/demo` input plus the demo profile
-configuration. If one of those fixtures changes, release certification stops
-and reports the stale reference instead of silently accepting the new data.
+> Does the current candidate still produce the exact workbook behavior that maintainers previously reviewed and approved?
 
-## Updating the reference
+## Contents
 
-Only update the golden masters after intentionally changing business behavior,
-the demo dataset, or the demo profile and manually reviewing the new output.
+- `workbooks/cross_check.xlsx`
+- `workbooks/stock_processing.xlsx`
+- `workbooks/yoy_reports.xlsx`
+- `manifest.json`
+
+## Certification
+
+```bash
+python tools/ReleaseCheck.py --release
+```
+
+The runner:
+
+1. verifies the fixture/profile fingerprint from `manifest.json`;
+2. generates new workflow outputs in temporary storage;
+3. compares them semantically with these references;
+4. runs repository verification;
+5. removes generated temporary outputs.
+
+## Semantic comparison
+
+Reference comparison is not a raw file hash because `.xlsx` is a ZIP container with metadata that can vary independently of workbook behavior.
+
+Meaningful workbook XML is canonicalized/compared, including values/formulas, sheet structure, styles, merges, filters, frozen panes, dimensions, and relevant row/column metadata.
+
+When a fast digest differs, diagnostic comparison reports human-readable workbook differences where possible.
+
+## Updating references
+
+Only after intentionally changing expected business/output behavior or the fixture/profile:
 
 ```bash
 python tools/ReleaseCheck.py --update-reference
 ```
 
-The command requires an explicit confirmation. It generates all three outputs
-in a temporary directory first and updates the committed references only after
-all workflows finish successfully.
+The update is guarded, generates all three candidates before installation, and uses rollback protection.
 
-After updating, review the changed reference workbooks and `manifest.json`
-before committing them. Updating a reference is equivalent to declaring the
-new output correct; it must never be used merely to make a failing release test
-green.
+After updating:
+
+1. review the produced workbooks;
+2. review `manifest.json`;
+3. run `python tools/ReleaseCheck.py --release` again;
+4. commit only if the new output is genuinely approved.
+
+Never update the references merely because certification failed. Doing so would redefine a regression as expected behavior.
+
+See [`../../docs/testing_and_examples.md`](../../docs/testing_and_examples.md) and [`../../docs/release_process.md`](../../docs/release_process.md).

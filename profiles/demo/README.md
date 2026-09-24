@@ -1,72 +1,64 @@
 # Demo Profile
 
-This profile is included with Inventory Toolkit as a complete configuration example.
+The `demo` profile is the checked-in reference configuration for Inventory Toolkit's bundled demo workbooks.
 
-Unlike a simplified template, this profile is based on a real production workflow used during the development of Inventory Toolkit.
+It demonstrates **configuration structure and workflow ownership**. It should not be copied as if its store names, families, or column mappings were universal business defaults.
 
-It serves as a practical reference for creating new profiles.
+## Structure
 
----
-
-# Included Configuration
-
-- Product Families
-- Cleaning Rules
-- Database Mapping
-- Store Definitions
-- Report Configuration
-- General Settings
-- Validation Schema
-
----
-
-# Purpose
-
-The objective of this profile is to demonstrate how Inventory Toolkit is configured without requiring modifications to the processing engine.
-
-Users are encouraged to duplicate this profile when creating configurations for their own businesses.
-
----
-
-# Example Files
-
-The spreadsheets used with this profile are located in:
-
+```text
+demo/
+├── profile.json
+└── configs/
+    ├── general/
+    │   ├── catalog.json
+    │   ├── families.json
+    │   └── network.json
+    ├── stock_processing/
+    │   └── settings.json
+    ├── cross_check/
+    │   └── settings.json
+    └── yoy_reports/
+        └── settings.json
 ```
+
+All current config files use schema version `3`.
+
+## What each file demonstrates
+
+- `general/catalog.json` — article/family column names and default family.
+- `general/families.json` — longest-prefix family rules, including `REVISAR` handling.
+- `general/network.json` — active stores, regional groups, and raw stock database-column mapping.
+- `stock_processing/settings.json` — cleaning, pricing mapping/aliases, output/detail/summary layout.
+- `cross_check/settings.json` — exclusions and cost/sales price-list mappings.
+- `yoy_reports/settings.json` — historical input fields, output options, and reporting groups.
+
+## Matching inputs
+
+Use with files from:
+
+```text
 examples/demo/
 ```
 
----
+## Creating your own profile
 
-# Creating a New Profile
+Recommended approach:
 
-Simply duplicate this directory.
+1. create/select the profile from Inventory Toolkit;
+2. open `K` / Configuration;
+3. run Guided Setup;
+4. configure each module with a representative sample file;
+5. validate the profile.
 
-```
-profiles/
+Maintainers may also duplicate the folder as a structural starting point, but business values must be reviewed rather than inherited blindly.
 
-    demo/
+## Release role
 
-    my_company/
-```
+The demo profile is fingerprinted together with `examples/demo/` by the release-reference manifest. Intentional changes may require reviewing and regenerating golden masters.
 
-Modify the JSON files according to your environment.
+## Privacy
 
-Inventory Toolkit will detect the new profile automatically.
+The reference profile intentionally avoids credentials, personal information, private contact data, and infrastructure secrets. If you create a real profile, review it before committing/sharing it.
 
----
-
-# Privacy
-
-The demo profile intentionally excludes:
-
-- Personal information
-- Company contact information
-- Infrastructure details
-- Credentials
-
-The included configuration represents a real-world workflow while avoiding identifiable business information.
-
----
-
-See the main project README for additional documentation.
+See [`../../docs/profiles.md`](../../docs/profiles.md).
