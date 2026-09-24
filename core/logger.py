@@ -23,6 +23,8 @@ _LOG_NAME = "InventoryToolkit"
 _ROOT = Path(__file__).resolve().parents[1]
 _LOG_DIR = _ROOT / "logs"
 _SESSION_LOG = _LOG_DIR / "session.log"
+DEBUG_LEVEL_ENV = "INVENTORY_TOOLKIT_DEBUG_LEVEL"
+
 _DEBUG_LEVEL = 1
 _INITIALIZED = False
 _LOCK = threading.RLock()
@@ -56,6 +58,16 @@ def _normalize_debug_level(debug_level: int) -> int:
 def get_debug_level() -> int:
     """Return the process-local Inventory Toolkit debug verbosity level."""
     return _DEBUG_LEVEL
+
+
+def debug_level_from_environment(default: int = 1) -> int:
+    """Return the debug level inherited by a newly spawned process.
+
+    Runtime changes made by the CLI are exported through ``DEBUG_LEVEL_ENV`` so
+    developer/release subprocesses can reproduce the parent's diagnostic
+    verbosity without requiring additional command-line flags.
+    """
+    return _normalize_debug_level(os.environ.get(DEBUG_LEVEL_ENV, default))
 
 
 def get_session_log_path() -> Path:
@@ -172,6 +184,7 @@ def set_debug_level(
     """Change logger verbosity for the current process and return the active level."""
     previous = _DEBUG_LEVEL
     setup_logger(debug_level, reset_session_log=reset_session_log)
+    os.environ[DEBUG_LEVEL_ENV] = str(_DEBUG_LEVEL)
     log.info("Debug verbosity changed: level %s -> level %s", previous, _DEBUG_LEVEL)
     if _DEBUG_LEVEL == 3:
         log.debug(

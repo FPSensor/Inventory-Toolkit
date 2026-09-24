@@ -29,6 +29,11 @@ PROFILES_ROOT = ROOT / "profiles"
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from core.logger import (  # noqa: E402
+    debug_level_from_environment,
+    log_debug_event,
+    setup_logger,
+)
 from tools.release_reference import (  # noqa: E402
     REFERENCE_MANIFEST_PATH,
     REFERENCE_WORKBOOK_ROOT,
@@ -47,7 +52,18 @@ WORKFLOWS = ("stock", "cross", "yoy")
 
 def _run(command: list[str]) -> None:
     print("  $", " ".join(command), flush=True)
-    subprocess.run(command, cwd=ROOT, check=True)
+    log_debug_event("release_subprocess_start", command=command, cwd=str(ROOT))
+    try:
+        subprocess.run(command, cwd=ROOT, check=True)
+    except subprocess.CalledProcessError as exc:
+        log_debug_event(
+            "release_subprocess_finish",
+            command=command,
+            returncode=exc.returncode,
+        )
+        raise
+    else:
+        log_debug_event("release_subprocess_finish", command=command, returncode=0)
 
 
 def _quick_gate() -> None:
@@ -516,9 +532,22 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
+    inherited_debug_level = debug_level_from_environment()
+    setup_logger(inherited_debug_level, reset_session_log=False)
+    log_debug_event(
+        "release_check_start",
+        debug_level=inherited_debug_level,
+        argv=sys.argv[1:],
+        repository=str(ROOT),
+    )
     try:
         if args._demo_workflow:
             _run_internal_demo(args._demo_workflow, args.cross_system, args._output)
+            log_debug_event(
+                "release_check_finish",
+                returncode=0,
+                workflow=args._demo_workflow,
+            )
             return 0
 
         print("Inventory Toolkit release verification")
@@ -540,10 +569,12 @@ def main() -> int:
         else:
             _quick_gate()
     except (Exception, subprocess.CalledProcessError) as exc:
+        log_debug_event("release_check_finish", returncode=1, error=str(exc))
         print(f"\nRELEASE CHECK FAILED: {exc}", file=sys.stderr)
         return 1
 
     print("\nRELEASE CHECK PASSED")
+    log_debug_event("release_check_finish", returncode=0)
     return 0
 
 
