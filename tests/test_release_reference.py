@@ -114,6 +114,28 @@ def test_release_reference_ignores_equivalent_ooxml_serializer_syntax(tmp_path):
     assert workbook_semantic_sha256(expected) == workbook_semantic_sha256(alternate)
 
 
+def test_release_reference_ignores_unused_style_registry_noise(tmp_path):
+    from openpyxl import load_workbook
+    from openpyxl.styles import Font, NamedStyle
+
+    expected = tmp_path / "expected.xlsx"
+    actual = tmp_path / "actual.xlsx"
+    _save_sample(expected)
+    _save_sample(actual)
+
+    workbook = load_workbook(actual)
+    unused = NamedStyle(name="runtime_generated_unused_style")
+    unused.font = Font(bold=True, color="00AA00")
+    workbook.add_named_style(unused)
+    workbook.save(actual)
+    workbook.close()
+
+    result = compare_workbooks(expected, actual)
+
+    assert result.matches
+    assert result.differences == ()
+
+
 def test_release_reference_still_detects_real_style_change(tmp_path):
     from openpyxl import load_workbook
     from openpyxl.styles import Font
@@ -131,7 +153,7 @@ def test_release_reference_still_detects_real_style_change(tmp_path):
     result = compare_workbooks(expected, actual)
 
     assert not result.matches
-    assert any("styles.xml" in difference or "sheet1.xml" in difference for difference in result.differences)
+    assert any("effective cell style changed" in difference for difference in result.differences)
 
 def test_json_fixture_fingerprint_is_semantic_and_line_ending_independent(tmp_path):
     lf_json = tmp_path / "lf.json"

@@ -235,6 +235,102 @@ def workbook_semantic_sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+
+
+def _serialisable_signature(value: Any) -> Any:
+    """Return a stable signature for an OpenPyXL serialisable style object."""
+    if value is None:
+        return None
+    to_tree = getattr(value, "to_tree", None)
+    if callable(to_tree):
+        try:
+            return json.loads(_canonical_xml(ET.tostring(to_tree())).decode("utf-8"))
+        except Exception:
+            pass
+    return repr(value)
+
+
+def _cell_style_signature(cell) -> tuple[Any, ...]:
+    """Describe the effective style applied to a cell, not style-table IDs."""
+    return (
+        _serialisable_signature(cell.font),
+        _serialisable_signature(cell.fill),
+        _serialisable_signature(cell.border),
+        _serialisable_signature(cell.alignment),
+        _serialisable_signature(cell.protection),
+        cell.number_format,
+        bool(cell.quotePrefix),
+        bool(cell.pivotButton),
+    )
+
+
+def _dimension_signature(dimension) -> tuple[Any, ...]:
+    return (
+        getattr(dimension, "hidden", False),
+        getattr(dimension, "outlineLevel", 0),
+        getattr(dimension, "collapsed", False),
+        getattr(dimension, "width", None),
+        getattr(dimension, "height", None),
+        getattr(dimension, "bestFit", False),
+        getattr(dimension, "style", 0),
+    )
+
+
+def _workbook_model_signature(path: Path) -> tuple[Any, ...]:
+    """Compare user-visible workbook semantics through OpenPyXL's object model.
+
+    Raw OOXML can legitimately differ across Pandas/OpenPyXL versions because
+    style registries, relationship IDs, and workbook metadata may be serialized
+    differently. This signature intentionally compares styles *as applied* to
+    cells and worksheet presentation instead of internal style-table identity.
+    """
+    from openpyxl import load_workbook
+
+    workbook = load_workbook(path, data_only=False, read_only=False)
+    try:
+        sheets = []
+        for worksheet in workbook.worksheets:
+            cells = []
+            for row in worksheet.iter_rows(
+                min_row=1,
+                max_row=worksheet.max_row,
+                min_col=1,
+                max_col=worksheet.max_column,
+            ):
+                for cell in row:
+                    cells.append((
+                        cell.coordinate,
+                        cell.value,
+                        cell.data_type,
+                        _cell_style_signature(cell),
+                    ))
+
+            row_dimensions = tuple(
+                (index, _dimension_signature(dimension))
+                for index, dimension in sorted(worksheet.row_dimensions.items())
+                if any(_dimension_signature(dimension))
+            )
+            column_dimensions = tuple(
+                (index, _dimension_signature(dimension))
+                for index, dimension in sorted(worksheet.column_dimensions.items())
+                if any(_dimension_signature(dimension))
+            )
+            sheets.append((
+                worksheet.title,
+                worksheet.max_row,
+                worksheet.max_column,
+                str(worksheet.freeze_panes or ""),
+                worksheet.auto_filter.ref or "",
+                tuple(sorted(str(item) for item in worksheet.merged_cells.ranges)),
+                row_dimensions,
+                column_dimensions,
+                tuple(cells),
+            ))
+        return tuple(sheets)
+    finally:
+        workbook.close()
+
+
 def _append_difference(
     differences: list[str],
     message: str,
@@ -352,6 +448,21 @@ def _diagnose_presentation_differences(
                     )
                     if truncated:
                         return True
+
+            max_row = max(expected_sheet.max_row, actual_sheet.max_row)
+            max_column = max(expected_sheet.max_column, actual_sheet.max_column)
+            for row in range(1, max_row + 1):
+                for column in range(1, max_column + 1):
+                    expected_cell = expected_sheet.cell(row=row, column=column)
+                    actual_cell = actual_sheet.cell(row=row, column=column)
+                    if _cell_style_signature(expected_cell) != _cell_style_signature(actual_cell):
+                        truncated = _append_difference(
+                            differences,
+                            f"{sheet_name}!{expected_cell.coordinate}: effective cell style changed",
+                            max_differences=max_differences,
+                        )
+                        if truncated:
+                            return True
     finally:
         expected.close()
         actual.close()
@@ -369,6 +480,13 @@ def compare_workbooks(
     expected_parts = _semantic_parts(expected_path)
     actual_parts = _semantic_parts(actual_path)
     if expected_parts == actual_parts:
+        return WorkbookComparison(True, ())
+
+    # XML internals can differ while the effective workbook remains identical
+    # (for example unused/reordered style-table entries created by different
+    # Pandas/OpenPyXL versions). Compare the loaded workbook model before
+    # treating an OOXML-part mismatch as a release regression.
+    if _workbook_model_signature(expected_path) == _workbook_model_signature(actual_path):
         return WorkbookComparison(True, ())
 
     differences: list[str] = []
