@@ -28,6 +28,8 @@
 
 ### Testing
 
+- Added a reproducible `tools/ReleaseCheck.py` gate for compilation, pytest, logical integrity, profile validation, compatibility readiness, and optional end-to-end demo workflows.
+- Added pytest path configuration so both `pytest` and `python -m pytest` collect the repository consistently.
 - Added `tools/RetireLegacyCompatibility.py`, a guarded read-only audit / optional removal-and-commit workflow for eventually deleting pre-v3 compatibility.
 - Added regression coverage ensuring compatibility diagnostics remain silent normally, warn only in debug mode, and point legacy profiles toward migration.
 - Added explicit regression coverage for variable-length scanned article normalization, longest-prefix matching, exact matches, and `REVISAR |` fallback behavior.

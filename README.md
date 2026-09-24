@@ -105,6 +105,7 @@ InventoryToolkit/
 │   └── test_stock_processing.py
 ├── tools/
 │   ├── IntegrityCheck.py
+│   ├── ReleaseCheck.py
 │   ├── RetireLegacyCompatibility.py
 │   └── StressTests.py
 ├── CHANGELOG.md
