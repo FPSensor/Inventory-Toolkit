@@ -22,6 +22,7 @@ Config Hub window:
 import os
 import sys
 import json
+import queue
 import threading
 import time
 from argparse import Namespace
@@ -1102,6 +1103,7 @@ class InventoryToolkitGUI(BaseWindow):
             cross_check_profile=self.active_profile.get(),
             cross_check_consolidate=self.cc_consol.get(),
             cross_check_partial=self.cc_partial.get(),
+            non_interactive=True,
         )
         self._run_async(lambda: run_cross_check(args), "Cross Check completed!")
 
@@ -1147,6 +1149,7 @@ class InventoryToolkitGUI(BaseWindow):
             shared_sales=self.sp_sales.get(),
             stock_processing_out=out,
             stock_processing_profile=self.active_profile.get(),
+            non_interactive=True,
         )
         self._run_async(lambda: run_stock_processing(args), "Stock Processing completed!")
 
@@ -1249,11 +1252,17 @@ class InventoryToolkitGUI(BaseWindow):
         if not out.endswith((".xlsx", ".xls")):
             out += ".xlsx"
 
+        # Capture every Tk variable on the UI thread before starting the worker.
+        segmented = self.yoy_seg.get()
+        has_families = self.yoy_has_fam.get()
+        profile = self.active_profile.get()
+        include_sizes = self.yoy_sizes.get()
+
         def task():
             return generate_sales_report(
                 f_path, out, s_dt, e_dt, cfg, grp_col,
-                self.yoy_seg.get(), self.yoy_has_fam.get(),
-                self.active_profile.get(), self.yoy_sizes.get()
+                segmented, has_families, profile, include_sizes,
+                non_interactive=True,
             )
         self._run_async(task, "YoY Sales Report generated!")
 
@@ -1276,14 +1285,20 @@ class InventoryToolkitGUI(BaseWindow):
             self._progress = None
 
     def _set_status(self, text: str):
-        """Update status bar text (thread-safe)."""
-        try:
-            self._status.configure(text=text)
-        except Exception:
-            pass
+        """Update the status bar from the Tk main thread."""
+        self._status.configure(text=text)
+
+    def _finish_progress(self, success: bool):
+        if self._progress and USE_CTK:
+            self._progress.stop()
+            self._progress.configure(mode="determinate")
+            self._progress.set(1 if success else 0)
 
     def _run_async(self, func, success_msg: str):
+        """Run engine work off-thread while keeping every Tk call on the UI thread."""
         t_start = time.time()
+        result_queue = queue.Queue(maxsize=1)
+
         self._set_status("⏳ Running task in background... Please wait.")
         if self._progress and USE_CTK:
             self._progress.configure(mode="indeterminate")
@@ -1292,26 +1307,40 @@ class InventoryToolkitGUI(BaseWindow):
         def worker():
             try:
                 out_path = func()
-                elapsed = time.time() - t_start
-                self._set_status(f"✅ Done in {elapsed:.1f}s  |  {out_path or 'Saved'}")
-                if self._progress and USE_CTK:
-                    self._progress.stop()
-                    self._progress.configure(mode="determinate")
-                    self._progress.set(1)
-                messagebox.showinfo(
-                    "Done",
-                    f"{success_msg}\n\nTime: {elapsed:.1f}s\nOutput: {out_path or 'Specified destination'}",
-                    parent=self)
+                if not out_path:
+                    raise RuntimeError(
+                        "The operation finished without producing an output file. "
+                        "Check logs/session.log for the validation error."
+                    )
+                result_queue.put(("success", out_path, time.time() - t_start))
             except Exception as exc:
                 log.error(f"Async error: {exc}")
+                result_queue.put(("error", exc, time.time() - t_start))
+
+        def poll_result():
+            try:
+                kind, payload, elapsed = result_queue.get_nowait()
+            except queue.Empty:
+                self.after(100, poll_result)
+                return
+
+            if kind == "success":
+                out_path = payload
+                self._set_status(f"✅ Done in {elapsed:.1f}s  |  {out_path}")
+                self._finish_progress(True)
+                messagebox.showinfo(
+                    "Done",
+                    f"{success_msg}\n\nTime: {elapsed:.1f}s\nOutput: {out_path}",
+                    parent=self,
+                )
+            else:
+                exc = payload
                 self._set_status(f"❌ Error: {exc}")
-                if self._progress and USE_CTK:
-                    self._progress.stop()
-                    self._progress.configure(mode="determinate")
-                    self._progress.set(0)
+                self._finish_progress(False)
                 messagebox.showerror("Execution Error", str(exc), parent=self)
 
         threading.Thread(target=worker, daemon=True).start()
+        self.after(100, poll_result)
 
 
 # ── Entry point ───────────────────────────────────────────────────────────────

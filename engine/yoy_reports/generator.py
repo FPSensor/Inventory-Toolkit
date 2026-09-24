@@ -16,6 +16,7 @@ def generate_sales_report(
     yoy_has_families,
     profile,
     yoy_include_sizes=False,
+    non_interactive=False,
 ):
   family_rules = None
   if not yoy_has_families:
@@ -41,5 +42,6 @@ def generate_sales_report(
       yoy_grouping_col,
       yoy_segmented,
       yoy_include_sizes,
+      interactive=not non_interactive,
   )
   return final_path

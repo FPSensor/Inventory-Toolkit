@@ -3,7 +3,6 @@ from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill
 from core.logger import log
 from core.system_utils import safe_openpyxl_save
-from core.system_utils import safe_openpyxl_save
 from engine.stock_processing.data_processor import calculate_margin
 
 def apply_excel_formatting(ws, is_summary=False):
@@ -32,7 +31,7 @@ def apply_excel_formatting(ws, is_summary=False):
                     cell.number_format = '#,##0'
         ws.column_dimensions[col_letter].width = (max_length + 2)
 
-def render_stock_excel(output_file, df_stock, summaries, df_columns, raw_data_sheet):
+def render_stock_excel(output_file, df_stock, summaries, df_columns, raw_data_sheet, interactive=True):
     log.info("Generating dynamic reports and applying formats...")
     wb = Workbook()
     wb.remove(wb.active)
@@ -82,4 +81,4 @@ def render_stock_excel(output_file, df_stock, summaries, df_columns, raw_data_sh
         ws_data.append(r)
     apply_excel_formatting(ws_data, is_summary=False)
 
-    return safe_openpyxl_save(wb, output_file)
+    return safe_openpyxl_save(wb, output_file, interactive=interactive)

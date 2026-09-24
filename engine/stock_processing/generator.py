@@ -8,6 +8,7 @@ from engine.stock_processing.data_processor import process_pricing
 from engine.stock_processing.excel_renderer import render_stock_excel
 
 def run_stock_processing(args):
+    interactive = not getattr(args, 'non_interactive', False)
     required_files = [args.stock_processing_raw, args.shared_cost, args.shared_sales]
     for f in required_files:
         if not os.path.exists(f):
@@ -107,6 +108,9 @@ def run_stock_processing(args):
         
     df_stock = df_stock[[col for col in final_col_order if col in df_stock.columns]]
 
-    final_path = render_stock_excel(args.stock_processing_out, df_stock, summaries, df_stock.columns, raw_data_sheet)
+    final_path = render_stock_excel(
+        args.stock_processing_out, df_stock, summaries, df_stock.columns,
+        raw_data_sheet, interactive=interactive
+    )
     log.info(f"Process completed. File saved at: {final_path}")
     return final_path

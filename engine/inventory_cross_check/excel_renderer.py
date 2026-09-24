@@ -1,6 +1,5 @@
 from core.logger import log
 from core.system_utils import safe_openpyxl_save
-from core.system_utils import safe_openpyxl_save
 
 try:
     from openpyxl import load_workbook
@@ -10,7 +9,7 @@ except ImportError:
     import sys
     sys.exit(1)
 
-def apply_excel_formatting(output_file):
+def apply_excel_formatting(output_file, interactive=True):
     wb = load_workbook(output_file)
     ws = wb.active
     thin_border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
@@ -29,4 +28,4 @@ def apply_excel_formatting(output_file):
                     elif cell.value > 0: cell.fill = green_fill
                 if col_name in ['CTOTAL', 'VTOTAL']:
                     cell.number_format = '#,##0.00'
-    return safe_openpyxl_save(wb, output_file)
+    return safe_openpyxl_save(wb, output_file, interactive=interactive)

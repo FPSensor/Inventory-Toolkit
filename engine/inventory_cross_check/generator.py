@@ -11,6 +11,7 @@ from engine.inventory_cross_check.data_processor import normalize_article, calcu
 from engine.inventory_cross_check.excel_renderer import apply_excel_formatting
 
 def run_cross_check(args):
+    interactive = not getattr(args, 'non_interactive', False)
     required_files = [args.cross_check_system, args.cross_check_count, args.shared_cost, args.shared_sales]
     for f in required_files:
         if not os.path.exists(f):
@@ -90,8 +91,10 @@ def run_cross_check(args):
         df_final = df_final[cols].sort_values(by=['Familias', 'Artículo'])
 
     with execution_timer("Excel Rendering & Formatting"):
-        final_path = safe_pandas_to_excel(df_final, args.cross_check_out, index=False)
-        apply_excel_formatting(final_path)
+        final_path = safe_pandas_to_excel(
+            df_final, args.cross_check_out, index=False, interactive=interactive
+        )
+        apply_excel_formatting(final_path, interactive=interactive)
 
     # Garbage collection optimization
     del df_system, df_count, df_cost, df_sales, df_cross, df_final

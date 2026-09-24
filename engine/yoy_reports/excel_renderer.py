@@ -231,7 +231,7 @@ def _render_sheet(ws, yoy_df_curr, yoy_df_prev, yoy_start_dt, yoy_end_dt, yoy_st
         ws.column_dimensions[get_column_letter(col)].width = 15
     ws.column_dimensions['A'].width = 30
 
-def render_yoy_sales_excel(yoy_output_path, yoy_df_curr, yoy_df_prev, yoy_start_dt, yoy_end_dt, yoy_start_prev, yoy_config, yoy_grouping_col, yoy_segmented, yoy_include_sizes=False):
+def render_yoy_sales_excel(yoy_output_path, yoy_df_curr, yoy_df_prev, yoy_start_dt, yoy_end_dt, yoy_start_prev, yoy_config, yoy_grouping_col, yoy_segmented, yoy_include_sizes=False, interactive=True):
     wb = openpyxl.Workbook()
     wb.remove(wb.active)
 
@@ -292,4 +292,4 @@ def render_yoy_sales_excel(yoy_output_path, yoy_df_curr, yoy_df_prev, yoy_start_
         ws_empty = wb.create_sheet(title="Sales")
         _render_sheet(ws_empty, yoy_df_curr, yoy_df_prev, yoy_start_dt, yoy_end_dt, yoy_start_prev, yoy_config, yoy_grouping_col, yoy_include_sizes)
 
-    return safe_openpyxl_save(wb, yoy_output_path)
+    return safe_openpyxl_save(wb, yoy_output_path, interactive=interactive)
