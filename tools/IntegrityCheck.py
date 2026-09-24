@@ -57,7 +57,7 @@ class IntegrityAuditor:
         print("\n" + "=" * 70)
         print(f" 📊 RESULTS: {self.passed} Passed | {self.failed} Failed | {self.warnings} Warnings")
         if self.failed == 0:
-            print(" 🎉 100% INTEGRITY GUARANTEED: No mathematical or logic regressions detected.")
+            print(" ✅ All implemented integrity checks passed; no regressions were detected by this audit.")
         else:
             print(" ⚠️ ATTENTION: Critical integrity failures detected:")
             for d in self.details:

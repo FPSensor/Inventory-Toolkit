@@ -123,7 +123,13 @@ def run_benchmark(n_items=50000):
     print(f"  🚀 Vectorized Classification:       {t_vectorized:.4f} sec ({n_items/t_vectorized:,.0f} SKUs/sec)")
 
     speedup = t_legacy / t_vectorized if t_vectorized > 0 else 0
-    print(f"\n  🔥 Performance Speedup: {speedup:.2f}x faster")
+    if speedup >= 1:
+        print(f"\n  🔥 Vectorized path: {speedup:.2f}x faster than apply")
+    elif speedup > 0:
+        slowdown = 1 / speedup
+        print(f"\n  ⚠️ Vectorized path: {slowdown:.2f}x slower than apply on this dataset")
+    else:
+        print("\n  ⚠️ Vectorized benchmark could not calculate a valid ratio")
     
     # Category distribution output
     counts = res_vec.value_counts().to_dict()
@@ -151,7 +157,7 @@ def audit_system():
         print("  📝 'logs/' directory ready for initialization.")
 
     print("\n" + "=" * 65)
-    print(" ✅ DIAGNOSTIC COMPLETE: Engine is healthy and ready for production.")
+    print(" ✅ DIAGNOSTIC COMPLETE: Review the checks and benchmark above for this environment.")
     print("=" * 65)
 
 if __name__ == "__main__":
