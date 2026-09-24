@@ -24,7 +24,7 @@ def test_assign_family():
 def test_calculate_difference():
     # Stock 10, Conteo 5 -> Faltan 5
     assert calculate_difference(10, 5) == -5
-    # Stock -2, Conteo 5 -> Sobran 5 (ignora negativo)
+    # System stock -2, physical count 5 -> difference is 5; negative system stock is ignored.
     assert calculate_difference(-2, 5) == 5
     # Stock 0, Conteo 10 -> Sobran 10
     assert calculate_difference(0, 10) == 10

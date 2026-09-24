@@ -1,6 +1,10 @@
-from openpyxl.utils.dataframe import dataframe_to_rows
+"""Excel rendering for Stock Processing outputs."""
+
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill
+from openpyxl.utils.dataframe import dataframe_to_rows
+
+from core.business_schema import COST_COLUMN, FAMILY_COLUMN, MARGIN_PREFIX, SALES_VALUE_LABEL
 from core.logger import log
 from core.system_utils import safe_openpyxl_save
 from engine.stock_processing.data_processor import calculate_margin
@@ -8,80 +12,112 @@ from engine.stock_processing.data_processor import calculate_margin
 MAX_COLUMN_WIDTH = 50
 
 
-def apply_excel_formatting(ws, is_summary=False):
-    header_fill = PatternFill(start_color="D9D9D9", end_color="D9D9D9", fill_type="solid")
+def apply_excel_formatting(worksheet, is_summary=False):
+    header_fill = PatternFill(
+        start_color="D9D9D9",
+        end_color="D9D9D9",
+        fill_type="solid",
+    )
     header_font = Font(bold=True)
-    for cell in ws[1]:
+    for cell in worksheet[1]:
         cell.font = header_font
         cell.fill = header_fill
 
-    ws.freeze_panes = 'A2'
-    ws.auto_filter.ref = ws.dimensions
+    worksheet.freeze_panes = "A2"
+    worksheet.auto_filter.ref = worksheet.dimensions
 
-    for col in ws.columns:
+    for column_cells in worksheet.columns:
         max_length = 0
-        col_letter = col[0].column_letter
-        for cell in col:
+        column_letter = column_cells[0].column_letter
+        column_name = str(worksheet[f"{column_letter}1"].value).upper()
+
+        for cell in column_cells:
             value_length = len(str(cell.value)) if cell.value is not None else 0
             max_length = max(max_length, value_length)
-            col_name = str(ws[f"{col_letter}1"].value).upper()
-            if cell.row > 1 and cell.value is not None:
-                if "MARGEN" in col_name:
-                    cell.number_format = '0.00%'
-                elif "COSTO" in col_name or "VENTA" in col_name or "TOTAL" in col_name:
-                    cell.number_format = '#,##0.00'
-                elif isinstance(cell.value, (int, float)) and not is_summary:
-                    cell.number_format = '#,##0'
-        ws.column_dimensions[col_letter].width = min(max_length + 2, MAX_COLUMN_WIDTH)
+            if cell.row <= 1 or cell.value is None:
+                continue
 
-def render_stock_excel(output_file, df_stock, summaries, df_columns, raw_data_sheet, interactive=True):
+            if "MARGEN" in column_name:
+                cell.number_format = "0.00%"
+            elif "COSTO" in column_name or "VENTA" in column_name or "TOTAL" in column_name:
+                cell.number_format = "#,##0.00"
+            elif isinstance(cell.value, (int, float)) and not is_summary:
+                cell.number_format = "#,##0"
+
+        worksheet.column_dimensions[column_letter].width = min(
+            max_length + 2,
+            MAX_COLUMN_WIDTH,
+        )
+
+
+def render_stock_excel(
+    output_file,
+    stock_frame,
+    summaries,
+    stock_columns,
+    raw_data_sheet,
+    interactive=True,
+):
     log.info("Generating dynamic reports and applying formats...")
-    wb = Workbook()
-    wb.remove(wb.active)
-    
+    workbook = Workbook()
+    workbook.remove(workbook.active)
+
     for summary in summaries:
-        sheet_name = summary.get("nombre_hoja", "Resumen")
-        included_stores = summary.get("locales_a_incluir", [])
-        final_titles = summary.get("titulos", [])
-        
-        valid_entities = [loc for loc in included_stores if loc in df_columns]
-        if not valid_entities: continue
-            
-        ws = wb.create_sheet(sheet_name)
-        agg_dict = {}
-        for entity in valid_entities:
-            agg_dict[entity] = 'sum'
-            if f"{entity}.Costo" in df_columns: agg_dict[f"{entity}.Costo"] = 'sum'
-            if f"{entity}.Venta" in df_columns: agg_dict[f"{entity}.Venta"] = 'sum'
-                
-        df_summary = df_stock.groupby('Familias').agg(agg_dict).reset_index()
+        sheet_name = summary.get("sheet_name", "Summary")
+        included_entities = summary.get("entities", [])
+        final_titles = summary.get("titles", [])
 
-        export_cols = ['Familias']
+        valid_entities = [entity for entity in included_entities if entity in stock_columns]
+        if not valid_entities:
+            continue
+
+        worksheet = workbook.create_sheet(sheet_name)
+        aggregations = {}
         for entity in valid_entities:
-            col_cost = f"{entity}.Costo"
-            col_sales = f"{entity}.Venta"
-            col_margin = f"Margen_{entity}"
-            
-            if col_sales in df_summary.columns and col_cost in df_summary.columns:
-                df_summary[col_margin] = calculate_margin(df_summary, col_sales, col_cost)
-                export_cols.extend([entity, col_cost, col_sales, col_margin])
+            aggregations[entity] = "sum"
+            cost_column = f"{entity}.{COST_COLUMN}"
+            sales_column = f"{entity}.{SALES_VALUE_LABEL}"
+            if cost_column in stock_columns:
+                aggregations[cost_column] = "sum"
+            if sales_column in stock_columns:
+                aggregations[sales_column] = "sum"
+
+        summary_frame = stock_frame.groupby(FAMILY_COLUMN).agg(aggregations).reset_index()
+
+        export_columns = [FAMILY_COLUMN]
+        for entity in valid_entities:
+            cost_column = f"{entity}.{COST_COLUMN}"
+            sales_column = f"{entity}.{SALES_VALUE_LABEL}"
+            margin_column = f"{MARGIN_PREFIX}{entity}"
+
+            if sales_column in summary_frame.columns and cost_column in summary_frame.columns:
+                summary_frame[margin_column] = calculate_margin(
+                    summary_frame,
+                    sales_column,
+                    cost_column,
+                )
+                export_columns.extend(
+                    [entity, cost_column, sales_column, margin_column]
+                )
             else:
-                export_cols.append(entity)
-                
-        df_summary = df_summary[export_cols]
-        
-        if final_titles and len(final_titles) == len(df_summary.columns):
-            df_summary.columns = final_titles
+                export_columns.append(entity)
+
+        summary_frame = summary_frame[export_columns]
+        if final_titles and len(final_titles) == len(summary_frame.columns):
+            summary_frame.columns = final_titles
         else:
-            log.warning(f"Title mismatch in sheet {sheet_name}. Original names will be used.")
-            
-        for r in dataframe_to_rows(df_summary, index=False, header=True):
-            ws.append(r)
-        apply_excel_formatting(ws, is_summary=True)
+            log.warning(
+                "Title mismatch in sheet %s. Original names will be used.",
+                sheet_name,
+            )
 
-    ws_data = wb.create_sheet(raw_data_sheet)
-    for r in dataframe_to_rows(df_stock, index=False, header=True):
-        ws_data.append(r)
-    apply_excel_formatting(ws_data, is_summary=False)
+        for row in dataframe_to_rows(summary_frame, index=False, header=True):
+            worksheet.append(row)
+        apply_excel_formatting(worksheet, is_summary=True)
 
-    return safe_openpyxl_save(wb, output_file, interactive=interactive)
+    data_worksheet = workbook.create_sheet(raw_data_sheet)
+    for row in dataframe_to_rows(stock_frame, index=False, header=True):
+        data_worksheet.append(row)
+    apply_excel_formatting(data_worksheet, is_summary=False)
+
+    return safe_openpyxl_save(workbook, output_file, interactive=interactive)

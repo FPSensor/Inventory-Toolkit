@@ -1,6 +1,6 @@
 import pytest
 import pandas as pd
-from engine.shared.families import build_family_rules, assign_family, vectorize_assign_families
+from engine.shared.families import assign_families, assign_family, build_family_rules
 from engine.stock_processing.data_processor import calculate_margin
 
 def test_classify_family():
@@ -18,7 +18,7 @@ def test_calculate_margin():
         "Venta": [1000, 2000, 0],
         "Costo": [500, 1500, 500]
     })
-    # (Venta - Costo) / Venta
+    # (Sales value - Cost) / Sales value
     margins = calculate_margin(df, "Venta", "Costo")
     assert margins[0] == 0.50  # 500 / 1000
     assert margins[1] == 0.25  # 500 / 2000
@@ -47,7 +47,7 @@ def test_batch_family_classifier_matches_iterative_semantics():
     from core.data_sanitizer import clean_sku_series
     cleaned = clean_sku_series(cleaned).str.upper()
     iterative = cleaned.apply(lambda code: assign_family(code, rules))
-    batched = vectorize_assign_families(raw, rules)
+    batched = assign_families(raw, rules)
 
     assert batched.equals(iterative)
     # Duplicate equal prefixes keep stable first-rule priority.

@@ -1,4 +1,4 @@
-"""Configuration Hub for Inventory Toolkit configuration v2.
+"""Configuration Hub for the current Inventory Toolkit configuration schema.
 
 The hub is organized by business module, not by JSON filename.  JSON remains
 human-readable storage, but users no longer need to know where a setting lives.
@@ -13,7 +13,7 @@ from pathlib import Path
 from cli.utils import ask_yes_no, clear_screen, load_json, save_json
 from cli.wizard import run_setup_wizard
 from core.configuration_manager import ConfigurationManager
-from core.profile_config import config_path, initialize_v2_config, migrate_legacy_config, profile_readiness
+from core.profile_config import config_path, ensure_profile_config, migrate_legacy_config, profile_readiness
 
 PROFILES_DIR = "profiles"
 
@@ -43,7 +43,7 @@ def _edit_list(data: dict, key: str, label: str):
 
 def _family_editor(path: Path, profile: str):
     while True:
-        data = load_json(str(path)) or {"version": 2, "rules": {}}
+        data = load_json(str(path)) or {"version": 3, "rules": {}}
         rules = data.setdefault("rules", {})
         clear_screen(); _header("Catalog → Family rules", profile)
         query = input("  Search family (Enter shows all, 0 back): ").strip()
@@ -97,7 +97,7 @@ def _catalog_menu(configs: Path, profile: str):
 def _network_menu(configs: Path, profile: str):
     path = config_path(configs, "general/network")
     while True:
-        data = load_json(str(path)) or {"version": 2, "active": [], "regional_groups": {}, "stock_database_columns": {}}
+        data = load_json(str(path)) or {"version": 3, "active": [], "regional_groups": {}, "stock_database_columns": {}}
         clear_screen(); _header("Stores & Network", profile)
         print(f"  Active stores: {', '.join(data.get('active',[])) or '—'}")
         print("  Regional groups:")
@@ -144,11 +144,11 @@ def _stock_menu(configs: Path, profile: str):
             _edit_scalar(out,"raw_data_sheet","Raw data sheet"); _edit_list(out,"base_columns","Base columns")
         elif cmd=="4":
             sums=out.setdefault("summaries",[])
-            for i,s in enumerate(sums,1): print(f"  [{i}] {s.get('nombre_hoja')} ← {s.get('locales_a_incluir',[])}")
+            for i,s in enumerate(sums,1): print(f"  [{i}] {s.get('sheet_name')} ← {s.get('entities',[])}")
             raw=input("  [A]dd, [D]elete or Enter: ").strip().upper()
             if raw=="A":
                 name=input("  Sheet name: ").strip(); stores=input("  Stores/groups comma-separated: ").strip()
-                if name: sums.append({"nombre_hoja":name,"locales_a_incluir":[x.strip() for x in stores.split(",") if x.strip()]})
+                if name: sums.append({"sheet_name": name, "entities": [x.strip() for x in stores.split(",") if x.strip()], "titles": []})
             elif raw=="D":
                 n=input("  Number: ").strip()
                 if n.isdigit() and 1<=int(n)<=len(sums): sums.pop(int(n)-1)
@@ -200,7 +200,7 @@ def _yoy_menu(configs: Path, profile: str):
 def _validate(profile: str):
     try:
         cm=ConfigurationManager(profile)
-        cm.get_catalog(); cm.get_family_config(); cm.get_store_config(); cm.get_stock_processing_settings(); cm.get_cross_check_config(); cm.get_yoy_config()
+        cm.get_catalog(); cm.get_family_config(); cm.get_network_config(); cm.get_stock_processing_config(); cm.get_cross_check_config(); cm.get_yoy_reports_config()
         print("  ✅ All configuration files validate successfully.")
     except Exception as exc:
         print(f"  ❌ Validation failed: {exc}")
@@ -209,7 +209,7 @@ def _validate(profile: str):
 
 def configuration_menu(current_profile: str) -> None:
     configs=Path(PROFILES_DIR)/current_profile/"configs"
-    migrate_legacy_config(configs,remove_legacy=False); initialize_v2_config(configs)
+    migrate_legacy_config(configs, remove_legacy=False); ensure_profile_config(configs)
     while True:
         clear_screen(); _header("Configuration Hub",current_profile)
         ready=profile_readiness(configs)

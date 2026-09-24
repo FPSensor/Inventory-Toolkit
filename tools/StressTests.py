@@ -15,7 +15,7 @@ try:
     import pandas as pd
     import numpy as np
     from core.configuration_manager import ConfigurationManager
-    from engine.shared.families import build_family_rules, vectorize_assign_families, assign_family
+    from engine.shared.families import assign_families, assign_family, build_family_rules
     from core.data_sanitizer import clean_sku_series
 except ImportError as e:
     print(f"❌ Import error: {e}")
@@ -43,34 +43,32 @@ def audit_profiles():
         print(f"\n  👉 Profile: [{prof.name}]")
         cfg_path = prof / "configs"
         
-        # Expected base JSON configs
+        # Expected current configuration files
         expected_configs = [
-            "general/familias.json",
-            "general/settings.json",
-            "general/stores.json",
-            "general/databases.json",
-            "stock_processing/cleaning.json",
-            "stock_processing/pricing.json",
-            "cross_check/cross_check_settings.json",
-            "yoy_reports/reports.json"
+            "general/catalog.json",
+            "general/families.json",
+            "general/network.json",
+            "stock_processing/settings.json",
+            "cross_check/settings.json",
+            "yoy_reports/settings.json",
         ]
-        
+
         missing = []
-        for rel_cfg in expected_configs:
-            target = cfg_path / rel_cfg
+        for relative_config in expected_configs:
+            target = cfg_path / relative_config
             if not target.exists():
-                missing.append(rel_cfg)
+                missing.append(relative_config)
 
         if missing:
             print(f"     ⚠️ Missing configs ({len(missing)}): {', '.join(missing)}")
         else:
-            print("     ✅ All base configuration files are present.")
+            print("     ✅ All current configuration files are present.")
 
         # Test loading via ConfigurationManager
         try:
             cm = ConfigurationManager(profile=prof.name)
-            familias = cm.get_familias()
-            print(f"     📊 Loaded family rules: {len(familias)} categories")
+            families = cm.get_family_rules()
+            print(f"     📊 Loaded family rules: {len(families)} categories")
         except Exception as err:
             print(f"     ❌ Error initializing ConfigurationManager: {err}")
 
@@ -118,7 +116,7 @@ def run_benchmark(n_items=50000):
 
     # Benchmark 3: Batch full pipeline (sanitization + prefix trie)
     t0 = time.perf_counter()
-    res_vec = vectorize_assign_families(s_raw, rules)
+    batch_result = assign_families(s_raw, rules)
     t_vectorized = time.perf_counter() - t0
     print(f"  🚀 Batch pipeline (clean + trie):   {t_vectorized:.4f} sec ({n_items/t_vectorized:,.0f} SKUs/sec)")
 
@@ -132,10 +130,10 @@ def run_benchmark(n_items=50000):
         print("\n  ⚠️ Batch benchmark could not calculate a valid ratio")
     
     # Category distribution output
-    counts = res_vec.value_counts().to_dict()
+    counts = batch_result.value_counts().to_dict()
     print(f"  📈 Category Distribution: {counts}")
 
-    del s_raw, s_clean, res_vec
+    del s_raw, s_clean, batch_result
     gc.collect()
 
 # =========================================================================

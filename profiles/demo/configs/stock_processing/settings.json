@@ -1,5 +1,5 @@
 {
-    "version": 2,
+    "version": 3,
     "cleaning": {
         "text_columns": [
             "Artículo",
@@ -51,14 +51,14 @@
         ],
         "summaries": [
             {
-                "nombre_hoja": "Nrw.I",
-                "locales_a_incluir": [
+                "sheet_name": "Nrw.I",
+                "entities": [
                     "LIBERT.R",
                     "PASO.R",
                     "P.OESTE",
                     "NRW"
                 ],
-                "titulos": [
+                "titles": [
                     "Familias",
                     "Libertad",
                     "CTOTAL",
@@ -79,11 +79,11 @@
                 ]
             },
             {
-                "nombre_hoja": "Virreyes.I",
-                "locales_a_incluir": [
+                "sheet_name": "Virreyes.I",
+                "entities": [
                     "VIRREYES"
                 ],
-                "titulos": [
+                "titles": [
                     "Familia",
                     "Cantidad",
                     "CTOTAL",

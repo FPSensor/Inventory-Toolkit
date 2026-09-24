@@ -1,3 +1,5 @@
+"""Orchestration for Year-over-Year sales reports."""
+
 from core.configuration_manager import ConfigurationManager
 from core.logger import log
 from engine.shared.families import build_family_rules
@@ -18,30 +20,32 @@ def generate_sales_report(
     yoy_include_sizes=False,
     non_interactive=False,
 ):
-  family_rules = None
-  if not yoy_has_families:
-    log.info("Loading family rules to dynamically generate groupings...")
-    cm = ConfigurationManager(profile)
-    fam_dict = cm.get_familias()
-    family_rules = build_family_rules(fam_dict)
+    family_rules = None
+    if not yoy_has_families:
+        log.info("Loading family rules to dynamically generate groupings...")
+        config = ConfigurationManager(profile)
+        family_rules = build_family_rules(config.get_family_rules())
 
-  log.info(f"Reading data from {yoy_file_path} and filtering dates...")
-  yoy_df_curr, yoy_df_prev, yoy_start_prev = process_sales_data(
-      yoy_file_path, yoy_start_dt, yoy_end_dt, yoy_config, family_rules
-  )
+    log.info("Reading data from %s and filtering dates...", yoy_file_path)
+    current_frame, previous_frame, previous_start = process_sales_data(
+        yoy_file_path,
+        yoy_start_dt,
+        yoy_end_dt,
+        yoy_config,
+        family_rules,
+    )
 
-  log.info("Calculating YoY metrics and rendering Excel file...")
-  final_path = render_yoy_sales_excel(
-      yoy_output_path,
-      yoy_df_curr,
-      yoy_df_prev,
-      yoy_start_dt,
-      yoy_end_dt,
-      yoy_start_prev,
-      yoy_config,
-      yoy_grouping_col,
-      yoy_segmented,
-      yoy_include_sizes,
-      interactive=not non_interactive,
-  )
-  return final_path
+    log.info("Calculating YoY metrics and rendering Excel file...")
+    return render_yoy_sales_excel(
+        yoy_output_path,
+        current_frame,
+        previous_frame,
+        yoy_start_dt,
+        yoy_end_dt,
+        previous_start,
+        yoy_config,
+        yoy_grouping_col,
+        yoy_segmented,
+        yoy_include_sizes,
+        interactive=not non_interactive,
+    )

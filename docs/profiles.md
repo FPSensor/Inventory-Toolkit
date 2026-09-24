@@ -1,10 +1,10 @@
-# 👤 Profiles & Configuration v2 (`/profiles`)
+# 👤 Profiles & Configuration v3 (`/profiles`)
 
 Profiles keep business rules outside the engines, so the same Inventory Toolkit build can serve different companies, datasets, or test environments without hard-coded forks.
 
 ## Configuration tree
 
-Each profile now uses a **module-oriented v2 layout**:
+Each profile now uses a **module-oriented v3 layout**:
 
 ```text
 profiles/<name>/
@@ -23,7 +23,7 @@ profiles/<name>/
 └── last_paths.json
 ```
 
-The important rule is **ownership**: Stock Processing settings live under Stock Processing; YoY settings live under YoY. The old `yoy_reports/reports.json` mixed Stock output layout and YoY configuration in one file and has been removed from v2.
+The important rule is **ownership**: Stock Processing settings live under Stock Processing; YoY settings live under YoY. The old `yoy_reports/reports.json` mixed Stock output layout and YoY configuration in one file and has been removed from the modular schema.
 
 ## Editing configuration
 
@@ -40,10 +40,10 @@ Progress is saved after each module, and the setup dashboard shows which modules
 
 ## Legacy v1 migration
 
-`ConfigurationManager` can read a legacy profile and create equivalent v2 files automatically. Configuration Hub also provides **Migrate/archive legacy config**, which moves the old JSON files to:
+`ConfigurationManager` can read a legacy profile and create equivalent current-schema files automatically. Configuration Hub also provides **Migrate/archive legacy config**, which moves the old JSON files to:
 
 ```text
 configs/_legacy_v1_backup/
 ```
 
-The engines continue receiving their established configuration contracts through compatibility accessors, so migration changes configuration storage—not business behavior.
+Legacy v1 and v2 keys are decoded only at the migration boundary. Built-in engines use the native English configuration API; migration changes storage and implementation vocabulary, not business behavior.

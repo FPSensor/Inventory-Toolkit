@@ -15,8 +15,9 @@ Config Hub window:
     dict_list   → category list + item list with Add / Import / Delete
     key_value   → field grid with Save button
     stores      → active stores + regional groups, fully interactive
-    yoy_reports → structured editor (data_source, output, sizes, resumenes, structures)
-    pricing     → structured editor (expected columns + aliases)
+    stock_output → structured editor (raw sheet, base columns, summaries)
+    yoy_reports  → structured editor (input, output, groups)
+    pricing      → structured editor (column mapping + aliases)
 """
 
 import os
@@ -61,6 +62,7 @@ try:
 except ImportError:
     PANDAS_AVAILABLE = False
 
+from core.business_schema import ARTICLE_COLUMN, DATABASE_ORIGIN_COLUMN, DEFAULT_FAMILY, FAMILY_COLUMN, PRICE_COLUMN, RAW_DATA_SHEET, SIZE_COLUMN
 from core.configuration_manager import ConfigurationManager
 from core.logger import log
 from cli.wizard import initialize_profile_files, run_setup_wizard
@@ -110,14 +112,15 @@ class ConfigHubWindow(BaseToplevel):
     """
 
     _REGISTRY = {
-        "Product Families":         ("general/families.json",              "dict_list"),
-        "General Settings":          ("general/catalog.json",               "key_value"),
-        "Active Stores & Groups":    ("general/network.json",               "stores"),
-        "Database Aliases":          ("general/network.json",               "key_value"),
-        "Stock Cleaning Rules":      ("stock_processing/settings.json",     "dict_list"),
-        "Pricing Rules":             ("stock_processing/settings.json",     "pricing"),
-        "Cross Check Exclusions":    ("cross_check/settings.json",          "dict_list"),
-        "YoY Report Structure":      ("yoy_reports/settings.json",          "yoy_reports"),
+        "Product Families":         ("general/families.json",          "dict_list"),
+        "General Settings":         ("general/catalog.json",           "key_value"),
+        "Active Stores & Groups":   ("general/network.json",           "stores"),
+        "Database Aliases":         ("general/network.json",           "key_value"),
+        "Stock Cleaning Rules":     ("stock_processing/settings.json", "dict_list"),
+        "Pricing Rules":            ("stock_processing/settings.json", "pricing"),
+        "Stock Output":             ("stock_processing/settings.json", "stock_output"),
+        "Cross Check":              ("cross_check/settings.json",      "cross_check"),
+        "YoY Report Structure":     ("yoy_reports/settings.json",      "yoy_reports"),
     }
 
     def __init__(self, parent, active_profile: str):
@@ -182,100 +185,110 @@ class ConfigHubWindow(BaseToplevel):
             "dict_list":  self._render_dict_list,
             "key_value":  self._render_key_value,
             "stores":     self._render_stores,
-            "yoy_reports":self._render_yoy_reports,
-            "pricing":    self._render_pricing,
+            "yoy_reports": self._render_yoy_reports,
+            "pricing": self._render_pricing,
+            "stock_output": self._render_stock_output,
+            "cross_check": self._render_cross_check,
         }
         dispatch.get(kind, self._render_key_value)()
 
     def _load_editor_data(self):
-        """Adapt the v2 module-oriented JSON to the existing experimental editors."""
+        """Load the current schema into small English editor-specific views."""
         raw = load_json(self._filepath()) or {}
         key = self._active_key
+
         if key == "Product Families":
             return raw.get("rules", {})
         if key == "General Settings":
-            cols = raw.get("columns", {})
-            return {"columna_articulo": cols.get("article", "Artículo"),
-                    "columna_familia": cols.get("family", "Familias"),
-                    "familia_por_defecto": raw.get("default_family", "Otro")}
+            columns = raw.get("columns", {})
+            return {
+                "article_column": columns.get("article", ARTICLE_COLUMN),
+                "family_column": columns.get("family", FAMILY_COLUMN),
+                "default_family": raw.get("default_family", DEFAULT_FAMILY),
+            }
         if key == "Active Stores & Groups":
-            return {"locales_activos": raw.get("active", []),
-                    "grupos_regionales": raw.get("regional_groups", {})}
+            return {
+                "active_stores": raw.get("active", []),
+                "regional_groups": raw.get("regional_groups", {}),
+            }
         if key == "Database Aliases":
             return raw.get("stock_database_columns", {})
         if key == "Stock Cleaning Rules":
-            c = raw.get("cleaning", {})
-            return {"columnas_texto_a_limpiar": c.get("text_columns", []),
-                    "columnas_a_eliminar": c.get("drop_columns", []),
-                    "columnas_a_formatear": c.get("numeric_columns", [])}
+            cleaning = raw.get("cleaning", {})
+            return {
+                "text_columns": cleaning.get("text_columns", []),
+                "drop_columns": cleaning.get("drop_columns", []),
+                "numeric_columns": cleaning.get("numeric_columns", []),
+            }
         if key == "Pricing Rules":
-            p = raw.get("pricing", {}); cols = p.get("columns", {})
-            return {"columnas_esperadas": [cols.get("article", "Artículo"),
-                                             cols.get("database", "Origen - Base de datos"),
-                                             cols.get("price", "Precio")],
-                    "mapeo_nombres": p.get("aliases", {})}
-        if key == "Cross Check Exclusions":
-            f = raw.get("filters", {}); pl = raw.get("price_lists", {})
-            def old(side):
-                m = pl.get(side, {})
-                return {"articulo": m.get("article_column", "Artículo"),
-                        "precio": m.get("price_column", "Precio")}
-            return {"articulos_ignorados": f.get("ignored_articles", []),
-                    "palabras_ignoradas": f.get("ignored_terms", []),
-                    "columnas_costo": old("cost"), "columnas_venta": old("sales")}
+            pricing = raw.get("pricing", {})
+            columns = pricing.get("columns", {})
+            return {
+                "article_column": columns.get("article", ARTICLE_COLUMN),
+                "database_column": columns.get("database", DATABASE_ORIGIN_COLUMN),
+                "price_column": columns.get("price", PRICE_COLUMN),
+                "aliases": pricing.get("aliases", {}),
+            }
+        if key == "Stock Output":
+            return raw.get("output", {})
+        if key == "Cross Check":
+            return {
+                "filters": raw.get("filters", {}),
+                "price_lists": raw.get("price_lists", {}),
+            }
         if key == "YoY Report Structure":
-            stock_path = os.path.join(PROFILES_DIR, self.profile, "configs", "stock_processing", "settings.json")
-            stock = load_json(stock_path) or {}; so = stock.get("output", {})
-            inp = raw.get("input", {}); out = raw.get("output", {})
-            return {"data_source": {k: inp.get(k, "") for k in
-                    ("date_column","quantity_column","grouping_column","item_column","branch_column")},
-                    "output_path": out.get("default_path", "analysis_report.xlsx"),
-                    "metricas_salida": out.get("metrics", []),
-                    "comparacion_anual": out.get("annual_comparison", True),
-                    "incluir_talles": out.get("include_sizes", False),
-                    "columna_talle": inp.get("size_column", "Talle"),
-                    "report_structures": raw.get("groups", {}),
-                    "hoja_datos_crudos": so.get("raw_data_sheet", "Datos"),
-                    "orden_columnas_base": so.get("base_columns", []),
-                    "resumenes": so.get("summaries", [])}
+            return {
+                "input": raw.get("input", {}),
+                "output": raw.get("output", {}),
+                "groups": raw.get("groups", {}),
+            }
         return raw
 
     def _save(self, data=None):
         data = data if data is not None else self.current_data
-        raw = load_json(self._filepath()) or {"version": 2}
+        raw = load_json(self._filepath()) or {"version": 3}
+        raw["version"] = 3
         key = self._active_key
-        if key == "Product Families": raw["rules"] = data
+
+        if key == "Product Families":
+            raw["rules"] = data
         elif key == "General Settings":
-            raw["columns"] = {"article": data.get("columna_articulo", "Artículo"),
-                              "family": data.get("columna_familia", "Familias")}
-            raw["default_family"] = data.get("familia_por_defecto", "Otro")
+            raw["columns"] = {
+                "article": data.get("article_column", ARTICLE_COLUMN),
+                "family": data.get("family_column", FAMILY_COLUMN),
+            }
+            raw["default_family"] = data.get("default_family", DEFAULT_FAMILY)
         elif key == "Active Stores & Groups":
-            raw["active"] = data.get("locales_activos", []); raw["regional_groups"] = data.get("grupos_regionales", {})
-        elif key == "Database Aliases": raw["stock_database_columns"] = data
+            raw["active"] = data.get("active_stores", [])
+            raw["regional_groups"] = data.get("regional_groups", {})
+        elif key == "Database Aliases":
+            raw["stock_database_columns"] = data
         elif key == "Stock Cleaning Rules":
-            raw["cleaning"] = {"text_columns": data.get("columnas_texto_a_limpiar", []),
-                               "drop_columns": data.get("columnas_a_eliminar", []),
-                               "numeric_columns": data.get("columnas_a_formatear", [])}
+            raw["cleaning"] = {
+                "text_columns": data.get("text_columns", []),
+                "drop_columns": data.get("drop_columns", []),
+                "numeric_columns": data.get("numeric_columns", []),
+            }
         elif key == "Pricing Rules":
-            cols = data.get("columnas_esperadas", [])
-            raw["pricing"] = {"columns": {"article": cols[0] if len(cols)>0 else "Artículo",
-                                             "database": cols[1] if len(cols)>1 else "Origen - Base de datos",
-                                             "price": cols[2] if len(cols)>2 else "Precio"},
-                              "aliases": data.get("mapeo_nombres", {})}
-        elif key == "Cross Check Exclusions":
-            def new(m): return {"article_column": m.get("articulo", "Artículo"), "price_column": m.get("precio", "Precio")}
-            raw["filters"] = {"ignored_articles": data.get("articulos_ignorados", []), "ignored_terms": data.get("palabras_ignoradas", [])}
-            raw["price_lists"] = {"cost": new(data.get("columnas_costo", {})), "sales": new(data.get("columnas_venta", {}))}
+            raw["pricing"] = {
+                "columns": {
+                    "article": data.get("article_column", ARTICLE_COLUMN),
+                    "database": data.get("database_column", DATABASE_ORIGIN_COLUMN),
+                    "price": data.get("price_column", PRICE_COLUMN),
+                },
+                "aliases": data.get("aliases", {}),
+            }
+        elif key == "Stock Output":
+            raw["output"] = data
+        elif key == "Cross Check":
+            raw["filters"] = data.get("filters", {})
+            raw["price_lists"] = data.get("price_lists", {})
         elif key == "YoY Report Structure":
-            ds=data.get("data_source",{}); raw["input"]={**raw.get("input",{}), **ds, "size_column": data.get("columna_talle","Talle")}
-            raw["output"]={"default_path": data.get("output_path","analysis_report.xlsx"), "metrics": data.get("metricas_salida",[]),
-                           "annual_comparison": data.get("comparacion_anual",True), "include_sizes": data.get("incluir_talles",False)}
-            raw["groups"] = data.get("report_structures", {})
-            stock_path=os.path.join(PROFILES_DIR,self.profile,"configs","stock_processing","settings.json")
-            stock=load_json(stock_path) or {"version":2}; so=stock.setdefault("output",{})
-            so["raw_data_sheet"]=data.get("hoja_datos_crudos","Datos"); so["base_columns"]=data.get("orden_columnas_base",[]); so["summaries"]=data.get("resumenes",[])
-            save_json(stock_path,stock)
-        else: raw=data
+            raw["input"] = data.get("input", {})
+            raw["output"] = data.get("output", {})
+            raw["groups"] = data.get("groups", {})
+        else:
+            raw = data
         save_json(self._filepath(), raw)
 
     # ── A. Dict-list editor ───────────────────────────────────────────────────
@@ -498,426 +511,665 @@ class ConfigHubWindow(BaseToplevel):
     # ── C. Stores editor ──────────────────────────────────────────────────────
 
     def _render_stores(self):
-        ws = self._workspace
-        _lbl(ws, text="Active Stores & Regional Groups",
-             font=("Arial", 13, "bold") if not USE_CTK else None
-             ).pack(anchor="w", padx=10, pady=(8, 4))
+        workspace = self._workspace
+        _lbl(
+            workspace,
+            text="Active Stores & Regional Groups",
+            font=("Arial", 13, "bold") if not USE_CTK else None,
+        ).pack(anchor="w", padx=10, pady=(8, 4))
 
         def rebuild():
-            for w in ws.winfo_children()[1:]:
-                w.destroy()
+            for widget in workspace.winfo_children()[1:]:
+                widget.destroy()
+
             data = self.current_data
-            activos = data.get("locales_activos", [])
-            grupos  = data.get("grupos_regionales", {})
+            active_stores = data.get("active_stores", [])
+            regional_groups = data.get("regional_groups", {})
 
-            # ── Active stores ─────────────────────────────────────────────────
-            _lbl(ws, text="📍 Active Stores").pack(anchor="w", padx=10, pady=(6, 2))
-            stores_lb = tk.Listbox(ws, height=6,
-                                   bg="#2b2b2b" if USE_CTK else "white",
-                                   fg="white" if USE_CTK else "black",
-                                   selectbackground="#1f538d", relief="flat")
-            stores_lb.pack(fill="x", padx=12, pady=2)
-            for s in activos:
-                stores_lb.insert(tk.END, s)
+            _lbl(workspace, text="📍 Active Stores").pack(
+                anchor="w", padx=10, pady=(6, 2)
+            )
+            stores_list = tk.Listbox(
+                workspace,
+                height=6,
+                bg="#2b2b2b" if USE_CTK else "white",
+                fg="white" if USE_CTK else "black",
+                selectbackground="#1f538d",
+                relief="flat",
+            )
+            stores_list.pack(fill="x", padx=12, pady=2)
+            for store in active_stores:
+                stores_list.insert(tk.END, store)
 
-            st_row = BaseFrame(ws)
-            st_row.pack(fill="x", padx=12, pady=4)
+            store_buttons = BaseFrame(workspace)
+            store_buttons.pack(fill="x", padx=12, pady=4)
 
             def add_store():
                 raw = simpledialog.askstring(
-                    "Add Stores", "Store name(s) — comma-separated:", parent=self)
+                    "Add Stores",
+                    "Store name(s) — comma-separated:",
+                    parent=self,
+                )
                 if raw:
-                    for s in [x.strip() for x in raw.split(",") if x.strip()]:
-                        if s not in activos:
-                            activos.append(s)
-                    data["locales_activos"] = activos
+                    for store in [item.strip() for item in raw.split(",") if item.strip()]:
+                        if store not in active_stores:
+                            active_stores.append(store)
+                    data["active_stores"] = active_stores
                     self._save(data)
                     rebuild()
 
-            def del_store():
-                sel = stores_lb.curselection()
-                if not sel:
+            def delete_store():
+                selection = stores_list.curselection()
+                if not selection:
                     return
-                name = stores_lb.get(sel[0])
-                activos.remove(name)
-                data["locales_activos"] = activos
+                store = stores_list.get(selection[0])
+                active_stores.remove(store)
+                data["active_stores"] = active_stores
                 self._save(data)
                 rebuild()
 
-            _btn(st_row, "➕ Add Store",    add_store).pack(side="left", padx=4)
-            _btn(st_row, "🗑️ Delete Store", del_store).pack(side="left", padx=4)
+            _btn(store_buttons, "➕ Add Store", add_store).pack(side="left", padx=4)
+            _btn(store_buttons, "🗑️ Delete Store", delete_store).pack(side="left", padx=4)
 
-            # ── Regional groups ───────────────────────────────────────────────
-            _lbl(ws, text="🗂️ Regional Groups").pack(anchor="w", padx=10, pady=(10, 2))
-            grp_lb = tk.Listbox(ws, height=6,
-                                bg="#2b2b2b" if USE_CTK else "white",
-                                fg="white" if USE_CTK else "black",
-                                selectbackground="#1f538d", relief="flat")
-            grp_lb.pack(fill="x", padx=12, pady=2)
-            for grp, members in sorted(grupos.items()):
-                grp_lb.insert(tk.END, f"{grp}  →  {', '.join(members)}")
+            _lbl(workspace, text="🗂️ Regional Groups").pack(
+                anchor="w", padx=10, pady=(10, 2)
+            )
+            groups_list = tk.Listbox(
+                workspace,
+                height=6,
+                bg="#2b2b2b" if USE_CTK else "white",
+                fg="white" if USE_CTK else "black",
+                selectbackground="#1f538d",
+                relief="flat",
+            )
+            groups_list.pack(fill="x", padx=12, pady=2)
+            for group_name, members in sorted(regional_groups.items()):
+                groups_list.insert(tk.END, f"{group_name}  →  {', '.join(members)}")
 
-            grp_row = BaseFrame(ws)
-            grp_row.pack(fill="x", padx=12, pady=4)
+            group_buttons = BaseFrame(workspace)
+            group_buttons.pack(fill="x", padx=12, pady=4)
 
             def add_group():
-                gname = simpledialog.askstring("New Group", "Group name:", parent=self)
-                if not gname:
+                group_name = simpledialog.askstring(
+                    "New Group", "Group name:", parent=self
+                )
+                if not group_name:
                     return
                 raw = simpledialog.askstring(
-                    "Group Members", f"Stores for '{gname}' (comma-separated):", parent=self)
-                grupos[gname] = [s.strip() for s in raw.split(",") if s.strip()] if raw else []
-                data["grupos_regionales"] = grupos
+                    "Group Members",
+                    f"Stores for '{group_name}' (comma-separated):",
+                    parent=self,
+                )
+                regional_groups[group_name] = (
+                    [store.strip() for store in raw.split(",") if store.strip()]
+                    if raw
+                    else []
+                )
+                data["regional_groups"] = regional_groups
                 self._save(data)
                 rebuild()
 
-            def del_group():
-                sel = grp_lb.curselection()
-                if not sel:
+            def delete_group():
+                selection = groups_list.curselection()
+                if not selection:
                     return
-                gname = grp_lb.get(sel[0]).split("  →  ")[0]
-                if messagebox.askyesno("Delete Group", f"Delete group '{gname}'?", parent=self):
-                    grupos.pop(gname, None)
-                    data["grupos_regionales"] = grupos
+                group_name = groups_list.get(selection[0]).split("  →  ")[0]
+                if messagebox.askyesno(
+                    "Delete Group",
+                    f"Delete group '{group_name}'?",
+                    parent=self,
+                ):
+                    regional_groups.pop(group_name, None)
+                    data["regional_groups"] = regional_groups
                     self._save(data)
                     rebuild()
 
             def edit_group():
-                sel = grp_lb.curselection()
-                if not sel:
+                selection = groups_list.curselection()
+                if not selection:
                     return
-                gname = grp_lb.get(sel[0]).split("  →  ")[0]
-                curr = ", ".join(grupos.get(gname, []))
+                group_name = groups_list.get(selection[0]).split("  →  ")[0]
+                current_members = ", ".join(regional_groups.get(group_name, []))
                 raw = simpledialog.askstring(
-                    "Edit Group", f"Stores for '{gname}':", initialvalue=curr, parent=self)
+                    "Edit Group",
+                    f"Stores for '{group_name}':",
+                    initialvalue=current_members,
+                    parent=self,
+                )
                 if raw is not None:
-                    grupos[gname] = [s.strip() for s in raw.split(",") if s.strip()]
-                    data["grupos_regionales"] = grupos
+                    regional_groups[group_name] = [
+                        store.strip() for store in raw.split(",") if store.strip()
+                    ]
+                    data["regional_groups"] = regional_groups
                     self._save(data)
                     rebuild()
 
-            _btn(grp_row, "➕ New Group",   add_group).pack(side="left", padx=4)
-            _btn(grp_row, "✏️ Edit Group",  edit_group).pack(side="left", padx=4)
-            _btn(grp_row, "🗑️ Delete Group",del_group).pack(side="left", padx=4)
+            _btn(group_buttons, "➕ New Group", add_group).pack(side="left", padx=4)
+            _btn(group_buttons, "✏️ Edit Group", edit_group).pack(side="left", padx=4)
+            _btn(group_buttons, "🗑️ Delete Group", delete_group).pack(side="left", padx=4)
 
         rebuild()
 
-    # ── D. YoY reports editor ─────────────────────────────────────────────────
+    # ── D. Stock output editor ─────────────────────────────────────────────────
+
+    def _render_stock_output(self):
+        workspace = self._workspace
+        data = self.current_data
+        _lbl(
+            workspace,
+            text="Stock Output",
+            font=("Arial", 13, "bold") if not USE_CTK else None,
+        ).pack(anchor="w", padx=10, pady=(8, 4))
+
+        settings_frame = BaseFrame(workspace)
+        settings_frame.pack(fill="x", padx=10, pady=6)
+
+        raw_sheet_var = tk.StringVar(value=data.get("raw_data_sheet", RAW_DATA_SHEET))
+        base_columns_var = tk.StringVar(value=", ".join(data.get("base_columns", [])))
+
+        _lbl(settings_frame, text="Raw data sheet name").grid(
+            row=0, column=0, sticky="w", padx=6, pady=5
+        )
+        _entry(settings_frame, textvariable=raw_sheet_var).grid(
+            row=0, column=1, sticky="ew", padx=6, pady=5
+        )
+        _lbl(settings_frame, text="Base output columns").grid(
+            row=1, column=0, sticky="w", padx=6, pady=5
+        )
+        _entry(settings_frame, textvariable=base_columns_var).grid(
+            row=1, column=1, sticky="ew", padx=6, pady=5
+        )
+        settings_frame.columnconfigure(1, weight=1)
+
+        def save_output_settings():
+            data["raw_data_sheet"] = raw_sheet_var.get().strip() or RAW_DATA_SHEET
+            data["base_columns"] = [
+                value.strip()
+                for value in base_columns_var.get().split(",")
+                if value.strip()
+            ]
+            self._save(data)
+            messagebox.showinfo("Saved", "Stock output settings saved.", parent=self)
+
+        _btn(settings_frame, "💾 Save Output", save_output_settings).grid(
+            row=2, column=1, sticky="e", padx=6, pady=6
+        )
+
+        _lbl(workspace, text="Summary Sheets").pack(
+            anchor="w", padx=10, pady=(10, 2)
+        )
+        summary_list = tk.Listbox(
+            workspace,
+            height=9,
+            bg="#2b2b2b" if USE_CTK else "white",
+            fg="white" if USE_CTK else "black",
+            selectbackground="#1f538d",
+            relief="flat",
+        )
+        summary_list.pack(fill="both", expand=True, padx=12, pady=2)
+
+        def refresh_summaries():
+            summary_list.delete(0, tk.END)
+            for summary in data.get("summaries", []):
+                summary_list.insert(
+                    tk.END,
+                    f"{summary.get('sheet_name', '?')}  ←  {', '.join(summary.get('entities', []))}",
+                )
+
+        def add_summary():
+            sheet_name = simpledialog.askstring(
+                "Add Summary", "Sheet name:", parent=self
+            )
+            if not sheet_name:
+                return
+            entities_text = simpledialog.askstring(
+                "Summary Entities",
+                f"Stores/groups for '{sheet_name}' (comma-separated):",
+                parent=self,
+            )
+            titles_text = simpledialog.askstring(
+                "Summary Titles",
+                "Optional exported titles (comma-separated; leave blank to keep generated names):",
+                parent=self,
+            )
+            data.setdefault("summaries", []).append(
+                {
+                    "sheet_name": sheet_name,
+                    "entities": [
+                        item.strip()
+                        for item in (entities_text or "").split(",")
+                        if item.strip()
+                    ],
+                    "titles": [
+                        item.strip()
+                        for item in (titles_text or "").split(",")
+                        if item.strip()
+                    ],
+                }
+            )
+            self._save(data)
+            refresh_summaries()
+
+        def edit_summary():
+            selection = summary_list.curselection()
+            if not selection:
+                return
+            summary = data.get("summaries", [])[selection[0]]
+            sheet_name = simpledialog.askstring(
+                "Edit Summary",
+                "Sheet name:",
+                initialvalue=summary.get("sheet_name", ""),
+                parent=self,
+            )
+            if not sheet_name:
+                return
+            entities_text = simpledialog.askstring(
+                "Summary Entities",
+                "Stores/groups (comma-separated):",
+                initialvalue=", ".join(summary.get("entities", [])),
+                parent=self,
+            )
+            if entities_text is None:
+                return
+            titles_text = simpledialog.askstring(
+                "Summary Titles",
+                "Exported titles (comma-separated):",
+                initialvalue=", ".join(summary.get("titles", [])),
+                parent=self,
+            )
+            if titles_text is None:
+                return
+            summary.update(
+                {
+                    "sheet_name": sheet_name,
+                    "entities": [
+                        item.strip() for item in entities_text.split(",") if item.strip()
+                    ],
+                    "titles": [
+                        item.strip() for item in titles_text.split(",") if item.strip()
+                    ],
+                }
+            )
+            self._save(data)
+            refresh_summaries()
+
+        def delete_summary():
+            selection = summary_list.curselection()
+            if not selection:
+                return
+            del data.get("summaries", [])[selection[0]]
+            self._save(data)
+            refresh_summaries()
+
+        summary_buttons = BaseFrame(workspace)
+        summary_buttons.pack(fill="x", padx=12, pady=4)
+        _btn(summary_buttons, "➕ Add", add_summary).pack(side="left", padx=4)
+        _btn(summary_buttons, "✏️ Edit", edit_summary).pack(side="left", padx=4)
+        _btn(summary_buttons, "🗑️ Delete", delete_summary).pack(side="left", padx=4)
+        refresh_summaries()
+
+    # ── E. Cross Check editor ──────────────────────────────────────────────────
+
+    def _render_cross_check(self):
+        workspace = self._workspace
+        data = self.current_data
+        filters = data.setdefault("filters", {})
+        price_lists = data.setdefault("price_lists", {})
+
+        _lbl(
+            workspace,
+            text="Cross Check Configuration",
+            font=("Arial", 13, "bold") if not USE_CTK else None,
+        ).pack(anchor="w", padx=10, pady=(8, 4))
+
+        form = BaseFrame(workspace)
+        form.pack(fill="both", expand=True, padx=10, pady=6)
+
+        ignored_articles_var = tk.StringVar(
+            value=", ".join(filters.get("ignored_articles", []))
+        )
+        ignored_terms_var = tk.StringVar(
+            value=", ".join(filters.get("ignored_terms", []))
+        )
+        fields = [
+            ("Ignored articles", ignored_articles_var),
+            ("Ignored text terms", ignored_terms_var),
+        ]
+
+        cost_mapping = price_lists.setdefault("cost", {})
+        sales_mapping = price_lists.setdefault("sales", {})
+        cost_article_var = tk.StringVar(
+            value=cost_mapping.get("article_column", ARTICLE_COLUMN)
+        )
+        cost_price_var = tk.StringVar(
+            value=cost_mapping.get("price_column", PRICE_COLUMN)
+        )
+        sales_article_var = tk.StringVar(
+            value=sales_mapping.get("article_column", ARTICLE_COLUMN)
+        )
+        sales_price_var = tk.StringVar(
+            value=sales_mapping.get("price_column", PRICE_COLUMN)
+        )
+        fields.extend(
+            [
+                ("Cost list — article column", cost_article_var),
+                ("Cost list — price column", cost_price_var),
+                ("Sales list — article column", sales_article_var),
+                ("Sales list — price column", sales_price_var),
+            ]
+        )
+
+        for row_index, (label, variable) in enumerate(fields):
+            _lbl(form, text=label).grid(
+                row=row_index, column=0, sticky="w", padx=6, pady=5
+            )
+            _entry(form, textvariable=variable).grid(
+                row=row_index, column=1, sticky="ew", padx=6, pady=5
+            )
+        form.columnconfigure(1, weight=1)
+
+        def save_cross_check():
+            filters["ignored_articles"] = [
+                value.strip()
+                for value in ignored_articles_var.get().split(",")
+                if value.strip()
+            ]
+            filters["ignored_terms"] = [
+                value.strip()
+                for value in ignored_terms_var.get().split(",")
+                if value.strip()
+            ]
+            price_lists["cost"] = {
+                "article_column": cost_article_var.get().strip() or ARTICLE_COLUMN,
+                "price_column": cost_price_var.get().strip() or PRICE_COLUMN,
+            }
+            price_lists["sales"] = {
+                "article_column": sales_article_var.get().strip() or ARTICLE_COLUMN,
+                "price_column": sales_price_var.get().strip() or PRICE_COLUMN,
+            }
+            data["filters"] = filters
+            data["price_lists"] = price_lists
+            self._save(data)
+            messagebox.showinfo("Saved", "Cross Check settings saved.", parent=self)
+
+        _btn(form, "💾 Save Configuration", save_cross_check).grid(
+            row=len(fields), column=1, sticky="e", padx=6, pady=8
+        )
+
+    # ── F. YoY reports editor ─────────────────────────────────────────────────
 
     def _render_yoy_reports(self):
-        ws = self._workspace
-        _lbl(ws, text="YoY Report Structure",
-             font=("Arial", 13, "bold") if not USE_CTK else None
-             ).pack(anchor="w", padx=10, pady=(8, 4))
+        workspace = self._workspace
+        _lbl(
+            workspace,
+            text="YoY Report Structure",
+            font=("Arial", 13, "bold") if not USE_CTK else None,
+        ).pack(anchor="w", padx=10, pady=(8, 4))
 
-        if USE_CTK:
-            tabs = ctk.CTkTabview(ws)
-        else:
-            tabs = tk.ttk.Notebook(ws)
+        tabs = ctk.CTkTabview(workspace) if USE_CTK else tk.ttk.Notebook(workspace)
         tabs.pack(fill="both", expand=True, padx=8, pady=4)
 
-        def _add_tab(label):
+        def add_tab(label):
             if USE_CTK:
                 return tabs.add(label)
             frame = ttk.Frame(tabs)
             tabs.add(frame, text=label)
             return frame
 
-        tab_ds     = _add_tab("Data Source")
-        tab_output = _add_tab("Output")
-        tab_sizes  = _add_tab("Sizes")
-        tab_sum    = _add_tab("Summaries")
-        tab_struct = _add_tab("Structures")
+        input_tab = add_tab("Input")
+        output_tab = add_tab("Output")
+        groups_tab = add_tab("Groups")
 
         data = self.current_data
-        ds   = data.get("data_source", {})
+        input_config = data.setdefault("input", {})
+        output_config = data.setdefault("output", {})
+        groups = data.setdefault("groups", {})
 
-        # ── Data source tab ───────────────────────────────────────────────────
-        ds_fields = [
-            ("date_column",     "Date column"),
+        input_fields = [
+            ("date_column", "Date column"),
             ("quantity_column", "Quantity column"),
-            ("item_column",     "Item / SKU column"),
-            ("grouping_column", "Grouping column (Family)"),
-            ("branch_column",   "Branch / Store column"),
+            ("item_column", "Item / SKU column"),
+            ("grouping_column", "Grouping / Family column"),
+            ("branch_column", "Branch / Store column"),
+            ("size_column", "Size column"),
         ]
-        ds_vars = {}
-        for i, (k, lbl) in enumerate(ds_fields):
-            _lbl(tab_ds, text=lbl, anchor="w").grid(row=i, column=0, sticky="w", padx=8, pady=5)
-            var = tk.StringVar(value=ds.get(k, ""))
-            _entry(tab_ds, textvariable=var, width=280 if USE_CTK else None
-                   ).grid(row=i, column=1, sticky="ew", padx=8, pady=5)
-            ds_vars[k] = var
-        tab_ds.columnconfigure(1, weight=1)
+        input_vars = {}
+        for row_index, (key, label) in enumerate(input_fields):
+            _lbl(input_tab, text=label).grid(
+                row=row_index, column=0, sticky="w", padx=8, pady=5
+            )
+            variable = tk.StringVar(value=input_config.get(key, ""))
+            _entry(input_tab, textvariable=variable).grid(
+                row=row_index, column=1, sticky="ew", padx=8, pady=5
+            )
+            input_vars[key] = variable
+        input_tab.columnconfigure(1, weight=1)
 
-        def save_ds():
-            data["data_source"] = {k: v.get().strip() for k, v in ds_vars.items()}
+        def save_input():
+            data["input"] = {
+                key: variable.get().strip() for key, variable in input_vars.items()
+            }
             self._save(data)
-            messagebox.showinfo("Saved", "Data source saved.", parent=self)
+            messagebox.showinfo("Saved", "YoY input mapping saved.", parent=self)
 
-        _btn(tab_ds, "💾 Save", save_ds).grid(row=len(ds_fields)+1, column=1, sticky="e", padx=8, pady=8)
+        _btn(input_tab, "💾 Save Input", save_input).grid(
+            row=len(input_fields), column=1, sticky="e", padx=8, pady=8
+        )
 
-        # ── Output tab ────────────────────────────────────────────────────────
-        out_fields = [
-            ("output_path",       "Output file path"),
-            ("hoja_datos_crudos", "Raw data sheet name"),
+        output_path_var = tk.StringVar(
+            value=output_config.get("default_path", "analysis_report.xlsx")
+        )
+        metrics_var = tk.StringVar(value=", ".join(output_config.get("metrics", [])))
+        annual_var = tk.StringVar(
+            value=str(output_config.get("annual_comparison", True)).lower()
+        )
+        sizes_var = tk.StringVar(
+            value=str(output_config.get("include_sizes", False)).lower()
+        )
+        output_fields = [
+            ("Default output path", output_path_var),
+            ("Metrics (comma-separated)", metrics_var),
+            ("Annual comparison (true/false)", annual_var),
+            ("Include sizes (true/false)", sizes_var),
         ]
-        out_vars = {}
-        for i, (k, lbl) in enumerate(out_fields):
-            _lbl(tab_output, text=lbl).grid(row=i, column=0, sticky="w", padx=8, pady=5)
-            var = tk.StringVar(value=str(data.get(k, "")))
-            _entry(tab_output, textvariable=var, width=280 if USE_CTK else None
-                   ).grid(row=i, column=1, sticky="ew", padx=8, pady=5)
-            out_vars[k] = var
-
-        _lbl(tab_output, text="Annual comparison (true/false)").grid(row=2, column=0, sticky="w", padx=8, pady=5)
-        comp_var = tk.StringVar(value=str(data.get("comparacion_anual", True)).lower())
-        _entry(tab_output, textvariable=comp_var, width=120 if USE_CTK else None
-               ).grid(row=2, column=1, sticky="w", padx=8, pady=5)
-
-        _lbl(tab_output, text="Output metrics (comma-sep)").grid(row=3, column=0, sticky="w", padx=8, pady=5)
-        metrics_var = tk.StringVar(value=", ".join(data.get("metricas_salida", [])))
-        _entry(tab_output, textvariable=metrics_var, width=280 if USE_CTK else None
-               ).grid(row=3, column=1, sticky="ew", padx=8, pady=5)
-
-        _lbl(tab_output, text="Base column order (comma-sep)").grid(row=4, column=0, sticky="w", padx=8, pady=5)
-        order_var = tk.StringVar(value=", ".join(data.get("orden_columnas_base", [])))
-        _entry(tab_output, textvariable=order_var, width=280 if USE_CTK else None
-               ).grid(row=4, column=1, sticky="ew", padx=8, pady=5)
-        tab_output.columnconfigure(1, weight=1)
+        for row_index, (label, variable) in enumerate(output_fields):
+            _lbl(output_tab, text=label).grid(
+                row=row_index, column=0, sticky="w", padx=8, pady=5
+            )
+            _entry(output_tab, textvariable=variable).grid(
+                row=row_index, column=1, sticky="ew", padx=8, pady=5
+            )
+        output_tab.columnconfigure(1, weight=1)
 
         def save_output():
-            for k, var in out_vars.items():
-                data[k] = var.get().strip()
-            data["comparacion_anual"] = comp_var.get().strip().lower() in ("true", "yes", "1")
-            raw_m = metrics_var.get().strip()
-            if raw_m:
-                data["metricas_salida"] = [x.strip() for x in raw_m.split(",") if x.strip()]
-            raw_o = order_var.get().strip()
-            if raw_o:
-                data["orden_columnas_base"] = [x.strip() for x in raw_o.split(",") if x.strip()]
+            output_config["default_path"] = (
+                output_path_var.get().strip() or "analysis_report.xlsx"
+            )
+            output_config["metrics"] = [
+                value.strip() for value in metrics_var.get().split(",") if value.strip()
+            ]
+            output_config["annual_comparison"] = annual_var.get().strip().lower() in (
+                "true",
+                "yes",
+                "1",
+            )
+            output_config["include_sizes"] = sizes_var.get().strip().lower() in (
+                "true",
+                "yes",
+                "1",
+            )
+            data["output"] = output_config
             self._save(data)
-            messagebox.showinfo("Saved", "Output settings saved.", parent=self)
+            messagebox.showinfo("Saved", "YoY output settings saved.", parent=self)
 
-        _btn(tab_output, "💾 Save", save_output).grid(row=5, column=1, sticky="e", padx=8, pady=8)
+        _btn(output_tab, "💾 Save Output", save_output).grid(
+            row=len(output_fields), column=1, sticky="e", padx=8, pady=8
+        )
 
-        # ── Sizes tab ─────────────────────────────────────────────────────────
-        _lbl(tab_sizes, text="Include sizes (true/false)").grid(row=0, column=0, sticky="w", padx=8, pady=6)
-        incl_var = tk.StringVar(value=str(data.get("incluir_talles", False)).lower())
-        _entry(tab_sizes, textvariable=incl_var, width=120 if USE_CTK else None
-               ).grid(row=0, column=1, sticky="w", padx=8, pady=6)
+        def rebuild_groups():
+            for widget in groups_tab.winfo_children():
+                widget.destroy()
 
-        _lbl(tab_sizes, text="Size column name").grid(row=1, column=0, sticky="w", padx=8, pady=6)
-        size_col_var = tk.StringVar(value=data.get("columna_talle", "Talle"))
-        _entry(tab_sizes, textvariable=size_col_var, width=200 if USE_CTK else None
-               ).grid(row=1, column=1, sticky="w", padx=8, pady=6)
+            groups_list = tk.Listbox(
+                groups_tab,
+                height=9,
+                bg="#2b2b2b" if USE_CTK else "white",
+                fg="white" if USE_CTK else "black",
+                selectbackground="#1f538d",
+                relief="flat",
+            )
+            groups_list.pack(fill="both", expand=True, padx=8, pady=4)
+            for group_name, branches in sorted(groups.items()):
+                groups_list.insert(tk.END, f"{group_name}  →  {', '.join(branches)}")
 
-        def save_sizes():
-            data["incluir_talles"] = incl_var.get().strip().lower() in ("true", "yes", "1")
-            data["columna_talle"]  = size_col_var.get().strip()
-            self._save(data)
-            messagebox.showinfo("Saved", "Size settings saved.", parent=self)
+            buttons = BaseFrame(groups_tab)
+            buttons.pack(fill="x", padx=8, pady=4)
 
-        _btn(tab_sizes, "💾 Save", save_sizes).grid(row=2, column=1, sticky="e", padx=8, pady=8)
-        tab_sizes.columnconfigure(1, weight=1)
-
-        # ── Summaries tab ─────────────────────────────────────────────────────
-        def rebuild_sum_tab():
-            for w in tab_sum.winfo_children():
-                w.destroy()
-            resumenes = data.get("resumenes", [])
-            sum_lb = tk.Listbox(tab_sum, height=8,
-                                bg="#2b2b2b" if USE_CTK else "white",
-                                fg="white" if USE_CTK else "black",
-                                selectbackground="#1f538d", relief="flat")
-            sum_lb.pack(fill="x", padx=8, pady=4)
-            for r in resumenes:
-                sum_lb.insert(tk.END, f"{r.get('nombre_hoja','?')}  ←  {r.get('locales_a_incluir','')}")
-
-            row = BaseFrame(tab_sum)
-            row.pack(fill="x", padx=8, pady=4)
-
-            def add_sum():
-                nombre = simpledialog.askstring("Add Summary", "Sheet name:", parent=self)
-                if not nombre:
+            def add_group():
+                group_name = simpledialog.askstring(
+                    "Add Group", "Group key name:", parent=self
+                )
+                if not group_name:
                     return
                 raw = simpledialog.askstring(
-                    "Stores", f"Stores for '{nombre}' (comma-sep):", parent=self)
-                locales = [s.strip() for s in raw.split(",") if s.strip()] if raw else []
-                resumenes.append({"nombre_hoja": nombre, "locales_a_incluir": locales})
-                data["resumenes"] = resumenes
+                    "Branches",
+                    f"Branches for '{group_name}' (comma-separated):",
+                    parent=self,
+                )
+                groups[group_name] = [
+                    value.strip() for value in (raw or "").split(",") if value.strip()
+                ]
+                data["groups"] = groups
                 self._save(data)
-                rebuild_sum_tab()
+                rebuild_groups()
 
-            def del_sum():
-                sel = sum_lb.curselection()
-                if not sel:
+            def edit_group():
+                selection = groups_list.curselection()
+                if not selection:
                     return
-                del resumenes[sel[0]]
-                data["resumenes"] = resumenes
-                self._save(data)
-                rebuild_sum_tab()
-
-            _btn(row, "➕ Add",    add_sum).pack(side="left", padx=4)
-            _btn(row, "🗑️ Delete", del_sum).pack(side="left", padx=4)
-
-        rebuild_sum_tab()
-
-        # ── Structures tab ────────────────────────────────────────────────────
-        def rebuild_struct_tab():
-            for w in tab_struct.winfo_children():
-                w.destroy()
-            structs = data.get("report_structures", {})
-            struct_lb = tk.Listbox(tab_struct, height=8,
-                                   bg="#2b2b2b" if USE_CTK else "white",
-                                   fg="white" if USE_CTK else "black",
-                                   selectbackground="#1f538d", relief="flat")
-            struct_lb.pack(fill="x", padx=8, pady=4)
-            for k, v in sorted(structs.items()):
-                struct_lb.insert(tk.END, f"{k}  →  {', '.join(v)}")
-
-            row = BaseFrame(tab_struct)
-            row.pack(fill="x", padx=8, pady=4)
-
-            def add_struct():
-                key = simpledialog.askstring("Add Structure", "Group key name:", parent=self)
-                if not key:
-                    return
+                group_name = groups_list.get(selection[0]).split("  →  ")[0]
                 raw = simpledialog.askstring(
-                    "Stores", f"Stores for '{key}' (comma-sep):", parent=self)
-                structs[key] = [s.strip() for s in raw.split(",") if s.strip()] if raw else []
-                data["report_structures"] = structs
-                self._save(data)
-                rebuild_struct_tab()
-
-            def del_struct():
-                sel = struct_lb.curselection()
-                if not sel:
-                    return
-                key = struct_lb.get(sel[0]).split("  →  ")[0]
-                structs.pop(key, None)
-                data["report_structures"] = structs
-                self._save(data)
-                rebuild_struct_tab()
-
-            def edit_struct():
-                sel = struct_lb.curselection()
-                if not sel:
-                    return
-                key = struct_lb.get(sel[0]).split("  →  ")[0]
-                curr = ", ".join(structs.get(key, []))
-                raw = simpledialog.askstring(
-                    "Edit Structure", f"Stores for '{key}':", initialvalue=curr, parent=self)
+                    "Edit Group",
+                    f"Branches for '{group_name}':",
+                    initialvalue=", ".join(groups.get(group_name, [])),
+                    parent=self,
+                )
                 if raw is not None:
-                    structs[key] = [s.strip() for s in raw.split(",") if s.strip()]
-                    data["report_structures"] = structs
+                    groups[group_name] = [
+                        value.strip() for value in raw.split(",") if value.strip()
+                    ]
+                    data["groups"] = groups
                     self._save(data)
-                    rebuild_struct_tab()
+                    rebuild_groups()
 
-            _btn(row, "➕ Add",   add_struct).pack(side="left", padx=4)
-            _btn(row, "✏️ Edit",  edit_struct).pack(side="left", padx=4)
-            _btn(row, "🗑️ Delete",del_struct).pack(side="left", padx=4)
+            def delete_group():
+                selection = groups_list.curselection()
+                if not selection:
+                    return
+                group_name = groups_list.get(selection[0]).split("  →  ")[0]
+                groups.pop(group_name, None)
+                data["groups"] = groups
+                self._save(data)
+                rebuild_groups()
 
-        rebuild_struct_tab()
+            _btn(buttons, "➕ Add", add_group).pack(side="left", padx=4)
+            _btn(buttons, "✏️ Edit", edit_group).pack(side="left", padx=4)
+            _btn(buttons, "🗑️ Delete", delete_group).pack(side="left", padx=4)
 
-    # ── E. Pricing editor ─────────────────────────────────────────────────────
+        rebuild_groups()
+
+    # ── G. Pricing editor ─────────────────────────────────────────────────────
 
     def _render_pricing(self):
-        ws = self._workspace
-        _lbl(ws, text="Pricing Rules",
-             font=("Arial", 13, "bold") if not USE_CTK else None
-             ).pack(anchor="w", padx=10, pady=(8, 4))
-
+        workspace = self._workspace
         data = self.current_data
+        _lbl(
+            workspace,
+            text="Pricing Rules",
+            font=("Arial", 13, "bold") if not USE_CTK else None,
+        ).pack(anchor="w", padx=10, pady=(8, 4))
 
-        # Expected columns
-        _lbl(ws, text="Expected Columns (columnas_esperadas)").pack(anchor="w", padx=10, pady=(6, 2))
-        col_lb = tk.Listbox(ws, height=6,
-                            bg="#2b2b2b" if USE_CTK else "white",
-                            fg="white" if USE_CTK else "black",
-                            selectbackground="#1f538d", relief="flat")
-        col_lb.pack(fill="x", padx=12, pady=2)
+        form = BaseFrame(workspace)
+        form.pack(fill="x", padx=10, pady=6)
+        article_var = tk.StringVar(value=data.get("article_column", ARTICLE_COLUMN))
+        database_var = tk.StringVar(
+            value=data.get("database_column", DATABASE_ORIGIN_COLUMN)
+        )
+        price_var = tk.StringVar(value=data.get("price_column", PRICE_COLUMN))
+        for row_index, (label, variable) in enumerate(
+            [
+                ("Article column", article_var),
+                ("Database / origin column", database_var),
+                ("Price column", price_var),
+            ]
+        ):
+            _lbl(form, text=label).grid(
+                row=row_index, column=0, sticky="w", padx=6, pady=5
+            )
+            _entry(form, textvariable=variable).grid(
+                row=row_index, column=1, sticky="ew", padx=6, pady=5
+            )
+        form.columnconfigure(1, weight=1)
 
-        def refresh_cols():
-            col_lb.delete(0, tk.END)
-            for c in data.get("columnas_esperadas", []):
-                col_lb.insert(tk.END, c)
-
-        refresh_cols()
-
-        col_btn = BaseFrame(ws)
-        col_btn.pack(fill="x", padx=12, pady=4)
-
-        def add_col():
-            raw = simpledialog.askstring(
-                "Add Columns", "Column name(s) — comma-separated:", parent=self)
-            if raw:
-                cols = data.get("columnas_esperadas", [])
-                for c in [x.strip() for x in raw.split(",") if x.strip()]:
-                    if c not in cols:
-                        cols.append(c)
-                data["columnas_esperadas"] = cols
-                self._save(data)
-                refresh_cols()
-
-        def del_col():
-            sel = col_lb.curselection()
-            if not sel:
-                return
-            c = col_lb.get(sel[0])
-            cols = data.get("columnas_esperadas", [])
-            if c in cols:
-                cols.remove(c)
-            data["columnas_esperadas"] = cols
+        def save_columns():
+            data["article_column"] = article_var.get().strip() or ARTICLE_COLUMN
+            data["database_column"] = (
+                database_var.get().strip() or DATABASE_ORIGIN_COLUMN
+            )
+            data["price_column"] = price_var.get().strip() or PRICE_COLUMN
             self._save(data)
-            refresh_cols()
+            messagebox.showinfo("Saved", "Pricing columns saved.", parent=self)
 
-        _btn(col_btn, "➕ Add Column",    add_col).pack(side="left", padx=4)
-        _btn(col_btn, "🗑️ Delete Column", del_col).pack(side="left", padx=4)
+        _btn(form, "💾 Save Columns", save_columns).grid(
+            row=3, column=1, sticky="e", padx=6, pady=6
+        )
 
-        # Aliases
-        _lbl(ws, text="Column Aliases (mapeo_nombres)").pack(anchor="w", padx=10, pady=(10, 2))
-        alias_lb = tk.Listbox(ws, height=5,
-                              bg="#2b2b2b" if USE_CTK else "white",
-                              fg="white" if USE_CTK else "black",
-                              selectbackground="#1f538d", relief="flat")
-        alias_lb.pack(fill="x", padx=12, pady=2)
+        _lbl(workspace, text="Column Aliases").pack(
+            anchor="w", padx=10, pady=(10, 2)
+        )
+        alias_list = tk.Listbox(
+            workspace,
+            height=6,
+            bg="#2b2b2b" if USE_CTK else "white",
+            fg="white" if USE_CTK else "black",
+            selectbackground="#1f538d",
+            relief="flat",
+        )
+        alias_list.pack(fill="x", padx=12, pady=2)
 
         def refresh_aliases():
-            alias_lb.delete(0, tk.END)
-            for orig, short in (data.get("mapeo_nombres") or {}).items():
-                alias_lb.insert(tk.END, f"'{orig}'  →  '{short}'")
-
-        refresh_aliases()
-
-        alias_btn = BaseFrame(ws)
-        alias_btn.pack(fill="x", padx=12, pady=4)
+            alias_list.delete(0, tk.END)
+            for original, alias in data.get("aliases", {}).items():
+                alias_list.insert(tk.END, f"'{original}'  →  '{alias}'")
 
         def add_alias():
-            orig = simpledialog.askstring("Add Alias", "Original column name:", parent=self)
-            if not orig:
+            original = simpledialog.askstring(
+                "Add Alias", "Original column name:", parent=self
+            )
+            if not original:
                 return
-            short = simpledialog.askstring("Add Alias", f"Short alias for '{orig}':", parent=self)
-            if short:
-                mapeo = data.get("mapeo_nombres", {})
-                mapeo[orig] = short
-                data["mapeo_nombres"] = mapeo
+            alias = simpledialog.askstring(
+                "Add Alias", f"Short alias for '{original}':", parent=self
+            )
+            if alias:
+                data.setdefault("aliases", {})[original] = alias
                 self._save(data)
                 refresh_aliases()
 
-        def del_alias():
-            sel = alias_lb.curselection()
-            if not sel:
+        def delete_alias():
+            selection = alias_list.curselection()
+            if not selection:
                 return
-            raw = alias_lb.get(sel[0])
-            orig = raw.split("'")[1]
-            mapeo = data.get("mapeo_nombres", {})
-            mapeo.pop(orig, None)
-            data["mapeo_nombres"] = mapeo
+            original = alias_list.get(selection[0]).split("'")[1]
+            data.setdefault("aliases", {}).pop(original, None)
             self._save(data)
             refresh_aliases()
 
-        _btn(alias_btn, "➕ Add Alias",    add_alias).pack(side="left", padx=4)
-        _btn(alias_btn, "🗑️ Delete Alias", del_alias).pack(side="left", padx=4)
+        alias_buttons = BaseFrame(workspace)
+        alias_buttons.pack(fill="x", padx=12, pady=4)
+        _btn(alias_buttons, "➕ Add Alias", add_alias).pack(side="left", padx=4)
+        _btn(alias_buttons, "🗑️ Delete Alias", delete_alias).pack(side="left", padx=4)
+        refresh_aliases()
 
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -989,6 +1241,15 @@ class InventoryToolkitGUI(BaseWindow):
         self._build_top_bar()
         self._build_tabs()
         self._build_status_bar()
+        self.bind("<Control-Shift-I>", self._show_easter_egg)
+
+    def _show_easter_egg(self, _event=None):
+        """Hidden nod for people who read source code and press suspicious shortcuts."""
+        messagebox.showinfo(
+            "Inventory Toolkit",
+            "🥚 Longest prefix wins.\nThe scanner may improvise; the master stock does not.\n\n— FPSensor",
+            parent=self,
+        )
 
     # ── Profile helpers ───────────────────────────────────────────────────────
 
@@ -1167,8 +1428,8 @@ class InventoryToolkitGUI(BaseWindow):
             try:
                 df_head = pd.read_excel(self.cc_sys.get(), nrows=0)
                 cm = ConfigurationManager(self.active_profile.get())
-                cfg = cm.get_cross_check_settings()
-                art_col = cfg.get("columnas_costo", {}).get("articulo", "Artículo")
+                config = cm.get_cross_check_config()
+                art_col = config["price_lists"]["cost"]["article_column"]
                 if art_col not in df_head.columns:
                     messagebox.showwarning(
                         "Column Warning",
@@ -1326,17 +1587,21 @@ class InventoryToolkitGUI(BaseWindow):
             messagebox.showerror("Invalid Date", f"Dates must be YYYY-MM-DD format:\n{err}", parent=self)
             return
 
-        cm  = ConfigurationManager(self.active_profile.get())
-        cfg = cm.get_yoy_settings()
-        if not cfg or "data_source" not in cfg:
+        config_manager = ConfigurationManager(self.active_profile.get())
+        yoy_config = config_manager.get_yoy_reports_config()
+        if not yoy_config or "input" not in yoy_config:
             messagebox.showerror("Config Error",
                                  f"YoY config missing for profile '{self.active_profile.get()}'.\n"
                                  "Run the Setup Wizard or edit YoY Reports in Config Hub.", parent=self)
             return
 
-        ds      = cfg["data_source"]
-        grp_col = ds["grouping_column"] if self.yoy_group.get() == "Family" else ds["item_column"]
-        out     = self.yoy_out.get().strip()
+        input_config = yoy_config["input"]
+        grouping_column = (
+            input_config["grouping_column"]
+            if self.yoy_group.get() == "Family"
+            else input_config["item_column"]
+        )
+        out = self.yoy_out.get().strip()
         if not out.endswith((".xlsx", ".xls")):
             out += ".xlsx"
 
@@ -1348,7 +1613,7 @@ class InventoryToolkitGUI(BaseWindow):
 
         def task():
             return generate_sales_report(
-                f_path, out, s_dt, e_dt, cfg, grp_col,
+                f_path, out, s_dt, e_dt, yoy_config, grouping_column,
                 segmented, has_families, profile, include_sizes,
                 non_interactive=True,
             )

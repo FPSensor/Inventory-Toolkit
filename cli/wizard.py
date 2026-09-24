@@ -1,4 +1,4 @@
-"""Module-oriented setup wizard for Inventory Toolkit configuration v2.
+"""Module-oriented setup wizard for the current Inventory Toolkit configuration schema.
 
 Unlike the old linear wizard, every module can be configured independently and
 with the Excel file that actually belongs to that workflow.  Progress is saved
@@ -13,7 +13,7 @@ from typing import Iterable, Optional
 
 from cli.utils import ask_file, clear_screen, load_json, save_json
 from core.profile_config import (
-    config_path, initialize_v2_config, migrate_legacy_config, profile_readiness,
+    config_path, ensure_profile_config, migrate_legacy_config, profile_readiness,
 )
 
 try:
@@ -35,7 +35,7 @@ _NON_STORE = ("ean", "id", "cod", "barcode", "precio", "costo", "stock", "total"
 
 def initialize_profile_files(configs_path: str) -> None:
     """Compatibility entry point used by profile creation."""
-    initialize_v2_config(Path(configs_path))
+    ensure_profile_config(Path(configs_path))
 
 
 def _load_columns(path: str) -> tuple[list[str], object | None]:
@@ -120,7 +120,7 @@ def _setup_catalog(configs: Path) -> None:
     if raw:
         catalog["default_family"] = raw
     _save(configs, "general/catalog", catalog)
-    families = load_json(str(config_path(configs, "general/families"))) or {"version": 2, "rules": {}}
+    families = load_json(str(config_path(configs, "general/families"))) or {"version": 3, "rules": {}}
     print(f"  ✅ Catalog saved. Family rules currently: {len(families.get('rules', {}))}")
     print("  Family rules are easier to maintain from Config Hub → Catalog & Families.")
     input("  Press Enter...")
@@ -128,7 +128,7 @@ def _setup_catalog(configs: Path) -> None:
 
 def _setup_network(configs: Path) -> None:
     clear_screen(); print("=== STORES & NETWORK ===")
-    network = load_json(str(config_path(configs, "general/network"))) or {"version": 2}
+    network = load_json(str(config_path(configs, "general/network"))) or {"version": 3}
     _, columns, df = _sample_file("Optional: select a raw Stock file to detect numeric store columns.")
     active = list(network.get("active", []))
     candidates = []
@@ -160,7 +160,7 @@ def _setup_network(configs: Path) -> None:
 
 def _setup_stock(configs: Path) -> None:
     clear_screen(); print("=== STOCK PROCESSING ===")
-    cfg = load_json(str(config_path(configs, "stock_processing/settings"))) or {"version": 2}
+    cfg = load_json(str(config_path(configs, "stock_processing/settings"))) or {"version": 3}
     cleaning = cfg.setdefault("cleaning", {})
     pricing = cfg.setdefault("pricing", {}).setdefault("columns", {})
     output = cfg.setdefault("output", {})
@@ -199,7 +199,7 @@ def _setup_stock(configs: Path) -> None:
 
 def _setup_cross(configs: Path) -> None:
     clear_screen(); print("=== CROSS CHECK ===")
-    cfg = load_json(str(config_path(configs, "cross_check/settings"))) or {"version": 2}
+    cfg = load_json(str(config_path(configs, "cross_check/settings"))) or {"version": 3}
     lists = cfg.setdefault("price_lists", {})
     for side, title in (("cost", "Cost list"), ("sales", "Sales list")):
         side_cfg = lists.setdefault(side, {})
@@ -218,7 +218,7 @@ def _setup_cross(configs: Path) -> None:
 
 def _setup_yoy(configs: Path) -> None:
     clear_screen(); print("=== YOY REPORTS ===")
-    cfg = load_json(str(config_path(configs, "yoy_reports/settings"))) or {"version": 2}
+    cfg = load_json(str(config_path(configs, "yoy_reports/settings"))) or {"version": 3}
     inp = cfg.setdefault("input", {})
     _, columns, _ = _sample_file("Select the historical Sales file used by YoY.")
     if columns:
@@ -246,7 +246,7 @@ def _setup_yoy(configs: Path) -> None:
 def run_setup_wizard(profile_dir: str, profile_name: str = "") -> None:
     configs = Path(profile_dir) / "configs"
     migrate_legacy_config(configs, remove_legacy=False)
-    initialize_v2_config(configs)
+    ensure_profile_config(configs)
     while True:
         clear_screen(); _dashboard(configs, profile_name)
         print("\n  [A] Guided setup — all modules")

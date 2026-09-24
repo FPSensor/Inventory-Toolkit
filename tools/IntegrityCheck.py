@@ -12,7 +12,7 @@ import numpy as np
 
 from core.configuration_manager import ConfigurationManager
 from core.data_sanitizer import clean_sku_series, sanitize_dataframe
-from engine.shared.families import build_family_rules, assign_family, vectorize_assign_families
+from engine.shared.families import assign_families, build_family_rules, assign_family
 from engine.inventory_cross_check.data_processor import normalize_article, calculate_difference
 from engine.stock_processing.data_processor import calculate_margin, process_pricing
 from engine.yoy_reports.data_processor import process_sales_data
@@ -115,14 +115,14 @@ class IntegrityAuditor:
         # Invariant 3: Vectorized vs Iterative must return EXACT identical results
         test_skus = pd.Series(["0085-A", "008-B", "001-C", "999-Unknown", "REVISAR | Corrupt"])
         res_iter = test_skus.apply(lambda x: assign_family(x, rules))
-        res_vec = vectorize_assign_families(test_skus, rules)
-        self.assert_check("Exact parity: Vectorized == Iterative", (res_iter == res_vec).all())
+        batch_result = assign_families(test_skus, rules)
+        self.assert_check("Exact parity: Vectorized == Iterative", (res_iter == batch_result).all())
 
         # Invariant 4: Physical count normalization against Master Base
         master_base = ["0085-100", "0085-100-M", "00100-XL"]
         master_set = set(master_base)
         
-        self.assert_check("Exact match in Master Base", normalize_article("0085-100", master_base, master_set) == "0085-100")
+        self.assert_check("Exact match in master article list", normalize_article("0085-100", master_base, master_set) == "0085-100")
         self.assert_check("Longest matching prefix available", normalize_article("0085-100-M-RED", master_base, master_set) == "0085-100-M")
         self.assert_check("Unmatched item marked as REVISAR", normalize_article("99999-NOPE", master_base, master_set) == "REVISAR | 99999-NOPE")
 
@@ -161,11 +161,11 @@ class IntegrityAuditor:
 
         margins = calculate_margin(df_mock, "Venta", "Costo")
 
-        self.assert_check("Standard 50% margin ((1000-500)/1000)", math.isclose(margins[0], 0.50, abs_tol=1e-4))
-        self.assert_check("Standard 25% margin ((2000-1500)/2000)", math.isclose(margins[1], 0.25, abs_tol=1e-4))
-        self.assert_check("Zero-Division Protection (Venta=0 -> Margin=0.0)", margins[2] == 0.0, f"Got: {margins[2]}")
-        self.assert_check("Negative Price Protection (Venta <= 0 -> Margin=0.0)", margins[3] == 0.0, f"Got: {margins[3]}")
-        self.assert_check("Zero Margin Baseline (Venta == Costo -> 0%)", margins[4] == 0.0)
+        self.assert_check("Standard 50% margin ((sales-cost)/sales)", math.isclose(margins[0], 0.50, abs_tol=1e-4))
+        self.assert_check("Standard 25% margin ((sales-cost)/sales)", math.isclose(margins[1], 0.25, abs_tol=1e-4))
+        self.assert_check("Zero-division protection (sales=0 -> margin=0.0)", margins[2] == 0.0, f"Got: {margins[2]}")
+        self.assert_check("Negative sales-value protection (sales <= 0 -> margin=0.0)", margins[3] == 0.0, f"Got: {margins[3]}")
+        self.assert_check("Zero-margin baseline (sales == cost -> 0%)", margins[4] == 0.0)
 
     # -------------------------------------------------------------------------
     # 5. TIME SERIES & OFFSET INTEGRITY (YOY SALES)
@@ -194,14 +194,14 @@ class IntegrityAuditor:
         
         try:
             cm = ConfigurationManager(profile="demo")
-            familias = cm.get_familias()
-            self.assert_check("Successful families load from 'demo' profile", isinstance(familias, dict) and len(familias) > 0)
+            families = cm.get_family_rules()
+            self.assert_check("Successful families load from 'demo' profile", isinstance(families, dict) and len(families) > 0)
 
-            stores = cm.get_stores()
-            self.assert_check("Active stores loading", "locales_activos" in stores and len(stores["locales_activos"]) > 0)
+            active_stores = cm.get_active_stores()
+            self.assert_check("Active stores loading", len(active_stores) > 0)
 
-            cleaning = cm.get_cleaning_rules()
-            self.assert_check("Cleaning rules loading", "columnas_texto_a_limpiar" in cleaning)
+            cleaning = cm.get_stock_cleaning()
+            self.assert_check("Cleaning rules loading", "text_columns" in cleaning)
 
             df_test = pd.DataFrame({
                 "Artículo": [" 00100 ", "00850.0"],
@@ -209,7 +209,7 @@ class IntegrityAuditor:
                 "Ignore_Col": ["X", "Y"]
             })
             
-            for col in cleaning.get("columnas_texto_a_limpiar", []):
+            for col in cleaning.get("text_columns", []):
                 if col in df_test.columns:
                     df_test[col] = clean_sku_series(df_test[col])
 

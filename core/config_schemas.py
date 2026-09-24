@@ -1,29 +1,41 @@
-"""Pydantic schemas for Inventory Toolkit profile configuration v2."""
+"""Pydantic schemas for Inventory Toolkit profile configuration."""
 
 from typing import Dict, List
+
 from pydantic import BaseModel, ConfigDict, Field
+
+from core.business_schema import (
+    ARTICLE_COLUMN,
+    DATABASE_ORIGIN_COLUMN,
+    DEFAULT_FAMILY,
+    FAMILY_COLUMN,
+    PRICE_COLUMN,
+    QUANTITY_COLUMN,
+    RAW_DATA_SHEET,
+    SIZE_COLUMN,
+)
 
 
 class _Config(BaseModel):
     model_config = ConfigDict(extra="allow")
-    version: int = 2
+    version: int = 3
 
 
 class CatalogColumns(BaseModel):
-    article: str = "Artículo"
-    family: str = "Familias"
+    article: str = ARTICLE_COLUMN
+    family: str = FAMILY_COLUMN
 
 
 class CatalogConfig(_Config):
     columns: CatalogColumns = Field(default_factory=CatalogColumns)
-    default_family: str = "Otro"
+    default_family: str = DEFAULT_FAMILY
 
 
 class FamiliesConfig(_Config):
     rules: Dict[str, List[str]] = Field(default_factory=dict)
 
 
-class StoresConfig(_Config):
+class NetworkConfig(_Config):
     active: List[str] = Field(default_factory=list)
     regional_groups: Dict[str, List[str]] = Field(default_factory=dict)
     stock_database_columns: Dict[str, str] = Field(default_factory=dict)
@@ -36,9 +48,9 @@ class CleaningConfig(BaseModel):
 
 
 class PricingColumns(BaseModel):
-    article: str = "Artículo"
-    database: str = "Origen - Base de datos"
-    price: str = "Precio"
+    article: str = ARTICLE_COLUMN
+    database: str = DATABASE_ORIGIN_COLUMN
+    price: str = PRICE_COLUMN
 
 
 class PricingConfig(BaseModel):
@@ -46,10 +58,16 @@ class PricingConfig(BaseModel):
     aliases: Dict[str, str] = Field(default_factory=dict)
 
 
+class StockSummaryConfig(BaseModel):
+    sheet_name: str = "Summary"
+    entities: List[str] = Field(default_factory=list)
+    titles: List[str] = Field(default_factory=list)
+
+
 class StockOutputConfig(BaseModel):
-    raw_data_sheet: str = "Datos"
-    base_columns: List[str] = Field(default_factory=lambda: ["Artículo", "Familias"])
-    summaries: List[dict] = Field(default_factory=list)
+    raw_data_sheet: str = RAW_DATA_SHEET
+    base_columns: List[str] = Field(default_factory=lambda: [ARTICLE_COLUMN, FAMILY_COLUMN])
+    summaries: List[StockSummaryConfig] = Field(default_factory=list)
 
 
 class StockProcessingConfig(_Config):
@@ -64,8 +82,8 @@ class CrossCheckFilters(BaseModel):
 
 
 class PriceListColumns(BaseModel):
-    article_column: str = "Artículo"
-    price_column: str = "Precio"
+    article_column: str = ARTICLE_COLUMN
+    price_column: str = PRICE_COLUMN
 
 
 class CrossCheckPriceLists(BaseModel):
@@ -80,16 +98,16 @@ class CrossCheckConfig(_Config):
 
 class YoYInputConfig(BaseModel):
     date_column: str = "Fecha"
-    quantity_column: str = "Cantidad"
-    grouping_column: str = "Familias"
+    quantity_column: str = QUANTITY_COLUMN
+    grouping_column: str = FAMILY_COLUMN
     item_column: str = "Articulo"
     branch_column: str = "Base"
-    size_column: str = "Talle"
+    size_column: str = SIZE_COLUMN
 
 
 class YoYOutputConfig(BaseModel):
     default_path: str = "analysis_report.xlsx"
-    metrics: List[str] = Field(default_factory=lambda: ["unidades", "ventas"])
+    metrics: List[str] = Field(default_factory=lambda: ["units", "sales"])
     annual_comparison: bool = True
     include_sizes: bool = False
 

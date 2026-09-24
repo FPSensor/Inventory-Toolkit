@@ -1,116 +1,177 @@
-import pandas as pd
-import numpy as np
+"""Orchestration for the Stock Processing workflow."""
+
 import os
-from core.logger import log
+
+import numpy as np
+import pandas as pd
+
+from core.business_schema import (
+    ARTICLE_COLUMN,
+    COST_COLUMN,
+    FAMILY_COLUMN,
+    RAW_DATA_SHEET,
+    SALES_VALUE_LABEL,
+    UNIT_COST_PREFIX,
+    UNIT_SALES_PREFIX,
+)
 from core.configuration_manager import ConfigurationManager
-from engine.shared.families import build_family_rules, assign_family
+from core.logger import log
+from engine.shared.families import assign_family, build_family_rules
 from engine.stock_processing.data_processor import process_pricing
 from engine.stock_processing.excel_renderer import render_stock_excel
 
-def run_stock_processing(args):
-    interactive = not getattr(args, 'non_interactive', False)
-    required_files = [args.stock_processing_raw, args.shared_cost, args.shared_sales]
-    for f in required_files:
-        if not os.path.exists(f):
-            log.error(f"Data file '{f}' not found.")
-            return
 
-    log.info(f"Loading configurations for profile: {args.stock_processing_profile}...")
+def run_stock_processing(args):
+    interactive = not getattr(args, "non_interactive", False)
+    required_files = [args.stock_processing_raw, args.shared_cost, args.shared_sales]
+    for file_path in required_files:
+        if not os.path.exists(file_path):
+            log.error("Data file '%s' not found.", file_path)
+            return None
+
+    log.info("Loading configurations for profile: %s...", args.stock_processing_profile)
     config = ConfigurationManager(args.stock_processing_profile)
 
-    families_raw = config.get_familias()
-    family_rules = build_family_rules(families_raw)
-    databases_dict = config.get_config('databases')
-    settings_dict = config.get_config('settings')
-    stores_dict = config.get_stores()
-    cleaning_dict = config.get_cleaning_rules()
-    reports_dict = config.get_reports()
-    
-    pricing_dict = config.get_pricing_rules() or settings_dict.get('pricing', {})
-    
-    active_stores = stores_dict.get("locales_activos", [])
-    regional_groups = stores_dict.get("grupos_regionales", {})
-    
-    unnecessary_cols = cleaning_dict.get("columnas_a_eliminar", [])
-    text_cols_to_clean = cleaning_dict.get("columnas_texto_a_limpiar", ["Artículo"])
-    stock_cols_to_clean = cleaning_dict.get("columnas_a_formatear", [])
-    
-    base_columns_order = reports_dict.get("orden_columnas_base", ["Artículo", "Familias"])
-    raw_data_sheet = reports_dict.get("hoja_datos_crudos", "Datos")
-    summaries = reports_dict.get("resumenes", [])
+    family_rules = build_family_rules(config.get_family_rules())
+    catalog = config.get_catalog()
+    network = config.get_network_config()
+    stock_config = config.get_stock_processing_config()
+
+    stock_database_columns = network["stock_database_columns"]
+    active_stores = network["active"]
+    regional_groups = network["regional_groups"]
+
+    cleaning = stock_config["cleaning"]
+    pricing = stock_config["pricing"]
+    output = stock_config["output"]
+
+    columns_to_drop = cleaning.get("drop_columns", [])
+    text_columns = cleaning.get("text_columns", [ARTICLE_COLUMN])
+    numeric_columns = cleaning.get("numeric_columns", [])
+    base_column_order = output.get("base_columns", [ARTICLE_COLUMN, FAMILY_COLUMN])
+    raw_data_sheet = output.get("raw_data_sheet", RAW_DATA_SHEET)
+    summaries = output.get("summaries", [])
 
     log.info("Processing Stock data...")
-    df_stock = pd.read_excel(args.stock_processing_raw)
-    
-    col_art_esperada = settings_dict.get('columna_articulo', 'Artículo')
-    if col_art_esperada not in df_stock.columns:
-        log.error(f"❌ APB Error: Stock file is missing the '{col_art_esperada}' column.")
-        print(f"\n❌ APB Error: The file '{os.path.basename(args.stock_processing_raw)}' is NOT a valid Stock file. Missing column '{col_art_esperada}'.")
-        return
-        
-    df_stock = df_stock.drop(columns=[col for col in unnecessary_cols if col in df_stock.columns], errors='ignore')
-    
-    for col in text_cols_to_clean:
-        if col in df_stock.columns:
-            df_stock[col] = df_stock[col].astype(str).str.strip()
-    
-    for col in stock_cols_to_clean:
-        if col in df_stock.columns:
-            df_stock[col] = df_stock[col].astype(str).str.replace(',', '.', regex=False).str.strip()
-            df_stock[col] = pd.to_numeric(df_stock[col], errors='coerce').fillna(0).astype(int)
-    
-    for local, deposito in databases_dict.items():
-        if local in df_stock.columns and deposito in df_stock.columns:
-            df_stock[local] = df_stock[local] + df_stock[deposito]
-            df_stock = df_stock.drop(columns=[deposito])
-            
-    for group_name, branches in regional_groups.items():
-        df_stock[group_name] = sum(df_stock.get(loc, 0) for loc in branches)
-        
-    df_stock['Familias'] = df_stock['Artículo'].apply(lambda x: assign_family(x, family_rules))
-    
-    log.info("Processing pricing files...")
-    df_cost = process_pricing(args.shared_cost, pricing_dict)
-    df_sales = process_pricing(args.shared_sales, pricing_dict)
-    
-    if df_cost is not None:
-        cost_renames = {col: f"PrecioUnit.Costo.{col}" for col in df_cost.columns if col != 'Artículo'}
-        df_cost = df_cost.rename(columns=cost_renames)
-        df_stock = pd.merge(df_stock, df_cost, on='Artículo', how='left')
-        
-    if df_sales is not None:
-        sales_renames = {col: f"PrecioUnit.Venta.{col}" for col in df_sales.columns if col != 'Artículo'}
-        df_sales = df_sales.rename(columns=sales_renames)
-        df_stock = pd.merge(df_stock, df_sales, on='Artículo', how='left')
+    stock_frame = pd.read_excel(args.stock_processing_raw)
 
-    price_cols = [c for c in df_stock.columns if c.startswith('PrecioUnit.')]
-    df_stock[price_cols] = df_stock[price_cols].fillna(-1).astype(float)
-    
+    expected_article_column = catalog.get("columns", {}).get("article", ARTICLE_COLUMN)
+    if expected_article_column not in stock_frame.columns:
+        log.error("APB Error: Stock file is missing the '%s' column.", expected_article_column)
+        print(
+            f"\n❌ APB Error: The file '{os.path.basename(args.stock_processing_raw)}' "
+            f"is NOT a valid Stock file. Missing column '{expected_article_column}'."
+        )
+        return None
+
+    stock_frame = stock_frame.drop(
+        columns=[column for column in columns_to_drop if column in stock_frame.columns],
+        errors="ignore",
+    )
+
+    for column in text_columns:
+        if column in stock_frame.columns:
+            stock_frame[column] = stock_frame[column].astype(str).str.strip()
+
+    for column in numeric_columns:
+        if column in stock_frame.columns:
+            stock_frame[column] = (
+                stock_frame[column]
+                .astype(str)
+                .str.replace(",", ".", regex=False)
+                .str.strip()
+            )
+            stock_frame[column] = pd.to_numeric(
+                stock_frame[column], errors="coerce"
+            ).fillna(0).astype(int)
+
+    for store_column, deposit_column in stock_database_columns.items():
+        if store_column in stock_frame.columns and deposit_column in stock_frame.columns:
+            stock_frame[store_column] = stock_frame[store_column] + stock_frame[deposit_column]
+            stock_frame = stock_frame.drop(columns=[deposit_column])
+
+    for group_name, branches in regional_groups.items():
+        stock_frame[group_name] = sum(stock_frame.get(branch, 0) for branch in branches)
+
+    stock_frame[FAMILY_COLUMN] = stock_frame[ARTICLE_COLUMN].apply(
+        lambda article: assign_family(article, family_rules)
+    )
+
+    log.info("Processing pricing files...")
+    cost_frame = process_pricing(args.shared_cost, pricing)
+    sales_frame = process_pricing(args.shared_sales, pricing)
+
+    if cost_frame is not None:
+        cost_renames = {
+            column: f"{UNIT_COST_PREFIX}{column}"
+            for column in cost_frame.columns
+            if column != ARTICLE_COLUMN
+        }
+        cost_frame = cost_frame.rename(columns=cost_renames)
+        stock_frame = pd.merge(stock_frame, cost_frame, on=ARTICLE_COLUMN, how="left")
+
+    if sales_frame is not None:
+        sales_renames = {
+            column: f"{UNIT_SALES_PREFIX}{column}"
+            for column in sales_frame.columns
+            if column != ARTICLE_COLUMN
+        }
+        sales_frame = sales_frame.rename(columns=sales_renames)
+        stock_frame = pd.merge(stock_frame, sales_frame, on=ARTICLE_COLUMN, how="left")
+
+    unit_price_columns = [
+        column for column in stock_frame.columns if column.startswith("PrecioUnit.")
+    ]
+    stock_frame[unit_price_columns] = stock_frame[unit_price_columns].fillna(-1).astype(float)
+
     entities_to_value = active_stores + list(regional_groups.keys())
-    
     for entity in entities_to_value:
+        cost_value_column = f"{entity}.{COST_COLUMN}"
+        sales_value_column = f"{entity}.{SALES_VALUE_LABEL}"
+
         if entity in regional_groups:
             branches = regional_groups[entity]
-            df_stock[f"{entity}.Costo"] = sum(df_stock.get(f"{loc}.Costo", 0) for loc in branches)
-            df_stock[f"{entity}.Venta"] = sum(df_stock.get(f"{loc}.Venta", 0) for loc in branches)
-        else:
-            col_cost = f"PrecioUnit.Costo.{entity}"
-            col_sales = f"PrecioUnit.Venta.{entity}"
-            if entity in df_stock.columns:
-                df_stock[f"{entity}.Costo"] = np.where(df_stock.get(col_cost, 0) <= 0, 0, df_stock[col_cost] * df_stock[entity])
-                df_stock[f"{entity}.Venta"] = np.where(df_stock.get(col_sales, 0) <= 0, 0, df_stock[col_sales] * df_stock[entity])
+            stock_frame[cost_value_column] = sum(
+                stock_frame.get(f"{branch}.{COST_COLUMN}", 0) for branch in branches
+            )
+            stock_frame[sales_value_column] = sum(
+                stock_frame.get(f"{branch}.{SALES_VALUE_LABEL}", 0) for branch in branches
+            )
+            continue
 
-    df_stock = df_stock.drop(columns=price_cols, errors='ignore')
-    
-    final_col_order = base_columns_order.copy()
+        unit_cost_column = f"{UNIT_COST_PREFIX}{entity}"
+        unit_sales_column = f"{UNIT_SALES_PREFIX}{entity}"
+        if entity in stock_frame.columns:
+            stock_frame[cost_value_column] = np.where(
+                stock_frame.get(unit_cost_column, 0) <= 0,
+                0,
+                stock_frame[unit_cost_column] * stock_frame[entity],
+            )
+            stock_frame[sales_value_column] = np.where(
+                stock_frame.get(unit_sales_column, 0) <= 0,
+                0,
+                stock_frame[unit_sales_column] * stock_frame[entity],
+            )
+
+    stock_frame = stock_frame.drop(columns=unit_price_columns, errors="ignore")
+
+    final_column_order = base_column_order.copy()
     for entity in entities_to_value:
-        final_col_order.extend([entity, f"{entity}.Costo", f"{entity}.Venta"])
-        
-    df_stock = df_stock[[col for col in final_col_order if col in df_stock.columns]]
+        final_column_order.extend(
+            [entity, f"{entity}.{COST_COLUMN}", f"{entity}.{SALES_VALUE_LABEL}"]
+        )
+
+    stock_frame = stock_frame[
+        [column for column in final_column_order if column in stock_frame.columns]
+    ]
 
     final_path = render_stock_excel(
-        args.stock_processing_out, df_stock, summaries, df_stock.columns,
-        raw_data_sheet, interactive=interactive
+        args.stock_processing_out,
+        stock_frame,
+        summaries,
+        stock_frame.columns,
+        raw_data_sheet,
+        interactive=interactive,
     )
-    log.info(f"Process completed. File saved at: {final_path}")
+    log.info("Process completed. File saved at: %s", final_path)
     return final_path

@@ -21,10 +21,10 @@ _VERSION = "1.4.0"
 _LOGO = r"""
   ██╗███╗   ██╗██╗   ██╗███████╗███╗   ██╗████████╗ ██████╗ ██████╗ ██╗   ██╗
   ██║████╗  ██║██║   ██║██╔════╝████╗  ██║╚══██╔══╝██╔═══██╗██╔══██╗╚██╗ ██╔╝
-  ██║██╔██╗ ██║██║   ██║█████╗  ██╔██╗ ██║   ██║   ██║   ██║██████╔╝ ╚████╔╝ 
-  ██║██║╚██╗██║╚██╗ ██╔╝██╔══╝  ██║╚██╗██║   ██║   ██║   ██║██╔══██╗  ╚██╔╝  
-  ██║██║ ╚████║ ╚████╔╝ ███████╗██║ ╚████║   ██║   ╚██████╔╝██║  ██║   ██║   
-  ╚═╝╚═╝  ╚═══╝  ╚═══╝  ╚══════╝╚═╝  ╚═══╝   ╚═╝    ╚═════╝ ╚═╝  ╚═╝   ╚═╝  
+  ██║██╔██╗ ██║██║   ██║█████╗  ██╔██╗ ██║   ██║   ██║   ██║██████╔╝ ╚████╔╝
+  ██║██║╚██╗██║╚██╗ ██╔╝██╔══╝  ██║╚██╗██║   ██║   ██║   ██║██╔══██╗  ╚██╔╝
+  ██║██║ ╚████║ ╚████╔╝ ███████╗██║ ╚████║   ██║   ╚██████╔╝██║  ██║   ██║
+  ╚═╝╚═╝  ╚═══╝  ╚═══╝  ╚══════╝╚═╝  ╚═══╝   ╚═╝    ╚═════╝ ╚═╝  ╚═╝   ╚═╝
                           T O O L K I T
 """
 
@@ -72,6 +72,16 @@ def _draw_menu(current_profile: str) -> None:
     print()
 
 
+
+def _show_easter_egg() -> None:
+    """Display the intentionally undocumented answer to an undocumented option."""
+    clear_screen()
+    print("\n  🥚  INVENTORY TOOLKIT / 42\n")
+    print("  Longest prefix wins.")
+    print("  The scanner may improvise; the master stock does not.")
+    print("  Somewhere, a Discman is still trying to seek track 2.\n")
+    input("  Press Enter to return...")
+
 def main():
     parser = argparse.ArgumentParser(description="Inventory Toolkit CLI")
     parser.add_argument('-debug_level', type=int, choices=[1, 2, 3], default=1,
@@ -108,6 +118,8 @@ def main():
                 configuration_menu(current_profile)
             elif option == "P":
                 current_profile = select_profile(current_profile)
+            elif option == "42":
+                _show_easter_egg()
             elif option == "E":
                 clear_screen()
                 print("  Goodbye!\n")

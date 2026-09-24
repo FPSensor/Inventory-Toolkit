@@ -1,7 +1,7 @@
-"""Profile configuration layout, defaults, validation and legacy migration.
+"""Profile configuration defaults, upgrades, and legacy migration.
 
-The v2 layout is deliberately module-oriented.  Each feature owns one cohesive
-settings file instead of spreading related keys across unrelated JSON files.
+The current layout is module-oriented: each feature owns one cohesive settings
+file instead of scattering related keys across unrelated JSON files.
 """
 
 from __future__ import annotations
@@ -10,19 +10,31 @@ import json
 import shutil
 from copy import deepcopy
 from pathlib import Path
-from typing import Any, Dict, Iterable, Tuple
+from typing import Any, Dict, Tuple
 
-CONFIG_VERSION = 2
+from core.business_schema import (
+    ARTICLE_COLUMN,
+    DATABASE_ORIGIN_COLUMN,
+    DEFAULT_FAMILY,
+    FAMILY_COLUMN,
+    PRICE_COLUMN,
+    QUANTITY_COLUMN,
+    RAW_DATA_SHEET,
+    REVIEW_FAMILY,
+    SIZE_COLUMN,
+)
+
+CONFIG_VERSION = 3
 
 DEFAULTS: Dict[str, dict] = {
     "general/catalog": {
         "version": CONFIG_VERSION,
-        "columns": {"article": "Artículo", "family": "Familias"},
-        "default_family": "Otro",
+        "columns": {"article": ARTICLE_COLUMN, "family": FAMILY_COLUMN},
+        "default_family": DEFAULT_FAMILY,
     },
     "general/families": {
         "version": CONFIG_VERSION,
-        "rules": {"REVISAR": ["REVISAR", "revisar"]},
+        "rules": {REVIEW_FAMILY: [REVIEW_FAMILY, REVIEW_FAMILY.lower()]},
     },
     "general/network": {
         "version": CONFIG_VERSION,
@@ -33,21 +45,21 @@ DEFAULTS: Dict[str, dict] = {
     "stock_processing/settings": {
         "version": CONFIG_VERSION,
         "cleaning": {
-            "text_columns": ["Artículo"],
+            "text_columns": [ARTICLE_COLUMN],
             "drop_columns": [],
             "numeric_columns": [],
         },
         "pricing": {
             "columns": {
-                "article": "Artículo",
-                "database": "Origen - Base de datos",
-                "price": "Precio",
+                "article": ARTICLE_COLUMN,
+                "database": DATABASE_ORIGIN_COLUMN,
+                "price": PRICE_COLUMN,
             },
-            "aliases": {"Origen - Base de datos": "Base"},
+            "aliases": {DATABASE_ORIGIN_COLUMN: "Base"},
         },
         "output": {
-            "raw_data_sheet": "Datos",
-            "base_columns": ["Artículo", "Familias"],
+            "raw_data_sheet": RAW_DATA_SHEET,
+            "base_columns": [ARTICLE_COLUMN, FAMILY_COLUMN],
             "summaries": [],
         },
     },
@@ -58,23 +70,23 @@ DEFAULTS: Dict[str, dict] = {
             "ignored_terms": ["Total general"],
         },
         "price_lists": {
-            "cost": {"article_column": "Artículo", "price_column": "Precio"},
-            "sales": {"article_column": "Artículo", "price_column": "Precio"},
+            "cost": {"article_column": ARTICLE_COLUMN, "price_column": PRICE_COLUMN},
+            "sales": {"article_column": ARTICLE_COLUMN, "price_column": PRICE_COLUMN},
         },
     },
     "yoy_reports/settings": {
         "version": CONFIG_VERSION,
         "input": {
             "date_column": "Fecha",
-            "quantity_column": "Cantidad",
-            "grouping_column": "Familias",
+            "quantity_column": QUANTITY_COLUMN,
+            "grouping_column": FAMILY_COLUMN,
             "item_column": "Articulo",
             "branch_column": "Base",
-            "size_column": "Talle",
+            "size_column": SIZE_COLUMN,
         },
         "output": {
             "default_path": "analysis_report.xlsx",
-            "metrics": ["unidades", "ventas"],
+            "metrics": ["units", "sales"],
             "annual_comparison": True,
             "include_sizes": False,
         },
@@ -82,6 +94,8 @@ DEFAULTS: Dict[str, dict] = {
     },
 }
 
+# Legacy v1 paths and keys are intentionally preserved here because migration
+# must be able to read profiles created before the English configuration model.
 LEGACY_FILES = (
     "general/settings.json",
     "general/databases.json",
@@ -114,8 +128,8 @@ def _write(path: Path, data: Any) -> None:
         fh.write("\n")
 
 
-def initialize_v2_config(configs_dir: Path) -> None:
-    """Create missing v2 files without overwriting existing user values."""
+def initialize_profile_config(configs_dir: Path) -> None:
+    """Create missing current-schema files without overwriting user values."""
     for logical_name, default in DEFAULTS.items():
         path = config_path(configs_dir, logical_name)
         if not path.exists():
@@ -123,22 +137,70 @@ def initialize_v2_config(configs_dir: Path) -> None:
 
 
 def has_legacy_config(configs_dir: Path) -> bool:
-    return any((configs_dir / rel).exists() for rel in LEGACY_FILES)
+    return any((configs_dir / relative_path).exists() for relative_path in LEGACY_FILES)
 
 
-def has_v2_config(configs_dir: Path) -> bool:
-    return all(config_path(configs_dir, name).exists() for name in DEFAULTS)
+def has_modular_config(configs_dir: Path) -> bool:
+    return any(config_path(configs_dir, name).exists() for name in DEFAULTS)
+
+
+def _upgrade_summary(summary: dict) -> dict:
+    """Convert pre-v3 stock summary structure to English schema keys."""
+    upgraded = dict(summary)
+    if "sheet_name" not in upgraded and "nombre_hoja" in upgraded:
+        upgraded["sheet_name"] = upgraded.pop("nombre_hoja")
+    if "entities" not in upgraded and "locales_a_incluir" in upgraded:
+        upgraded["entities"] = upgraded.pop("locales_a_incluir")
+    if "titles" not in upgraded and "titulos" in upgraded:
+        upgraded["titles"] = upgraded.pop("titulos")
+    return upgraded
+
+
+def upgrade_profile_config(configs_dir: Path) -> bool:
+    """Upgrade modular profile files in place to the current schema version."""
+    changed = False
+    for logical_name, default in DEFAULTS.items():
+        path = config_path(configs_dir, logical_name)
+        if not path.exists():
+            continue
+        data = _read(path, deepcopy(default)) or deepcopy(default)
+        original = deepcopy(data)
+
+        if logical_name == "stock_processing/settings":
+            output = data.setdefault("output", {})
+            output["summaries"] = [
+                _upgrade_summary(summary) for summary in output.get("summaries", [])
+            ]
+        elif logical_name == "yoy_reports/settings":
+            output = data.setdefault("output", {})
+            metric_map = {"unidades": "units", "ventas": "sales"}
+            output["metrics"] = [metric_map.get(metric, metric) for metric in output.get("metrics", [])]
+
+        data["version"] = CONFIG_VERSION
+        if data != original:
+            _write(path, data)
+            changed = True
+    return changed
+
+
+def ensure_profile_config(configs_dir: Path) -> None:
+    """Ensure a profile exists in the current modular configuration schema."""
+    if has_legacy_config(configs_dir) and not has_modular_config(configs_dir):
+        migrate_legacy_config(configs_dir, remove_legacy=False)
+    initialize_profile_config(configs_dir)
+    upgrade_profile_config(configs_dir)
 
 
 def migrate_legacy_config(configs_dir: Path, *, remove_legacy: bool = False) -> bool:
-    """Migrate the old mixed layout into the v2 module-oriented layout.
+    """Migrate the old mixed v1 layout into the current module-oriented layout.
 
-    Existing v2 files win.  Legacy files are only used to populate missing v2
-    files, so rerunning migration is safe.  Returns True when legacy input was
-    found and a migration was attempted.
+    Existing modular files win. Legacy files only populate missing files, so
+    rerunning migration is safe. When ``remove_legacy`` is true, source files
+    are archived under ``configs/_legacy_v1_backup`` after conversion.
     """
     if not has_legacy_config(configs_dir):
-        initialize_v2_config(configs_dir)
+        initialize_profile_config(configs_dir)
+        upgrade_profile_config(configs_dir)
         return False
 
     old_settings = _read(configs_dir / "general/settings.json", {}) or {}
@@ -147,17 +209,17 @@ def migrate_legacy_config(configs_dir: Path, *, remove_legacy: bool = False) -> 
     old_databases = _read(configs_dir / "general/databases.json", {}) or {}
     old_cleaning = _read(configs_dir / "stock_processing/cleaning.json", {}) or {}
     old_pricing = _read(configs_dir / "stock_processing/pricing.json", {}) or {}
-    old_cross = _read(configs_dir / "cross_check/cross_check_settings.json", {}) or {}
+    old_cross_check = _read(configs_dir / "cross_check/cross_check_settings.json", {}) or {}
     old_reports = _read(configs_dir / "yoy_reports/reports.json", {}) or {}
 
     migrated = {
         "general/catalog": {
             "version": CONFIG_VERSION,
             "columns": {
-                "article": old_settings.get("columna_articulo", "Artículo"),
-                "family": old_settings.get("columna_familia", "Familias"),
+                "article": old_settings.get("columna_articulo", ARTICLE_COLUMN),
+                "family": old_settings.get("columna_familia", FAMILY_COLUMN),
             },
-            "default_family": old_settings.get("familia_por_defecto", "Otro"),
+            "default_family": old_settings.get("familia_por_defecto", DEFAULT_FAMILY),
         },
         "general/families": {
             "version": CONFIG_VERSION,
@@ -172,7 +234,7 @@ def migrate_legacy_config(configs_dir: Path, *, remove_legacy: bool = False) -> 
         "stock_processing/settings": {
             "version": CONFIG_VERSION,
             "cleaning": {
-                "text_columns": old_cleaning.get("columnas_texto_a_limpiar", ["Artículo"]),
+                "text_columns": old_cleaning.get("columnas_texto_a_limpiar", [ARTICLE_COLUMN]),
                 "drop_columns": old_cleaning.get("columnas_a_eliminar", []),
                 "numeric_columns": old_cleaning.get("columnas_a_formatear", []),
             },
@@ -181,20 +243,22 @@ def migrate_legacy_config(configs_dir: Path, *, remove_legacy: bool = False) -> 
                 "aliases": old_pricing.get("mapeo_nombres", {}),
             },
             "output": {
-                "raw_data_sheet": old_reports.get("hoja_datos_crudos", "Datos"),
-                "base_columns": old_reports.get("orden_columnas_base", ["Artículo", "Familias"]),
-                "summaries": old_reports.get("resumenes", []),
+                "raw_data_sheet": old_reports.get("hoja_datos_crudos", RAW_DATA_SHEET),
+                "base_columns": old_reports.get("orden_columnas_base", [ARTICLE_COLUMN, FAMILY_COLUMN]),
+                "summaries": [
+                    _upgrade_summary(summary) for summary in old_reports.get("resumenes", [])
+                ],
             },
         },
         "cross_check/settings": {
             "version": CONFIG_VERSION,
             "filters": {
-                "ignored_articles": old_cross.get("articulos_ignorados", []),
-                "ignored_terms": old_cross.get("palabras_ignoradas", ["Total general"]),
+                "ignored_articles": old_cross_check.get("articulos_ignorados", []),
+                "ignored_terms": old_cross_check.get("palabras_ignoradas", ["Total general"]),
             },
             "price_lists": {
-                "cost": _legacy_price_map(old_cross.get("columnas_costo", {})),
-                "sales": _legacy_price_map(old_cross.get("columnas_venta", {})),
+                "cost": _legacy_price_map(old_cross_check.get("columnas_costo", {})),
+                "sales": _legacy_price_map(old_cross_check.get("columnas_venta", {})),
             },
         },
         "yoy_reports/settings": {
@@ -202,7 +266,10 @@ def migrate_legacy_config(configs_dir: Path, *, remove_legacy: bool = False) -> 
             "input": _legacy_yoy_input(old_reports),
             "output": {
                 "default_path": old_reports.get("output_path", "analysis_report.xlsx"),
-                "metrics": old_reports.get("metricas_salida", ["unidades", "ventas"]),
+                "metrics": [
+                    {"unidades": "units", "ventas": "sales"}.get(metric, metric)
+                    for metric in old_reports.get("metricas_salida", ["unidades", "ventas"])
+                ],
                 "annual_comparison": old_reports.get("comparacion_anual", True),
                 "include_sizes": old_reports.get("incluir_talles", False),
             },
@@ -217,72 +284,91 @@ def migrate_legacy_config(configs_dir: Path, *, remove_legacy: bool = False) -> 
 
     if remove_legacy:
         backup_root = configs_dir / "_legacy_v1_backup"
-        for rel in LEGACY_FILES:
-            path = configs_dir / rel
+        for relative_path in LEGACY_FILES:
+            path = configs_dir / relative_path
             if path.exists():
-                target = backup_root / rel
+                target = backup_root / relative_path
                 target.parent.mkdir(parents=True, exist_ok=True)
                 shutil.move(str(path), str(target))
 
+    upgrade_profile_config(configs_dir)
     return True
 
 
 def _legacy_pricing_columns(data: dict) -> dict:
-    cols = data.get("columnas_esperadas", [])
+    columns = data.get("columnas_esperadas", [])
     return {
-        "article": cols[0] if len(cols) > 0 else "Artículo",
-        "database": cols[1] if len(cols) > 1 else "Origen - Base de datos",
-        "price": cols[2] if len(cols) > 2 else "Precio",
+        "article": columns[0] if len(columns) > 0 else ARTICLE_COLUMN,
+        "database": columns[1] if len(columns) > 1 else DATABASE_ORIGIN_COLUMN,
+        "price": columns[2] if len(columns) > 2 else PRICE_COLUMN,
     }
 
 
 def _legacy_price_map(data: dict) -> dict:
     return {
-        "article_column": data.get("articulo", "Artículo"),
-        "price_column": data.get("precio", "Precio"),
+        "article_column": data.get("articulo", ARTICLE_COLUMN),
+        "price_column": data.get("precio", PRICE_COLUMN),
     }
 
 
 def _legacy_yoy_input(data: dict) -> dict:
-    ds = data.get("data_source", {})
+    source = data.get("data_source", {})
     return {
-        "date_column": ds.get("date_column", "Fecha"),
-        "quantity_column": ds.get("quantity_column", "Cantidad"),
-        "grouping_column": ds.get("grouping_column", "Familias"),
-        "item_column": ds.get("item_column", "Articulo"),
-        "branch_column": ds.get("branch_column", "Base"),
-        "size_column": ds.get("size_column", data.get("columna_talle", "Talle")),
+        "date_column": source.get("date_column", "Fecha"),
+        "quantity_column": source.get("quantity_column", QUANTITY_COLUMN),
+        "grouping_column": source.get("grouping_column", FAMILY_COLUMN),
+        "item_column": source.get("item_column", "Articulo"),
+        "branch_column": source.get("branch_column", "Base"),
+        "size_column": source.get("size_column", data.get("columna_talle", SIZE_COLUMN)),
     }
 
 
 def profile_readiness(configs_dir: Path) -> Dict[str, Tuple[bool, str]]:
-    """Return human-readable readiness for the Config Hub / wizard dashboard."""
-    initialize_v2_config(configs_dir)
+    """Return human-readable readiness for the Config Hub and setup wizard."""
+    ensure_profile_config(configs_dir)
     catalog = _read(config_path(configs_dir, "general/catalog"), {}) or {}
     families = _read(config_path(configs_dir, "general/families"), {}) or {}
-    stores = _read(config_path(configs_dir, "general/network"), {}) or {}
+    network = _read(config_path(configs_dir, "general/network"), {}) or {}
     stock = _read(config_path(configs_dir, "stock_processing/settings"), {}) or {}
-    cross = _read(config_path(configs_dir, "cross_check/settings"), {}) or {}
+    cross_check = _read(config_path(configs_dir, "cross_check/settings"), {}) or {}
     yoy = _read(config_path(configs_dir, "yoy_reports/settings"), {}) or {}
 
     columns = catalog.get("columns", {})
     family_rules = families.get("rules", {})
-    active = stores.get("active", [])
-    pricing_cols = stock.get("pricing", {}).get("columns", {})
-    cc_lists = cross.get("price_lists", {})
+    active_stores = network.get("active", [])
+    pricing_columns = stock.get("pricing", {}).get("columns", {})
+    price_lists = cross_check.get("price_lists", {})
     yoy_input = yoy.get("input", {})
 
     return {
-        "catalog": (bool(columns.get("article") and columns.get("family") and family_rules),
-                    f"{len(family_rules)} families"),
-        "stores": (bool(active), f"{len(active)} active stores"),
-        "stock": (all(pricing_cols.get(k) for k in ("article", "database", "price")),
-                  f"{len(stock.get('cleaning', {}).get('drop_columns', []))} drop rules"),
-        "cross_check": (all(cc_lists.get(side, {}).get("article_column") and
-                            cc_lists.get(side, {}).get("price_column")
-                            for side in ("cost", "sales")),
-                        f"{len(cross.get('filters', {}).get('ignored_articles', []))} ignored articles"),
-        "yoy": (all(yoy_input.get(k) for k in
-                    ("date_column", "quantity_column", "grouping_column", "item_column", "branch_column")),
-                f"{len(yoy.get('groups', {}))} report groups"),
+        "catalog": (
+            bool(columns.get("article") and columns.get("family") and family_rules),
+            f"{len(family_rules)} families",
+        ),
+        "stores": (bool(active_stores), f"{len(active_stores)} active stores"),
+        "stock": (
+            all(pricing_columns.get(key) for key in ("article", "database", "price")),
+            f"{len(stock.get('cleaning', {}).get('drop_columns', []))} drop rules",
+        ),
+        "cross_check": (
+            all(
+                price_lists.get(side, {}).get("article_column")
+                and price_lists.get(side, {}).get("price_column")
+                for side in ("cost", "sales")
+            ),
+            f"{len(cross_check.get('filters', {}).get('ignored_articles', []))} ignored articles",
+        ),
+        "yoy": (
+            all(
+                yoy_input.get(key)
+                for key in (
+                    "date_column",
+                    "quantity_column",
+                    "grouping_column",
+                    "item_column",
+                    "branch_column",
+                )
+            ),
+            f"{len(yoy.get('groups', {}))} report groups",
+        ),
     }

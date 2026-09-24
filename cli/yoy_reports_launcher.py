@@ -1,9 +1,7 @@
-"""
-yoy_reports_launcher.py — Year-over-Year Sales Report launcher.
+"""Year-over-Year Sales Report launcher.
 
-Uses ask_file() from utils instead of duplicating tkinter logic.
-File paths are persisted between runs.
-APB header validation is preserved intact.
+File paths are persisted between runs and APB header validation happens before
+starting the report engine.
 """
 
 import time
@@ -19,128 +17,148 @@ def launch_yoy_reports(active_profile: str) -> None:
     print("\n  📊  YEAR-OVER-YEAR SALES REPORT\n")
 
     profile = active_profile or "demo"
-    cm = ConfigurationManager(profile=profile)
-    yoy_config = cm.get_yoy_settings()
+    config = ConfigurationManager(profile=profile)
+    yoy_config = config.get_yoy_reports_config()
 
-    if not yoy_config or "data_source" not in yoy_config:
-        log.error(f"No valid report configuration found for profile '{profile}'.")
+    if not yoy_config or "input" not in yoy_config:
+        log.error("No valid report configuration found for profile '%s'.", profile)
         print("  ❌ Check YoY Reports in the Configuration Hub (yoy_reports/settings.json).")
         input("  Press Enter to return...")
         return
 
-    last = load_last_paths(profile)
-    yoy_prev = last.get("yoy_reports", {})
+    last_paths = load_last_paths(profile)
+    previous_paths = last_paths.get("yoy_reports", {})
 
-    # ── Sales data file ──────────────────────────────────────────────────────
-    yoy_file = ask_file("Sales data file", yoy_prev.get("file", ""))
-    if not yoy_file:
+    sales_file = ask_file("Sales data file", previous_paths.get("file", ""))
+    if not sales_file:
         print("  ⚠️  No file selected — operation cancelled.")
         input("  Press Enter to return...")
         return
 
-    # ── Grouping ─────────────────────────────────────────────────────────────
     while True:
-        group_opt = input("  Group by Family (F) or Item (I)? [F/I]: ").strip().lower()
-        if group_opt in ("f", "i"):
+        grouping_option = input("  Group by Family (F) or Item (I)? [F/I]: ").strip().lower()
+        if grouping_option in ("f", "i"):
             break
         print("  ❌ Enter 'F' or 'I'.")
 
-    ds = yoy_config["data_source"]
-    yoy_grouping_col = ds["grouping_column"] if group_opt == "f" else ds["item_column"]
-    item_col         = ds["item_column"]
+    input_config = yoy_config["input"]
+    grouping_column = (
+        input_config["grouping_column"]
+        if grouping_option == "f"
+        else input_config["item_column"]
+    )
+    item_column = input_config["item_column"]
 
-    # ── Does the file already have the Family column? ────────────────────────
-    yoy_has_families = True
-    if group_opt == "f":
-        resp = input("  Does the file already include the Family column? [Y/N]: ").strip().upper()
-        yoy_has_families = resp != "N"
+    has_families = True
+    if grouping_option == "f":
+        response = input(
+            "  Does the file already include the Family column? [Y/N]: "
+        ).strip().upper()
+        has_families = response != "N"
 
-    # ── APB header validation ────────────────────────────────────────────────
     try:
-        df_headers = pd.read_excel(yoy_file, nrows=0)
-        required = [ds["date_column"], ds["quantity_column"], ds["branch_column"]]
-        if group_opt == "f":
-            required.append(yoy_grouping_col if yoy_has_families else item_col)
+        header_frame = pd.read_excel(sales_file, nrows=0)
+        required_columns = [
+            input_config["date_column"],
+            input_config["quantity_column"],
+            input_config["branch_column"],
+        ]
+        if grouping_option == "f":
+            required_columns.append(grouping_column if has_families else item_column)
         else:
-            required.append(item_col)
+            required_columns.append(item_column)
 
-        missing = [c for c in required if c not in df_headers.columns]
-        if missing:
-            log.error(f"APB — Missing columns: {missing}")
-            print(f"\n  ❌ APB Error: required columns are missing: {missing}")
-            print("  Check that you selected the correct file, or verify YoY input columns in Configuration Hub.")
+        missing_columns = [
+            column for column in required_columns if column not in header_frame.columns
+        ]
+        if missing_columns:
+            log.error("APB — Missing columns: %s", missing_columns)
+            print(f"\n  ❌ APB Error: required columns are missing: {missing_columns}")
+            print(
+                "  Check that you selected the correct file, or verify YoY input "
+                "columns in Configuration Hub."
+            )
             input("  Press Enter to return...")
             return
-    except Exception as e:
-        log.error(f"Could not read file headers: {e}")
+    except Exception as exc:
+        log.error("Could not read file headers: %s", exc)
         print("\n  ❌ APB Error: could not read the file. Is it open in another application?")
         input("  Press Enter to return...")
         return
 
-    # ── Date range ───────────────────────────────────────────────────────────
     while True:
         try:
-            start_str = input("  Start date (YYYY-MM-DD): ").strip()
-            end_str   = input("  End date   (YYYY-MM-DD): ").strip()
-            yoy_start = pd.to_datetime(start_str, format="%Y-%m-%d")
-            yoy_end   = pd.to_datetime(end_str,   format="%Y-%m-%d")
-            if yoy_start > yoy_end:
+            start_text = input("  Start date (YYYY-MM-DD): ").strip()
+            end_text = input("  End date   (YYYY-MM-DD): ").strip()
+            start_date = pd.to_datetime(start_text, format="%Y-%m-%d")
+            end_date = pd.to_datetime(end_text, format="%Y-%m-%d")
+            if start_date > end_date:
                 print("  ❌ Start date cannot be later than end date.")
                 continue
             break
         except ValueError:
             print("  ❌ Invalid format — use YYYY-MM-DD (e.g. 2026-01-31).")
 
-    yoy_end = yoy_end + pd.Timedelta(days=1, seconds=-1)
-
-    # ── Report options ───────────────────────────────────────────────────────
-    while True:
-        seg_opt = input("  Generate segmented report by month? [Y/N, default N]: ").strip().lower()
-        if seg_opt in ("y", "n", ""):
-            break
-        print("  ❌ Enter 'Y' or 'N'.")
-    yoy_segmented = seg_opt == "y"
+    end_date = end_date + pd.Timedelta(days=1, seconds=-1)
 
     while True:
-        size_opt = input("  Include size breakdown? [Y/N, default N]: ").strip().lower()
-        if size_opt in ("y", "n", ""):
+        segmented_option = input(
+            "  Generate segmented report by month? [Y/N, default N]: "
+        ).strip().lower()
+        if segmented_option in ("y", "n", ""):
             break
         print("  ❌ Enter 'Y' or 'N'.")
-    yoy_include_sizes = size_opt == "y"
+    segmented = segmented_option == "y"
 
-    # ── Output file ──────────────────────────────────────────────────────────
-    default_out = yoy_config.get("output_path", "analysis_report.xlsx")
-    out_path    = ask_file("Output file", yoy_prev.get("out", default_out), is_output=True)
-    if not out_path.lower().endswith((".xlsx", ".xls")):
-        out_path += ".xlsx"
+    while True:
+        size_option = input(
+            "  Include size breakdown? [Y/N, default N]: "
+        ).strip().lower()
+        if size_option in ("y", "n", ""):
+            break
+        print("  ❌ Enter 'Y' or 'N'.")
+    include_sizes = size_option == "y"
 
-    save_last_paths(profile, {
-        "yoy_reports": {"file": yoy_file, "out": out_path}
-    })
+    default_output = yoy_config.get("output", {}).get(
+        "default_path",
+        "analysis_report.xlsx",
+    )
+    output_path = ask_file(
+        "Output file",
+        previous_paths.get("out", default_output),
+        is_output=True,
+    )
+    if not output_path.lower().endswith((".xlsx", ".xls")):
+        output_path += ".xlsx"
 
-    # ── Generate ─────────────────────────────────────────────────────────────
+    save_last_paths(
+        profile,
+        {"yoy_reports": {"file": sales_file, "out": output_path}},
+    )
+
     try:
         from engine.yoy_reports.generator import generate_sales_report
+
         log.info("Starting YoY report pipeline...")
-        start = time.time()
-        final_out = generate_sales_report(
-            yoy_file,
-            out_path,
-            yoy_start,
-            yoy_end,
+        started_at = time.time()
+        final_output = generate_sales_report(
+            sales_file,
+            output_path,
+            start_date,
+            end_date,
             yoy_config,
-            yoy_grouping_col,
-            yoy_segmented,
-            yoy_has_families,
+            grouping_column,
+            segmented,
+            has_families,
             profile,
-            yoy_include_sizes,
+            include_sizes,
         )
-        if final_out:
-            elapsed = time.time() - start
-            log.info(f"Report generated: {final_out}")
-            print(f"\n  ✅ Done in {elapsed:.2f}s  →  {final_out}")
-    except Exception as e:
-        log.error(f"Error generating report: {e}")
-        print(f"\n  ❌ Critical error: {e}")
+        if final_output:
+            elapsed = time.time() - started_at
+            log.info("Report generated: %s", final_output)
+            print(f"\n  ✅ Done in {elapsed:.2f}s  →  {final_output}")
+    except Exception as exc:
+        log.error("Error generating report: %s", exc)
+        print(f"\n  ❌ Critical error: {exc}")
 
     input("\n  Press Enter to return to the main menu...")

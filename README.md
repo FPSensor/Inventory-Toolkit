@@ -36,74 +36,77 @@ The project was originally developed to solve real-world inventory problems and 
 
 # Project Structure
 
-InventoryToolkit/    
-├── cli/    
-│   ├── config_menu.py    
-│   ├── cross_check_launcher.py    
-│   ├── menu.py    
-│   ├── profiles.py    
-│   ├── stock_processing_launcher.py    
-│   ├── utils.py    
-│   ├── wizard.py    
-│   └── yoy_reports_launcher.py    
-├── core/    
-│   ├── config_schemas.py    
-│   ├── configuration_manager.py    
-│   ├── data_sanitizer.py    
-│   ├── logger.py    
-│   ├── system_utils.py    
-│   └── telemetry.py    
-├── docs/    
-│   ├── architecture.md    
-│   ├── cli.md    
-│   ├── core.md    
-│   ├── dev_notes.md    
-│   ├── engine.md    
-│   ├── index.md    
-│   ├── profiles.md    
-│   └── testing_and_examples.md    
-├── engine/    
-│   ├── inventory_cross_check/    
-│   │   ├── data_processor.py    
-│   │   ├── excel_renderer.py    
-│   │   └── generator.py    
-│   ├── shared/    
-│   │   └── families.py    
-│   ├── stock_processing/    
-│   │   ├── data_processor.py    
-│   │   ├── excel_renderer.py    
-│   │   └── generator.py    
-│   └── yoy_reports/    
-│       ├── data_processor.py    
-│       ├── excel_renderer.py    
-│       └── generator.py    
-├── examples/    
-│   └── demo/    
-├── gui/    
-│   └── app.py    
-├── logs/    
-├── profiles/    
-│   └── demo/    
-│       ├── configs/    
+InventoryToolkit/
+├── cli/
+│   ├── config_menu.py
+│   ├── cross_check_launcher.py
+│   ├── menu.py
+│   ├── profiles.py
+│   ├── stock_processing_launcher.py
+│   ├── utils.py
+│   ├── wizard.py
+│   └── yoy_reports_launcher.py
+├── core/
+│   ├── business_schema.py
+│   ├── config_schemas.py
+│   ├── configuration_manager.py
+│   ├── data_sanitizer.py
+│   ├── legacy_config.py
+│   ├── logger.py
+│   ├── system_utils.py
+│   └── telemetry.py
+├── docs/
+│   ├── architecture.md
+│   ├── cli.md
+│   ├── core.md
+│   ├── dev_notes.md
+│   ├── engine.md
+│   ├── index.md
+│   ├── profiles.md
+│   └── testing_and_examples.md
+├── engine/
+│   ├── inventory_cross_check/
+│   │   ├── data_processor.py
+│   │   ├── excel_renderer.py
+│   │   └── generator.py
+│   ├── shared/
+│   │   └── families.py
+│   ├── stock_processing/
+│   │   ├── data_processor.py
+│   │   ├── excel_renderer.py
+│   │   └── generator.py
+│   └── yoy_reports/
+│       ├── data_processor.py
+│       ├── excel_renderer.py
+│       ├── sheet_renderer.py
+│       └── generator.py
+├── examples/
+│   └── demo/
+├── gui/
+│   └── app.py
+├── logs/
+├── profiles/
+│   └── demo/
+│       ├── configs/
 │       │   ├── general/            # catalog.json, families.json, network.json
 │       │   ├── stock_processing/   # settings.json
 │       │   ├── cross_check/        # settings.json
 │       │   └── yoy_reports/        # settings.json
-│       └── last_paths.json    
-├── tests/    
-│   ├── test_config.py    
-│   ├── test_inventory_cross_check.py    
-│   └── test_stock_processing.py    
-├── tools/    
-│   ├── IntegrityCheck.py    
-│   └── StressTests.py    
-├── CHANGELOG.md    
-├── LICENSE    
-├── README.md    
-├── requirements.txt    
-├── Inventory Toolkit.bat    
-├── Inventory Toolkit.sh    
-└── Setup Environment.bat    
+│       └── last_paths.json
+├── tests/
+│   ├── test_config.py
+│   ├── test_inventory_cross_check.py
+│   └── test_stock_processing.py
+├── tools/
+│   ├── IntegrityCheck.py
+│   └── StressTests.py
+├── CHANGELOG.md
+├── LICENSE
+├── README.md
+├── requirements.txt
+├── Inventory Toolkit.bat
+├── Inventory Toolkit.sh
+└── Setup Environment.bat
 
 ---
 
@@ -165,7 +168,7 @@ CustomTkinter is optional and is not installed by `requirements.txt`; the standa
 
 Inventory Toolkit separates business rules from the processing engine.
 
-Each company can have its own independent profile under `profiles/<profile_name>/configs/`. Configuration v2 is module-oriented: shared catalog/network rules live under `general/`, while Stock Processing, Cross Check, and YoY each own a cohesive `settings.json`. The Configuration Hub and Guided Setup are the recommended editing surfaces.
+Each company can have its own independent profile under `profiles/<profile_name>/configs/`. Configuration v3 is module-oriented: shared catalog/network rules live under `general/`, while Stock Processing, Cross Check, and YoY each own a cohesive `settings.json`. The Configuration Hub and Guided Setup are the recommended editing surfaces.
 
 Documentation:
 
@@ -197,7 +200,7 @@ Run the automated test suite using `pytest`:
 
 ```bash
 pytest tests/
-``` 
+```
 
-# License    
+# License
 MIT License
