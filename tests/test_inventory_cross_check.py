@@ -55,3 +55,58 @@ def test_normalize_article_exact_match_and_review_fallback():
     # Unknown readings must never be guessed, truncated, or discarded.
     raw_unknown = "UNKNOWN-XXLH1"
     assert normalize_article(raw_unknown, master_base, master_set) == f"REVISAR | {raw_unknown}"
+
+
+def test_cross_check_renderer_owns_header_style(tmp_path):
+    """Cross Check headers must not inherit version-dependent Pandas styling."""
+    import pandas as pd
+    from openpyxl import load_workbook
+    from openpyxl.styles import Font, PatternFill
+
+    from engine.inventory_cross_check.excel_renderer import apply_excel_formatting
+
+    output = tmp_path / "cross.xlsx"
+    pd.DataFrame(
+        [{
+            "Familias": "Demo",
+            "Artículo": "ABC-1",
+            "Stock Sistema": 1,
+            "Conteo Físico": 2,
+            "Diferencia": 1,
+            "CTOTAL": 10.0,
+            "VTOTAL": 20.0,
+        }]
+    ).to_excel(output, index=False)
+
+    # Simulate a different Pandas/OpenPyXL runtime contributing a different
+    # header style before Inventory Toolkit applies its own presentation.
+    workbook = load_workbook(output)
+    for cell in workbook.active[1]:
+        cell.font = Font(name="Arial", size=14, italic=True, color="FF0000")
+        cell.fill = PatternFill(fill_type="solid", fgColor="FFFF00")
+    workbook.save(output)
+    workbook.close()
+
+    apply_excel_formatting(output, interactive=False)
+
+    workbook = load_workbook(output)
+    try:
+        for cell in workbook.active[1]:
+            assert cell.font.name == "Calibri"
+            assert cell.font.sz == 11
+            assert cell.font.bold is True
+            assert cell.font.italic is False
+            assert cell.font.color.type == "theme"
+            assert cell.font.color.theme == 1
+            assert cell.fill.fill_type is None
+            assert cell.alignment.horizontal == "center"
+            assert cell.alignment.vertical == "center"
+            assert cell.number_format == "General"
+            assert cell.protection.locked is True
+            assert cell.protection.hidden is False
+            assert cell.border.left.style == "thin"
+            assert cell.border.right.style == "thin"
+            assert cell.border.top.style == "thin"
+            assert cell.border.bottom.style == "thin"
+    finally:
+        workbook.close()

@@ -3,7 +3,7 @@ from core.system_utils import safe_openpyxl_save
 
 try:
     from openpyxl import load_workbook
-    from openpyxl.styles import PatternFill, Border, Side, Alignment
+    from openpyxl.styles import Alignment, Border, Color, Font, PatternFill, Protection, Side
 except ImportError:
     log.error("Missing openpyxl library for Excel formatting.")
     import sys
@@ -21,6 +21,16 @@ def apply_excel_formatting(output_file, interactive=True):
     centered = Alignment(horizontal='center', vertical='center')
     green_fill = PatternFill(start_color='C6EFCE', end_color='C6EFCE', fill_type='solid')
     red_fill = PatternFill(start_color='FFC7CE', end_color='FFC7CE', fill_type='solid')
+    header_font = Font(
+        name='Calibri',
+        size=11,
+        bold=True,
+        color=Color(theme=1),
+        family=2,
+        scheme='minor',
+    )
+    header_fill = PatternFill()
+    header_protection = Protection(locked=True, hidden=False)
     ws.freeze_panes = 'A2'
     ws.auto_filter.ref = ws.dimensions
 
@@ -28,6 +38,14 @@ def apply_excel_formatting(output_file, interactive=True):
         for cell in row:
             cell.border = thin_border
             cell.alignment = centered
+            if cell.row == 1:
+                # Pandas applies its own header style before this renderer runs.
+                # Own every visible header property here so the approved output
+                # does not depend on the installed Pandas/OpenPyXL versions.
+                cell.font = header_font
+                cell.fill = header_fill
+                cell.protection = header_protection
+                cell.number_format = 'General'
             if cell.row > 1 and isinstance(cell.value, (int, float)):
                 col_name = ws.cell(row=1, column=cell.column).value
                 if col_name in ['Diferencia', 'CTOTAL', 'VTOTAL']:
