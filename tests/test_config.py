@@ -54,6 +54,7 @@ def test_empty_profile_bootstraps_current_defaults(tmp_path, monkeypatch):
     assert config.get_yoy_reports_config()["version"] == CONFIG_VERSION
 
 
+# BEGIN LEGACY_COMPATIBILITY
 def test_legacy_profile_migrates_without_changing_business_contract(tmp_path, monkeypatch):
     base = tmp_path / "profiles" / "legacy" / "configs"
     legacy_files = {
@@ -157,3 +158,4 @@ def test_v2_modular_profile_upgrades_internal_keys_to_english(tmp_path):
     }]
     assert yoy["version"] == CONFIG_VERSION
     assert yoy["output"]["metrics"] == ["units", "sales"]
+# END LEGACY_COMPATIBILITY

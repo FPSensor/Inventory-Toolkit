@@ -4,6 +4,8 @@
 
 ### Refactored
 
+- Isolated temporary legacy API/profile migration code behind explicit compatibility boundaries and added debug-level deprecation diagnostics for remaining users.
+- Finished the internal English cleanup in the logging subsystem.
 - Standardized non-business implementation vocabulary in English across core, CLI, GUI, tests, diagnostics, and engine internals. Spanish remains only at explicit business-data and legacy-compatibility boundaries.
 - Upgraded the modular profile schema to v3, translating Stock summary keys and YoY metric identifiers to English with automatic v2-to-v3 migration.
 - Centralized external workbook labels in `core/business_schema.py` and isolated pre-modular serialized keys in `core/legacy_config.py`.
@@ -25,6 +27,7 @@
 
 ### Testing
 
+- Added regression coverage ensuring compatibility diagnostics remain silent normally, warn only in debug mode, and point legacy profiles toward migration.
 - Added explicit regression coverage for variable-length scanned article normalization, longest-prefix matching, exact matches, and `REVISAR |` fallback behavior.
 - Added Safe Saver tests for non-interactive locked-file handling and preserved CLI copy behavior.
 

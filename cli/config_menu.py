@@ -13,7 +13,10 @@ from pathlib import Path
 from cli.utils import ask_yes_no, clear_screen, load_json, save_json
 from cli.wizard import run_setup_wizard
 from core.configuration_manager import ConfigurationManager
-from core.profile_config import config_path, ensure_profile_config, migrate_legacy_config, profile_readiness
+from core.profile_config import config_path, ensure_profile_config, profile_readiness
+# BEGIN LEGACY_COMPATIBILITY
+from core.legacy_profile_migration import migrate_legacy_config
+# END LEGACY_COMPATIBILITY
 
 PROFILES_DIR = "profiles"
 
@@ -209,13 +212,19 @@ def _validate(profile: str):
 
 def configuration_menu(current_profile: str) -> None:
     configs=Path(PROFILES_DIR)/current_profile/"configs"
-    migrate_legacy_config(configs, remove_legacy=False); ensure_profile_config(configs)
+    # BEGIN LEGACY_COMPATIBILITY
+    migrate_legacy_config(configs, remove_legacy=False)
+    # END LEGACY_COMPATIBILITY
+    ensure_profile_config(configs)
     while True:
         clear_screen(); _header("Configuration Hub",current_profile)
         ready=profile_readiness(configs)
         for n,(key,label) in enumerate((("catalog","Catalog & families"),("stores","Stores & network"),("stock","Stock Processing"),("cross_check","Cross Check"),("yoy","YoY Reports")),1):
             ok,detail=ready[key]; print(f"  [{n}] {'✅' if ok else '⚠️ '} {label:<22} {detail}")
-        print("\n  [W] Guided Setup   [V] Validate profile   [M] Migrate/archive legacy config   [0] Back")
+        print("\n  [W] Guided Setup   [V] Validate profile   [0] Back")
+        # BEGIN LEGACY_COMPATIBILITY
+        print("  [M] Migrate/archive legacy config (deprecated compatibility)")
+        # END LEGACY_COMPATIBILITY
         cmd=input("\n  Select a module: ").strip().upper()
         if cmd=="0": return
         if cmd=="1": _catalog_menu(configs,current_profile)
@@ -225,8 +234,10 @@ def configuration_menu(current_profile: str) -> None:
         elif cmd=="5": _yoy_menu(configs,current_profile)
         elif cmd=="W": run_setup_wizard(str(configs.parent),current_profile)
         elif cmd=="V": _validate(current_profile)
+        # BEGIN LEGACY_COMPATIBILITY
         elif cmd=="M":
             migrated = migrate_legacy_config(configs, remove_legacy=True)
             print("  ✅ Legacy configuration migrated and archived in configs/_legacy_v1_backup/." if migrated
                   else "  ℹ️  No legacy v1 files were found.")
             _pause()
+        # END LEGACY_COMPATIBILITY

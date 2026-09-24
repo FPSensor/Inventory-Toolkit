@@ -38,6 +38,7 @@ The Guided Setup is module-oriented rather than a fixed eight-step sequence. Eac
 
 Progress is saved after each module, and the setup dashboard shows which modules are ready.
 
+<!-- BEGIN LEGACY_COMPATIBILITY -->
 ## Legacy v1 migration
 
 `ConfigurationManager` can read a legacy profile and create equivalent current-schema files automatically. Configuration Hub also provides **Migrate/archive legacy config**, which moves the old JSON files to:
@@ -47,3 +48,4 @@ configs/_legacy_v1_backup/
 ```
 
 Legacy v1 and v2 keys are decoded only at the migration boundary. Built-in engines use the native English configuration API; migration changes storage and implementation vocabulary, not business behavior.
+<!-- END LEGACY_COMPATIBILITY -->

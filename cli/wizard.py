@@ -12,9 +12,10 @@ from pathlib import Path
 from typing import Iterable, Optional
 
 from cli.utils import ask_file, clear_screen, load_json, save_json
-from core.profile_config import (
-    config_path, ensure_profile_config, migrate_legacy_config, profile_readiness,
-)
+from core.profile_config import config_path, ensure_profile_config, profile_readiness
+# BEGIN LEGACY_COMPATIBILITY
+from core.legacy_profile_migration import migrate_legacy_config
+# END LEGACY_COMPATIBILITY
 
 try:
     import pandas as pd
@@ -245,7 +246,9 @@ def _setup_yoy(configs: Path) -> None:
 
 def run_setup_wizard(profile_dir: str, profile_name: str = "") -> None:
     configs = Path(profile_dir) / "configs"
+    # BEGIN LEGACY_COMPATIBILITY
     migrate_legacy_config(configs, remove_legacy=False)
+    # END LEGACY_COMPATIBILITY
     ensure_profile_config(configs)
     while True:
         clear_screen(); _dashboard(configs, profile_name)

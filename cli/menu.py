@@ -98,6 +98,12 @@ def main():
     from core.logger import setup_logger
     log = setup_logger(args.debug_level)
 
+    # BEGIN LEGACY_COMPATIBILITY
+    from core.compatibility import configure_compatibility_diagnostics
+
+    configure_compatibility_diagnostics(args.debug_level > 1)
+    # END LEGACY_COMPATIBILITY
+
     if args.debug_level > 1:
         log.info(f"Inventory Toolkit {_VERSION} starting (debug level {args.debug_level})...")
 

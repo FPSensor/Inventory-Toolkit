@@ -51,7 +51,9 @@ InventoryToolkit/
 │   ├── config_schemas.py
 │   ├── configuration_manager.py
 │   ├── data_sanitizer.py
+│   ├── compatibility.py
 │   ├── legacy_config.py
+│   ├── legacy_profile_migration.py
 │   ├── logger.py
 │   ├── system_utils.py
 │   └── telemetry.py

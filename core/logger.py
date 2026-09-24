@@ -1,34 +1,37 @@
+"""Inventory Toolkit logging configuration."""
+
 import logging
 import os
 
-def setup_logger(nivel_debug=1):
-    niveles = {
+
+def setup_logger(debug_level=1):
+    levels = {
         1: logging.ERROR,
         2: logging.WARNING,
-        3: logging.INFO
+        3: logging.INFO,
     }
-    level = niveles.get(nivel_debug, logging.ERROR)
-    
+    level = levels.get(debug_level, logging.ERROR)
+
     logger = logging.getLogger("InventoryToolkit")
     logger.setLevel(level)
-    
+
     if not logger.handlers:
-        # Console Handler
-        ch = logging.StreamHandler()
-        formatter = logging.Formatter('%(levelname)s - %(message)s')
-        ch.setFormatter(formatter)
-        logger.addHandler(ch)
-        
-        # File Handler (Persistente para Magoya)
-        os.makedirs('logs', exist_ok=True)
-        fh = logging.FileHandler('logs/session.log', mode='w', encoding='utf-8')
-        fh_formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-        fh.setFormatter(fh_formatter)
-        logger.addHandler(fh)
-        
+        console_handler = logging.StreamHandler()
+        formatter = logging.Formatter("%(levelname)s - %(message)s")
+        console_handler.setFormatter(formatter)
+        logger.addHandler(console_handler)
+
+        # Persistent session log used for post-run diagnostics.
+        os.makedirs("logs", exist_ok=True)
+        file_handler = logging.FileHandler("logs/session.log", mode="w", encoding="utf-8")
+        file_formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+        file_handler.setFormatter(file_formatter)
+        logger.addHandler(file_handler)
+
     for handler in logger.handlers:
         handler.setLevel(level)
-    
+
     return logger
+
 
 log = logging.getLogger("InventoryToolkit")
