@@ -30,6 +30,9 @@
 
 ### Testing
 
+- Added a hidden runtime `debug` command in the main CLI, allowing debug levels 1/2/3 to be changed without restarting or supplying startup flags.
+- Expanded the level-3 Developer Console with direct pytest execution, session-log inspection, and the complete guarded legacy-compatibility retirement lifecycle. The retirement tool now strips its own CLI launcher/menu blocks when it removes itself.
+- Rebuilt logging verbosity: level 2 now provides operational diagnostics, while level 3 provides structured forensic events for configuration resolution, workbook metadata, transformation counts, merge/filter decisions, generated output structure, save operations, developer tooling, and tracebacks without dumping raw business rows.
 - Added golden-master pre-release certification for all three demo workflows, including semantic XLSX comparison, fixture/config fingerprints, cell-level mismatch diagnostics, and automatic temporary-output cleanup.
 - Added guarded golden-master regeneration for intentional business/demo changes; all candidates are generated and repository-validated before rollback-protected reference installation.
 - Added a debug-level 3 Developer / Release Tools menu exposing quick checks, demo smoke tests, strict release certification, and explicit reference updates from inside the CLI.

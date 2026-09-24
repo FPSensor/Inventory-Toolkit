@@ -8,3 +8,8 @@ The interactive presentation layer of Inventory Toolkit. It bridges the user's i
 *   **`config_menu.py`**: Interactive JSON editor for modifying profiles without leaving the terminal.
 *   **`wizard.py`**: Auto-detects Excel columns and generates boilerplate configurations for new profiles.
 *   **`utils.py`**: Helper functions for screen clearing, file dialogs (Tkinter), and JSON I/O.
+
+
+## Hidden debug console
+
+Typing `debug` in the main menu opens the runtime verbosity selector without requiring a restart. Level 3 exposes the Developer Console for pytest, repository/release checks, golden-master maintenance, session-log inspection, and (while present) guarded legacy-compatibility retirement. The hidden startup flags remain supported for automation.

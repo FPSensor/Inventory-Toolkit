@@ -221,5 +221,7 @@ python tools/ReleaseCheck.py --release
 
 Temporary output files are removed automatically. When an intentional business/demo change requires new expected output, regenerate the references with `python tools/ReleaseCheck.py --update-reference` and review the resulting Git diff before committing it. See [docs/testing_and_examples.md](docs/testing_and_examples.md) for the full workflow.
 
+For normal interactive development, no debug launch flag is required: type the hidden command `debug` in the main CLI, select level 3, and use the Developer Console to run pytest, release gates, golden-master maintenance, view the session log, and manage the temporary legacy-compatibility lifecycle.
+
 # License
 MIT License

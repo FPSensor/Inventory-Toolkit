@@ -45,3 +45,15 @@ def test_legacy_storage_warning_points_to_migration_action(tmp_path, monkeypatch
     assert "Deprecated legacy configuration storage detected" in caplog.text
     assert "Migrate/archive legacy config" in caplog.text
     reset_compatibility_diagnostics()
+
+
+def test_retirement_strips_its_developer_menu_entry_cleanly():
+    from pathlib import Path
+
+    from tools.RetireLegacyCompatibility import strip_compatibility_blocks
+
+    path = Path("cli/debug_menu.py")
+    stripped = strip_compatibility_blocks(path.read_text(encoding="utf-8"), path)
+    assert "Legacy compatibility lifecycle" not in stripped
+    assert "_legacy_compatibility_menu" not in stripped
+    compile(stripped, str(path), "exec")

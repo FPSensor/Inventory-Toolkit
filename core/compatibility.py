@@ -1,8 +1,9 @@
 """Runtime diagnostics for temporary compatibility paths.
 
 Compatibility diagnostics are disabled by default so library/API consumers are
-not spammed. The CLI enables them when ``-debug_level`` is 2 or 3. Warnings are
-emitted at most once per compatibility event during a process lifetime.
+not spammed. The CLI enables them at debug levels 2 and 3, whether selected by
+startup flag or the hidden runtime ``debug`` command. Warnings are emitted at
+most once per compatibility event during a process lifetime.
 """
 
 from __future__ import annotations

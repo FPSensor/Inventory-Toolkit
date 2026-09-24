@@ -50,6 +50,14 @@ This is intentionally guarded by an `UPDATE REFERENCES` confirmation. All three 
 
 Updating references merely because `--release` failed defeats the protection provided by golden-master testing.
 
-### Debug-level 3 CLI
+### Hidden debug console
 
-When Inventory Toolkit is started with debug level 3, the main menu exposes **Developer / Release Tools**. It provides the quick gate, demo smoke test, strict golden-master certification, and the explicitly confirmed reference-update operation without requiring the user to remember the standalone commands.
+The startup flag is no longer required for normal developer use. From the main menu, type the intentionally undisplayed command:
+
+```text
+debug
+```
+
+Then select level 1, 2, or 3. Level 3 exposes the **Developer Console**, which can run pytest directly, quick repository verification, demo smoke workflows, strict golden-master certification, approved-reference regeneration, and a live tail of `logs/session.log`. While legacy compatibility still exists, the same console also exposes its guarded audit/retirement lifecycle.
+
+The original `-debug_level 3` (and `--debug-level 3`) startup form remains supported for automation.
