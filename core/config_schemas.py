@@ -1,58 +1,100 @@
-"""
-config_schemas.py — Pydantic schemas for profile configuration validation.
+"""Pydantic schemas for Inventory Toolkit profile configuration v2."""
 
-The schemas intentionally preserve unknown keys so profile extensions remain
-forward-compatible instead of being silently discarded during validation.
-"""
-
-from typing import Any, Dict, List
-
-from pydantic import BaseModel, ConfigDict, Field, RootModel
+from typing import Dict, List
+from pydantic import BaseModel, ConfigDict, Field
 
 
-class _FlexibleConfig(BaseModel):
-  """Base config that validates known fields without dropping extensions."""
-
-  model_config = ConfigDict(extra='allow')
-
-
-class FamiliasConfig(RootModel[Dict[str, List[str]]]):
-  """familias.json is a root mapping: family name -> SKU prefixes."""
+class _Config(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    version: int = 2
 
 
-class StoresConfig(_FlexibleConfig):
-  locales_activos: List[str] = Field(default_factory=list)
-  grupos_regionales: Dict[str, List[str]] = Field(default_factory=dict)
+class CatalogColumns(BaseModel):
+    article: str = "Artículo"
+    family: str = "Familias"
 
 
-class CleaningConfig(_FlexibleConfig):
-  columnas_a_eliminar: List[str] = Field(default_factory=list)
-  columnas_texto_a_limpiar: List[str] = Field(default_factory=list)
-  columnas_a_formatear: List[str] = Field(default_factory=list)
+class CatalogConfig(_Config):
+    columns: CatalogColumns = Field(default_factory=CatalogColumns)
+    default_family: str = "Otro"
 
 
-class PricingConfig(_FlexibleConfig):
-  columnas_esperadas: List[str] = Field(default_factory=list)
-  mapeo_nombres: Dict[str, str] = Field(default_factory=dict)
-  margen_defecto: float = 0.0
+class FamiliesConfig(_Config):
+    rules: Dict[str, List[str]] = Field(default_factory=dict)
 
 
-class CrossCheckSettings(_FlexibleConfig):
-  articulos_ignorados: List[str] = Field(default_factory=list)
-  palabras_ignoradas: List[str] = Field(default_factory=list)
-  columnas_costo: Dict[str, str] = Field(default_factory=dict)
-  columnas_venta: Dict[str, str] = Field(default_factory=dict)
-  tolerancia: float = 0.0
+class StoresConfig(_Config):
+    active: List[str] = Field(default_factory=list)
+    regional_groups: Dict[str, List[str]] = Field(default_factory=dict)
+    stock_database_columns: Dict[str, str] = Field(default_factory=dict)
 
 
-class YoYReportsConfig(_FlexibleConfig):
-  # The same reports.json also contains Stock Processing report layout.
-  orden_columnas_base: List[str] = Field(
-      default_factory=lambda: ['Artículo', 'Familias']
-  )
-  hoja_datos_crudos: str = 'Datos'
-  resumenes: List[Dict[str, Any]] = Field(default_factory=list)
+class CleaningConfig(BaseModel):
+    text_columns: List[str] = Field(default_factory=list)
+    drop_columns: List[str] = Field(default_factory=list)
+    numeric_columns: List[str] = Field(default_factory=list)
 
-  output_path: str = 'analysis_report.xlsx'
-  data_source: Dict[str, Any] = Field(default_factory=dict)
-  report_structures: Dict[str, List[str]] = Field(default_factory=dict)
+
+class PricingColumns(BaseModel):
+    article: str = "Artículo"
+    database: str = "Origen - Base de datos"
+    price: str = "Precio"
+
+
+class PricingConfig(BaseModel):
+    columns: PricingColumns = Field(default_factory=PricingColumns)
+    aliases: Dict[str, str] = Field(default_factory=dict)
+
+
+class StockOutputConfig(BaseModel):
+    raw_data_sheet: str = "Datos"
+    base_columns: List[str] = Field(default_factory=lambda: ["Artículo", "Familias"])
+    summaries: List[dict] = Field(default_factory=list)
+
+
+class StockProcessingConfig(_Config):
+    cleaning: CleaningConfig = Field(default_factory=CleaningConfig)
+    pricing: PricingConfig = Field(default_factory=PricingConfig)
+    output: StockOutputConfig = Field(default_factory=StockOutputConfig)
+
+
+class CrossCheckFilters(BaseModel):
+    ignored_articles: List[str] = Field(default_factory=list)
+    ignored_terms: List[str] = Field(default_factory=list)
+
+
+class PriceListColumns(BaseModel):
+    article_column: str = "Artículo"
+    price_column: str = "Precio"
+
+
+class CrossCheckPriceLists(BaseModel):
+    cost: PriceListColumns = Field(default_factory=PriceListColumns)
+    sales: PriceListColumns = Field(default_factory=PriceListColumns)
+
+
+class CrossCheckConfig(_Config):
+    filters: CrossCheckFilters = Field(default_factory=CrossCheckFilters)
+    price_lists: CrossCheckPriceLists = Field(default_factory=CrossCheckPriceLists)
+
+
+class YoYInputConfig(BaseModel):
+    date_column: str = "Fecha"
+    quantity_column: str = "Cantidad"
+    grouping_column: str = "Familias"
+    item_column: str = "Articulo"
+    branch_column: str = "Base"
+    size_column: str = "Talle"
+
+
+class YoYOutputConfig(BaseModel):
+    default_path: str = "analysis_report.xlsx"
+    metrics: List[str] = Field(default_factory=lambda: ["unidades", "ventas"])
+    annual_comparison: bool = True
+    include_sizes: bool = False
+
+
+class YoYReportsConfig(_Config):
+    input: YoYInputConfig = Field(default_factory=YoYInputConfig)
+    output: YoYOutputConfig = Field(default_factory=YoYOutputConfig)
+    groups: Dict[str, List[str]] = Field(default_factory=dict)

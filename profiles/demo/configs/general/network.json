@@ -1,0 +1,21 @@
+{
+    "version": 2,
+    "active": [
+        "LIBERT.R",
+        "PASO.R",
+        "P.OESTE",
+        "VIRREYES"
+    ],
+    "regional_groups": {
+        "NRW": [
+            "LIBERT.R",
+            "PASO.R",
+            "P.OESTE"
+        ]
+    },
+    "stock_database_columns": {
+        "LIBERT.R": "DSLIBERT",
+        "PASO.R": "DSPASO.R",
+        "P.OESTE": "DSPOESTE"
+    }
+}

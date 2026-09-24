@@ -1,0 +1,8 @@
+{
+    "version": 2,
+    "columns": {
+        "article": "Artículo",
+        "family": "Familias"
+    },
+    "default_family": "Otro"
+}

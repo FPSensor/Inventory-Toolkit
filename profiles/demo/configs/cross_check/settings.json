@@ -1,0 +1,22 @@
+{
+    "version": 2,
+    "filters": {
+        "ignored_articles": [
+            "12060-142",
+            "12102-142"
+        ],
+        "ignored_terms": [
+            "Total general"
+        ]
+    },
+    "price_lists": {
+        "cost": {
+            "article_column": "Artículo",
+            "price_column": "Precio"
+        },
+        "sales": {
+            "article_column": "Artículo",
+            "price_column": "Precio"
+        }
+    }
+}

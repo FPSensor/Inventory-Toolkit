@@ -41,11 +41,50 @@ def test_configuration_manager_loading():
     assert non_existent == {"default_key": True}
 
 
-def test_schema_validation_fallback(tmp_path, monkeypatch):
-    # A profile directory with no config JSON files remains harmless.
+def test_empty_profile_bootstraps_safe_v2_defaults(tmp_path, monkeypatch):
     profile_dir = tmp_path / "profiles" / "test_dummy" / "configs" / "general"
     profile_dir.mkdir(parents=True)
 
     monkeypatch.chdir(tmp_path)
     cm = ConfigurationManager(profile="test_dummy")
-    assert cm._index == {}
+    assert cm.get_catalog()["columns"]["article"] == "Artículo"
+    assert cm.get_family_config()["rules"]["REVISAR"] == ["REVISAR", "revisar"]
+    assert "stock_processing/settings" in cm._index
+    assert "cross_check/settings" in cm._index
+    assert "yoy_reports/settings" in cm._index
+
+
+def test_legacy_profile_migrates_without_changing_engine_contract(tmp_path, monkeypatch):
+    import json
+    from pathlib import Path
+
+    base = tmp_path / "profiles" / "legacy" / "configs"
+    files = {
+        "general/settings.json": {"columna_articulo": "SKU", "columna_familia": "Family", "familia_por_defecto": "Other"},
+        "general/familias.json": {"Shirts": ["01", "001"]},
+        "general/stores.json": {"locales_activos": ["A"], "grupos_regionales": {"ALL": ["A"]}},
+        "general/databases.json": {"A": "DB_A"},
+        "stock_processing/cleaning.json": {"columnas_texto_a_limpiar": ["SKU"], "columnas_a_eliminar": ["Noise"], "columnas_a_formatear": ["A"]},
+        "stock_processing/pricing.json": {"columnas_esperadas": ["SKU", "Origin", "Price"], "mapeo_nombres": {"Origin": "Base"}},
+        "cross_check/cross_check_settings.json": {"articulos_ignorados": ["X"], "palabras_ignoradas": ["TOTAL"], "columnas_costo": {"articulo": "SKU", "precio": "Cost"}, "columnas_venta": {"articulo": "SKU", "precio": "Retail"}},
+        "yoy_reports/reports.json": {"orden_columnas_base": ["SKU", "Family"], "hoja_datos_crudos": "Raw", "resumenes": [], "output_path": "yoy.xlsx", "data_source": {"date_column": "Date", "quantity_column": "Qty", "grouping_column": "Family", "item_column": "SKU", "branch_column": "Store"}, "report_structures": {"G": ["A"]}},
+    }
+    for rel, payload in files.items():
+        path = base / rel
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(payload), encoding="utf-8")
+
+    monkeypatch.chdir(tmp_path)
+    cm = ConfigurationManager("legacy")
+    assert cm.get_settings()["columna_articulo"] == "SKU"
+    assert cm.get_familias() == {"Shirts": ["01", "001"]}
+    assert cm.get_databases() == {"A": "DB_A"}
+    assert cm.get_cleaning_rules()["columnas_a_eliminar"] == ["Noise"]
+    assert cm.get_pricing_rules()["columnas_esperadas"] == ["SKU", "Origin", "Price"]
+    assert cm.get_cross_check_settings()["columnas_venta"]["precio"] == "Retail"
+    reports = cm.get_reports()
+    assert reports["hoja_datos_crudos"] == "Raw"
+    assert reports["data_source"]["date_column"] == "Date"
+    assert (base / "general/catalog.json").exists()
+    assert (base / "stock_processing/settings.json").exists()
+    assert (base / "yoy_reports/settings.json").exists()

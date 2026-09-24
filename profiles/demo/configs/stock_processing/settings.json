@@ -1,0 +1,96 @@
+{
+    "version": 2,
+    "cleaning": {
+        "text_columns": [
+            "Artículo",
+            "Color",
+            "Talle"
+        ],
+        "drop_columns": [
+            "Grupo",
+            "Artículo Descripción",
+            "Color Descripción",
+            "Talle Descripción",
+            "CENTRAL",
+            "DSELLERS",
+            "SELLERS1",
+            "DETROIT",
+            "DSLOMAS",
+            "Costo Anterior",
+            "Proveedor"
+        ],
+        "numeric_columns": [
+            "DSLIBERT",
+            "DSPASO.R",
+            "DSPOESTE",
+            "LIBERT.R",
+            "P.OESTE",
+            "PASO.R",
+            "VIRREYES",
+            "Stock",
+            "Precio"
+        ]
+    },
+    "pricing": {
+        "columns": {
+            "article": "Artículo",
+            "database": "Origen - Base de datos",
+            "price": "Precio"
+        },
+        "aliases": {
+            "Origen - Base de datos": "Base"
+        }
+    },
+    "output": {
+        "raw_data_sheet": "Datos",
+        "base_columns": [
+            "Artículo",
+            "Color",
+            "Talle",
+            "Familias"
+        ],
+        "summaries": [
+            {
+                "nombre_hoja": "Nrw.I",
+                "locales_a_incluir": [
+                    "LIBERT.R",
+                    "PASO.R",
+                    "P.OESTE",
+                    "NRW"
+                ],
+                "titulos": [
+                    "Familias",
+                    "Libertad",
+                    "CTOTAL",
+                    "VTOTAL",
+                    "Margen",
+                    "Paso",
+                    "CTOTAL ",
+                    "VTOTAL ",
+                    "Margen ",
+                    "Plaza",
+                    "CTOTAL  ",
+                    "VTOTAL  ",
+                    "Margen  ",
+                    "Consolidado",
+                    "CTOTAL   ",
+                    "VTOTAL   ",
+                    "Margen   "
+                ]
+            },
+            {
+                "nombre_hoja": "Virreyes.I",
+                "locales_a_incluir": [
+                    "VIRREYES"
+                ],
+                "titulos": [
+                    "Familia",
+                    "Cantidad",
+                    "CTOTAL",
+                    "VTOTAL",
+                    "Margen"
+                ]
+            }
+        ]
+    }
+}

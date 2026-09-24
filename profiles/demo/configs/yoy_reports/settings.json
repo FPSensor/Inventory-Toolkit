@@ -1,0 +1,30 @@
+{
+    "version": 2,
+    "input": {
+        "date_column": "Fecha",
+        "quantity_column": "Cantidad",
+        "grouping_column": "Familias",
+        "item_column": "Articulo",
+        "branch_column": "Base",
+        "size_column": "Talle"
+    },
+    "output": {
+        "default_path": "analysis_report.xlsx",
+        "metrics": [
+            "unidades",
+            "ventas"
+        ],
+        "annual_comparison": true,
+        "include_sizes": false
+    },
+    "groups": {
+        "branch_group_1": [
+            "LIBERT.R",
+            "PASO.R",
+            "P.OESTE"
+        ],
+        "branch_group_2": [
+            "VIRREYES"
+        ]
+    }
+}
