@@ -1,4 +1,5 @@
 @echo off
+cd /d "%~dp0"
 :: Fuerza el uso de UTF-8 en el proceso de la consola
 chcp 65001 > nul
 set PYTHONUTF8=1

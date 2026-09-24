@@ -1,4 +1,5 @@
 @echo off
+cd /d "%~dp0"
 echo ===================================================
 echo     Instalador del Entorno para el CLI
 echo ===================================================

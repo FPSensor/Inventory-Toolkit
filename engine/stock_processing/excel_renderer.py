@@ -5,6 +5,9 @@ from core.logger import log
 from core.system_utils import safe_openpyxl_save
 from engine.stock_processing.data_processor import calculate_margin
 
+MAX_COLUMN_WIDTH = 50
+
+
 def apply_excel_formatting(ws, is_summary=False):
     header_fill = PatternFill(start_color="D9D9D9", end_color="D9D9D9", fill_type="solid")
     header_font = Font(bold=True)
@@ -12,15 +15,15 @@ def apply_excel_formatting(ws, is_summary=False):
         cell.font = header_font
         cell.fill = header_fill
 
+    ws.freeze_panes = 'A2'
+    ws.auto_filter.ref = ws.dimensions
+
     for col in ws.columns:
         max_length = 0
         col_letter = col[0].column_letter
         for cell in col:
-            try:
-                if len(str(cell.value)) > max_length:
-                    max_length = len(str(cell.value))
-            except:
-                pass
+            value_length = len(str(cell.value)) if cell.value is not None else 0
+            max_length = max(max_length, value_length)
             col_name = str(ws[f"{col_letter}1"].value).upper()
             if cell.row > 1 and cell.value is not None:
                 if "MARGEN" in col_name:
@@ -29,7 +32,7 @@ def apply_excel_formatting(ws, is_summary=False):
                     cell.number_format = '#,##0.00'
                 elif isinstance(cell.value, (int, float)) and not is_summary:
                     cell.number_format = '#,##0'
-        ws.column_dimensions[col_letter].width = (max_length + 2)
+        ws.column_dimensions[col_letter].width = min(max_length + 2, MAX_COLUMN_WIDTH)
 
 def render_stock_excel(output_file, df_stock, summaries, df_columns, raw_data_sheet, interactive=True):
     log.info("Generating dynamic reports and applying formats...")

@@ -16,6 +16,8 @@ def apply_excel_formatting(output_file, interactive=True):
     centered = Alignment(horizontal='center', vertical='center')
     green_fill = PatternFill(start_color='C6EFCE', end_color='C6EFCE', fill_type='solid')
     red_fill = PatternFill(start_color='FFC7CE', end_color='FFC7CE', fill_type='solid')
+    ws.freeze_panes = 'A2'
+    ws.auto_filter.ref = ws.dimensions
 
     for row in ws.iter_rows(min_row=1, max_row=ws.max_row, min_col=1, max_col=ws.max_column):
         for cell in row:

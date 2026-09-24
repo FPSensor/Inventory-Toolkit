@@ -18,7 +18,7 @@ The project was originally developed to solve real-world inventory problems and 
 - 📦 Stock Processing (`engine/stock_processing/`)
 - 🔄 Inventory Cross Check (`engine/inventory_cross_check/`)
 - 📊 Year-over-Year (YoY) Sales Reports with Monthly/Annual Segmentation and optional Size Breakdown (`engine/yoy_reports/`)
-- 🖥️ Native Desktop GUI (`gui/app.py`), Tkinter/CustomTkinter based, as a full alternative to the CLI
+- 🧪 Experimental Desktop GUI (`gui/app.py`), Tkinter/CustomTkinter based; currently in active testing rather than a user-ready replacement for the CLI
 - 🐧 Cross-Platform: Windows, Linux, and macOS launchers
 - 👤 Multiple Profiles with Isolated Config Folders
 - ⚙ JSON-based Configuration Subdirectories, validated against Pydantic schemas (`core/config_schemas.py`)
@@ -27,7 +27,7 @@ The project was originally developed to solve real-world inventory problems and 
 - 📂 Native File Picker
 - 📊 Automatic Excel Column Detection
 - 🔧 8-Step Guided Configuration Wizard
-- 🚀 Vectorized SKU/Family Classification for large datasets
+- 🧭 Shared SKU/Family Classification with parity and performance diagnostics
 - 🛡️ APB Protocol Validations & PermissionError Safe Savers
 - 📝 Persistent Dual-Channel Logging (`logs/session.log`)
 - 🧪 Automated Unit Testing with Pytest, plus Integrity Check and Stress Test diagnostic tools (`tools/`)
@@ -56,10 +56,8 @@ InventoryToolkit/
 ├── docs/    
 │   ├── architecture.md    
 │   ├── cli.md    
-│   ├── configuration.md    
 │   ├── core.md    
 │   ├── dev_notes.md    
-│   ├── development_and_apb.md    
 │   ├── engine.md    
 │   ├── index.md    
 │   ├── profiles.md    
@@ -133,13 +131,17 @@ On Linux and macOS, use **Inventory Toolkit.sh** instead (`./Inventory\ Toolkit.
 
 ---
 
-# Desktop GUI
+# Desktop GUI (Experimental)
 
-In addition to the CLI, Inventory Toolkit ships a native desktop GUI (`gui/app.py`) covering the same three workflows — Inventory Cross Check, Stock Processing, and YoY Sales Reports — plus a graphical Configuration Hub. It runs on Windows, Linux, and macOS, and uses [CustomTkinter](https://github.com/TomSchimansky/CustomTkinter) when available, falling back to plain Tkinter/ttk otherwise.
+Inventory Toolkit includes an experimental desktop GUI (`gui/app.py`) covering the three workflows plus a graphical Configuration Hub. The GUI is still in active testing and is not yet considered the primary user-facing interface. It runs on Windows, Linux, and macOS, and uses CustomTkinter when installed, falling back to plain Tkinter/ttk otherwise.
+
+Run it from the repository root as a module:
 
 ```bash
-python gui/app.py
+python -m gui.app
 ```
+
+CustomTkinter is optional and is not installed by `requirements.txt`; the standard-library Tkinter fallback remains supported.
 
 ---
 

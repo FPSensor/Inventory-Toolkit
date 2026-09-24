@@ -1,5 +1,23 @@
 # Changelog
 
+## [Unreleased]
+
+### Fixed
+
+- Pydantic schemas now preserve the real profile JSON shapes, including family root mappings, regional groups, pricing aliases, Cross Check settings, and the shared Stock/YoY report configuration.
+- Engines now consume validated configuration accessors consistently instead of mixing raw and typed configuration paths.
+- Added the missing Pydantic runtime dependency and restored a green pytest suite.
+- GUI background execution no longer calls Tk widgets from worker threads and no longer blocks on invisible terminal `input()` prompts when an output workbook is locked.
+- Safe Saver keeps its existing interactive CLI retry/copy behavior while exposing a non-interactive error path for graphical callers.
+- Diagnostic tools no longer claim a speedup or production guarantee when their own measurements do not support those conclusions.
+- Cross Check and Stock output workbooks now freeze headers and expose filters; Stock column auto-sizing is capped to avoid pathological widths.
+- Windows launchers now anchor execution to the repository directory.
+
+### Testing
+
+- Added explicit regression coverage for variable-length scanned article normalization, longest-prefix matching, exact matches, and `REVISAR |` fallback behavior.
+- Added Safe Saver tests for non-interactive locked-file handling and preserved CLI copy behavior.
+
 ## [1.4.0] - 2026-09-23
 
 ### Added
