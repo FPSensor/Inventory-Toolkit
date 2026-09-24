@@ -110,26 +110,26 @@ def run_benchmark(n_items=50000):
     t_sanitization = time.perf_counter() - t0
     print(f"  🧹 Sanitization of {n_items:,} SKUs: {t_sanitization:.4f} sec")
 
-    # Benchmark 2: Legacy Iterative Classification (apply/lambda)
+    # Benchmark 2: Legacy full pipeline (sanitization + apply/lambda)
     t0 = time.perf_counter()
-    _ = s_clean.apply(lambda x: assign_family(x, rules))
+    _ = clean_sku_series(s_raw).apply(lambda x: assign_family(x, rules))
     t_legacy = time.perf_counter() - t0
-    print(f"  🐢 Legacy Classification (apply):     {t_legacy:.4f} sec ({n_items/t_legacy:,.0f} SKUs/sec)")
+    print(f"  🐢 Legacy pipeline (clean + apply): {t_legacy:.4f} sec ({n_items/t_legacy:,.0f} SKUs/sec)")
 
-    # Benchmark 3: Vectorized Classification (regex-anchored)
+    # Benchmark 3: Batch full pipeline (sanitization + prefix trie)
     t0 = time.perf_counter()
-    res_vec = vectorize_assign_families(s_clean, rules)
+    res_vec = vectorize_assign_families(s_raw, rules)
     t_vectorized = time.perf_counter() - t0
-    print(f"  🚀 Vectorized Classification:       {t_vectorized:.4f} sec ({n_items/t_vectorized:,.0f} SKUs/sec)")
+    print(f"  🚀 Batch pipeline (clean + trie):   {t_vectorized:.4f} sec ({n_items/t_vectorized:,.0f} SKUs/sec)")
 
     speedup = t_legacy / t_vectorized if t_vectorized > 0 else 0
     if speedup >= 1:
-        print(f"\n  🔥 Vectorized path: {speedup:.2f}x faster than apply")
+        print(f"\n  🔥 Batch classifier: {speedup:.2f}x faster than apply")
     elif speedup > 0:
         slowdown = 1 / speedup
-        print(f"\n  ⚠️ Vectorized path: {slowdown:.2f}x slower than apply on this dataset")
+        print(f"\n  ⚠️ Batch classifier: {slowdown:.2f}x slower than apply on this dataset")
     else:
-        print("\n  ⚠️ Vectorized benchmark could not calculate a valid ratio")
+        print("\n  ⚠️ Batch benchmark could not calculate a valid ratio")
     
     # Category distribution output
     counts = res_vec.value_counts().to_dict()

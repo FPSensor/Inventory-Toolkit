@@ -1,7 +1,9 @@
-import re
 import pandas as pd
 from typing import List, Tuple, Dict
 from core.data_sanitizer import clean_sku_series
+
+_TRIE_FAMILY_KEY = "__family__"
+
 
 def build_family_rules(families_dict: Dict[str, List[str]]) -> List[Tuple[str, str]]:
     rules = []
@@ -12,6 +14,7 @@ def build_family_rules(families_dict: Dict[str, List[str]]) -> List[Tuple[str, s
                 rules.append((p_str, family))
     rules.sort(key=lambda x: len(x[0]), reverse=True)
     return rules
+
 
 def assign_family(code, rules: List[Tuple[str, str]]) -> str:
     if pd.isna(code) or not isinstance(code, str):
@@ -24,27 +27,46 @@ def assign_family(code, rules: List[Tuple[str, str]]) -> str:
             return family
     return "Other"
 
+
+def _build_prefix_trie(rules: List[Tuple[str, str]]) -> dict:
+    """Compile ordered prefix rules into a trie while preserving first-rule wins."""
+    root = {}
+    for prefix, family in rules:
+        node = root
+        for char in prefix:
+            node = node.setdefault(char, {})
+        # Equal prefixes preserve the same stable priority as assign_family().
+        node.setdefault(_TRIE_FAMILY_KEY, family)
+    return root
+
+
+def _assign_family_from_trie(code: str, trie: dict) -> str:
+    if code.startswith("REVISAR"):
+        return "REVISAR"
+
+    node = trie
+    best_family = None
+    for char in code:
+        next_node = node.get(char)
+        if next_node is None:
+            break
+        node = next_node
+        if _TRIE_FAMILY_KEY in node:
+            best_family = node[_TRIE_FAMILY_KEY]
+
+    return best_family if best_family is not None else "Other"
+
+
 def vectorize_assign_families(series: pd.Series, rules: List[Tuple[str, str]]) -> pd.Series:
     """
-    High-performance vector mapping using regex boundary matches.
+    Batch-classify a Series with the exact longest-prefix semantics of assign_family().
+
+    The public name is retained for backward compatibility. Internally a prefix trie
+    avoids running one full regex scan per configured prefix.
     """
     clean_series = clean_sku_series(series).str.upper()
-    result = pd.Series("Other", index=clean_series.index)
-    
-    # Flag REVISAR explicitly
-    revisar_mask = clean_series.str.startswith("REVISAR")
-    result[revisar_mask] = "REVISAR"
-    
-    unassigned_mask = ~revisar_mask
-    for prefix, family in rules:
-        if not unassigned_mask.any():
-            break
-        # Match prefix at the start of string
-        pattern = f"^{re.escape(prefix)}"
-        matched = clean_series[unassigned_mask].str.contains(pattern, regex=True, na=False)
-        matched_indices = matched[matched].index
-        if not matched_indices.empty:
-            result.loc[matched_indices] = family
-            unassigned_mask.loc[matched_indices] = False
-            
-    return result
+    if not rules:
+        return pd.Series("Other", index=clean_series.index, dtype="object")
+
+    trie = _build_prefix_trie(rules)
+    return clean_series.map(lambda code: _assign_family_from_trie(code, trie))

@@ -1,6 +1,6 @@
 import pytest
 import pandas as pd
-from engine.shared.families import build_family_rules, assign_family
+from engine.shared.families import build_family_rules, assign_family, vectorize_assign_families
 from engine.stock_processing.data_processor import calculate_margin
 
 def test_classify_family():
@@ -23,3 +23,32 @@ def test_calculate_margin():
     assert margins[0] == 0.50  # 500 / 1000
     assert margins[1] == 0.25  # 500 / 2000
     assert margins[2] == 0.00  # Evita división por cero
+
+
+def test_batch_family_classifier_matches_iterative_semantics():
+    families = {
+        "Generic": ["00", "AB"],
+        "Specific": ["0085", "ABC"],
+        "Duplicate Later": ["AB"],
+    }
+    rules = build_family_rules(families)
+    raw = pd.Series([
+        "0085-123",
+        "001-XYZ",
+        "ABC-1",
+        "AB-2",
+        "REVISAR | UNKNOWN",
+        " 0085-999 ",
+        12345,
+        None,
+    ])
+
+    cleaned = raw.astype(object)
+    from core.data_sanitizer import clean_sku_series
+    cleaned = clean_sku_series(cleaned).str.upper()
+    iterative = cleaned.apply(lambda code: assign_family(code, rules))
+    batched = vectorize_assign_families(raw, rules)
+
+    assert batched.equals(iterative)
+    # Duplicate equal prefixes keep stable first-rule priority.
+    assert batched.iloc[3] == "Generic"

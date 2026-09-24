@@ -10,6 +10,7 @@
 - GUI background execution no longer calls Tk widgets from worker threads and no longer blocks on invisible terminal `input()` prompts when an output workbook is locked.
 - Safe Saver keeps its existing interactive CLI retry/copy behavior while exposing a non-interactive error path for graphical callers.
 - Diagnostic tools no longer claim a speedup or production guarantee when their own measurements do not support those conclusions.
+- Family batch classification now uses a prefix trie, preserving longest-prefix semantics while avoiding repeated full-Series regex scans for every configured prefix.
 - Cross Check and Stock output workbooks now freeze headers and expose filters; Stock column auto-sizing is capped to avoid pathological widths.
 - Windows launchers now anchor execution to the repository directory.
 
