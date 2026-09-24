@@ -1,84 +1,124 @@
 # Changelog
 
-## [Unreleased]
+All notable changes to Inventory Toolkit are documented in this file.
 
-### Refactored
+## [1.4.0] - 2026-09-24
 
-- Isolated temporary legacy API/profile migration code behind explicit compatibility boundaries and added debug-level deprecation diagnostics for remaining users.
-- Finished the internal English cleanup in the logging subsystem.
-- Standardized non-business implementation vocabulary in English across core, CLI, GUI, tests, diagnostics, and engine internals. Spanish remains only at explicit business-data and legacy-compatibility boundaries.
-- Upgraded the modular profile schema to v3, translating Stock summary keys and YoY metric identifiers to English with automatic v2-to-v3 migration.
-- Centralized external workbook labels in `core/business_schema.py` and isolated pre-modular serialized keys in `core/legacy_config.py`.
-- Split YoY worksheet/formula construction into `engine/yoy_reports/sheet_renderer.py`, leaving workbook segmentation and saving in `excel_renderer.py`.
-- Split YoY worksheet rendering further into current-period, comparison, style, and orchestration modules without changing workbook formulas or output contracts.
-- Added intentionally hidden CLI (`42`) and GUI (`Ctrl+Shift+I`) easter eggs; neither affects generated business output.
+`1.4.0` is a broad evolution of the `1.3.1` architecture rather than a narrowly scoped feature release. Across the full development line, Inventory Toolkit gained a first desktop GUI, a redesigned profile/configuration system, stronger Cross Check and YoY behavior, substantially deeper diagnostics, guarded migration tooling, reproducible release certification, and a complete documentation overhaul while preserving the established business-output contracts of the three core workflows.
 
+### Configuration & Profiles
+
+- Added initial Pydantic configuration models in `core/config_schemas.py`, then hardened them so validated configuration preserves the real persisted shapes used by families, regional groups, pricing aliases, Cross Check settings, Stock summaries, and YoY reports.
+- Reworked `ConfigurationManager` from the earlier hand-written `schema.json` / `ConfigNode` approach into typed configuration loading and validation.
+- Replaced filename-stem lookup with module-oriented logical paths so Stock Processing, Cross Check, and YoY can each own an independent `settings.json` without collisions.
+- Reorganized profile storage around cohesive ownership: shared catalog/family/network data under `general/`, plus one settings document per processing workflow.
+- Introduced schema v2 and then schema v3, with automatic migration of supported older profiles and explicit rejection of stale versions after migration.
+- Standardized current configuration vocabulary in English while preserving Spanish only where it belongs to workbook/business contracts or historical compatibility data.
+- Centralized external workbook labels and business-facing constants in `core/business_schema.py`.
+- Isolated legacy serialized keys and old configuration projections behind dedicated compatibility modules instead of mixing them with current configuration APIs.
+- Redesigned Guided Setup from the original eight-step shared-file flow into a module-oriented setup dashboard where each workflow can use its own representative sample workbook for column discovery.
+- Redesigned the Configuration Hub around business domains rather than JSON filenames, with dedicated editors for catalog/families, stores/network, Stock Processing, Cross Check, and YoY.
+- Added profile-readiness summaries, current-schema validation, safe defaults for new profiles, and explicit migration/archive flows for older layouts.
+- Added per-profile last-path persistence in `profiles/<profile>/last_paths.json`, allowing Cross Check, Stock Processing, and YoY launchers to pre-fill recently used files.
+
+### CLI & Developer Experience
+
+- Redesigned profile creation/selection and the main CLI presentation, including profile descriptions, a boxed menu layout, and more guided configuration flows.
+- Added an intentionally hidden runtime `debug` command so debug verbosity can be changed without restarting Inventory Toolkit.
+- Added operator, diagnostics, and forensic debug levels while retaining startup debug flags for automation.
+- Added a level-3 Developer Console with direct pytest execution, quick repository verification, demo smoke tests, strict release certification, golden-master maintenance, session-log inspection, and compatibility-lifecycle tooling.
+- Rebuilt runtime logging so level 2 records operational diagnostics and level 3 records structured forensic events including profile/config resolution, workbook metadata, detected columns, transformation counts, merge/filter decisions, generated output structure, save operations, timings, subprocess activity, and tracebacks without dumping complete business datasets.
+- Made `logs/session.log` safe for parent/child processes by truncating once at session start and using append-mode handlers afterward.
+- Propagated the runtime debug level through Developer Console → `ReleaseCheck` → workflow subprocesses, allowing the parent process and concurrent Cross Check, Stock Processing, and YoY workers to contribute to one forensic session log with distinct PIDs.
+- Added intentionally hidden CLI (`42`) and GUI (`Ctrl+Shift+I`) easter eggs; neither affects business output.
+
+### GUI & Runtime Safety
+
+- Added the first experimental desktop GUI in `gui/app.py`, using Tkinter with optional CustomTkinter support and exposing Cross Check, Stock Processing, YoY Reports, profile selection/creation, and a graphical Configuration Hub.
+- Kept the GUI explicitly experimental and adapted it as the profile/configuration schema evolved.
+- Moved GUI completion/error updates back onto Tk's main thread instead of updating widgets directly from worker threads.
+- Added a non-interactive Safe Saver path so graphical callers receive an explicit locked-output error instead of blocking on an invisible terminal `input()` prompt.
+- Preserved the interactive CLI retry/save-copy flow for locked output workbooks.
+- Made Tkinter optional for CLI file-browser functionality so terminal workflows can degrade gracefully when graphical dialogs are unavailable.
+
+### Cross-Platform Support & Launchers
+
+- Added the Linux/macOS `Inventory Toolkit.sh` launcher.
+- Added a dedicated Linux `xdg-open` branch to `open_in_editor()`.
+- Anchored Windows launchers to the repository directory so startup no longer depends on the caller's current working directory.
+- Added `.gitignore` coverage for per-profile `last_paths.json` state.
+
+### Engine, Reporting & Data Handling
+
+- Added centralized SKU/article sanitization through `core/data_sanitizer.py`, including `clean_sku_series()` and `sanitize_dataframe()`.
+- Fixed missing values before string conversion so absent SKUs do not become literal `"nan"` identifiers.
+- Added per-stage execution timing through `core/telemetry.py` and expanded processing-stage diagnostics.
+- Introduced a batch regex family classifier as the first attempt to replace repeated row-by-row classification, then replaced repeated full-Series regex scans with a prefix trie after benchmarking exposed the regex approach's limitations.
+- The trie preserves stable longest-prefix family semantics while improving the classifier's scaling behavior.
+- Added explicit regression protection for variable-length `normalize_article()` behavior: exact master matches, longest valid article-prefix selection, and unresolved `REVISAR | <original>` preservation.
+- Added frozen headers and filters to Cross Check and Stock outputs.
+- Capped Stock auto-sized column widths to avoid pathological layouts caused by unusually long cell values.
+- Added optional size breakdowns to YoY reports.
+- Added a consolidated `Global` comparison block for YoY groups spanning multiple stores.
+- Fixed YoY variation/global comparison behavior while integrating the size-breakdown path.
+- Further modularized YoY rendering into workbook/period orchestration, worksheet orchestration, current-period blocks, comparison blocks, and shared styles without changing approved formulas or workbook contracts.
+- Continued explicit memory cleanup in large Cross Check and YoY processing paths.
+
+### Compatibility & Migration
+
+- Added debug-level deprecation warnings whenever the deprecated configuration API, legacy profile storage, or pre-v3 migration path is actually used.
+- Isolated compatibility behavior behind removable boundaries so current engines and configuration surfaces consume the modern API directly.
+- Added `tools/RetireLegacyCompatibility.py` as a guarded audit and optional retirement workflow for eventually removing pre-v3 compatibility.
+- Retirement refuses destructive changes when active legacy profiles, stale schemas, unexpected compatibility consumers, missing markers, or a dirty Git worktree are detected.
+- Optional retirement validates the resulting repository, can create an authored Git commit, removes the legacy tooling itself, and strips its own Developer Console launcher/menu blocks.
+- Legacy profile backups remain preserved when compatibility is retired.
+
+### Testing, Diagnostics & Release Engineering
+
+- Added `tools/IntegrityCheck.py` for logical invariants including family-prefix priority, inventory differences, margins, date offsets/leap years, and demo-profile configuration checks.
+- Added `tools/StressTests.py` for profile/environment audits and synthetic family-classification benchmarking.
+- Corrected diagnostic reporting so a slower benchmark is no longer described as a speedup and integrity checks no longer claim absolute production guarantees.
+- Added `tools/ReleaseCheck.py` as a reproducible gate for compilation, pytest, logical integrity, profile validation, compatibility readiness, and optional end-to-end demo execution.
+- Added `pytest.ini` so `pytest` and `python -m pytest` resolve the project consistently from the repository root.
+- Expanded pytest coverage for configuration migration/schema versions, Safe Saver behavior, runtime debug tooling, forensic logging, compatibility diagnostics, and article-normalization invariants.
+- Added committed golden-master workbooks for Cross Check, Stock Processing, and YoY under `tests/release_reference/`.
+- Added strict pre-release certification that executes all three demo workflows in isolated subprocesses and compares generated outputs against approved references.
+- Golden-master comparison is semantic rather than a raw XLSX/ZIP hash and can diagnose changed sheets, dimensions, values/formulas, merged ranges, filters, freeze panes, and relevant workbook structure.
+- Added fingerprints for demo fixtures and demo configuration so approved references are rejected as stale when their inputs change.
+- Added guarded golden-master regeneration for intentional business/demo changes: all candidates are generated and repository-validated before rollback-protected reference installation.
+- Release-test outputs are written to temporary storage and automatically removed after certification.
+- Made demo JSON fixture fingerprints canonical and cross-platform so harmless whitespace, key-order, and LF/CRLF differences do not invalidate approved references; legacy raw-hash manifests remain accepted during transition.
+- Canonicalized OOXML comparison across OpenPyXL XML serializers so namespace prefixes, attribute ordering, self-closing syntax, and equivalent serializer output do not cause false golden-master failures.
+- Refined workbook fallback comparison to inspect effective presentation (cell font/fill/border/alignment/protection/number format plus worksheet structure) instead of treating unused/reordered internal style registries as user-visible changes.
+- Added regression coverage proving real semantic JSON changes, real workbook presentation changes, and applied-cell style changes still fail certification.
 
 ### Fixed
 
-- Current Pydantic profile schemas now reject stale schema versions explicitly; compatibility migration still upgrades supported legacy profiles before validation.
-- Finished the non-business English cleanup in the Windows launcher comments.
-- Pydantic schemas now preserve the real profile JSON shapes, including family root mappings, regional groups, pricing aliases, Cross Check settings, and the shared Stock/YoY report configuration.
-- Engines now consume validated configuration accessors consistently instead of mixing raw and typed configuration paths.
-- Added the missing Pydantic runtime dependency and restored a green pytest suite.
-- GUI background execution no longer calls Tk widgets from worker threads and no longer blocks on invisible terminal `input()` prompts when an output workbook is locked.
-- Safe Saver keeps its existing interactive CLI retry/copy behavior while exposing a non-interactive error path for graphical callers.
-- Diagnostic tools no longer claim a speedup or production guarantee when their own measurements do not support those conclusions.
-- Family batch classification now uses a prefix trie, preserving longest-prefix semantics while avoiding repeated full-Series regex scans for every configured prefix.
-- Cross Check and Stock output workbooks now freeze headers and expose filters; Stock column auto-sizing is capped to avoid pathological widths.
-- Windows launchers now anchor execution to the repository directory.
+- Fixed initial Pydantic schemas that silently discarded valid persisted data because their models did not match the JSON structures shipped by the profile.
+- Fixed mixed raw/typed configuration access by routing built-in engines through validated accessors consistently.
+- Restored the configuration accessor expected by the test suite and returned pytest to a green baseline before extending coverage.
+- Added the missing Pydantic runtime dependency to `requirements.txt`.
+- Made current schema models explicitly reject stale version numbers after supported migrations have run.
+- Fixed GUI/background paths that could update Tk widgets from worker threads or wait for terminal input.
+- Removed a duplicate Safe Saver import from the Cross Check generator.
+- Fixed benchmark/integrity messaging that overstated measured guarantees.
+- Fixed Cross Check header formatting so the engine explicitly owns the approved header font, fill, alignment, borders, protection, and number format instead of inheriting Pandas-version-dependent styling.
+- Fixed false release-reference drift caused by Windows CRLF JSON checkouts and by equivalent OpenPyXL OOXML serializers.
+- Fixed golden-master false positives caused by unused or reordered workbook style-table entries while preserving detection of effective style changes.
 
-### Testing
+### Documentation
 
-- Added a hidden runtime `debug` command in the main CLI, allowing debug levels 1/2/3 to be changed without restarting or supplying startup flags.
-- Expanded the level-3 Developer Console with direct pytest execution, session-log inspection, and the complete guarded legacy-compatibility retirement lifecycle. The retirement tool now strips its own CLI launcher/menu blocks when it removes itself.
-- Rebuilt logging verbosity: level 2 now provides operational diagnostics, while level 3 provides structured forensic events for configuration resolution, workbook metadata, transformation counts, merge/filter decisions, generated output structure, save operations, developer tooling, and tracebacks without dumping raw business rows.
-- Added golden-master pre-release certification for all three demo workflows, including semantic XLSX comparison, fixture/config fingerprints, cell-level mismatch diagnostics, and automatic temporary-output cleanup.
-- Added guarded golden-master regeneration for intentional business/demo changes; all candidates are generated and repository-validated before rollback-protected reference installation.
-- Added a debug-level 3 Developer / Release Tools menu exposing quick checks, demo smoke tests, strict release certification, and explicit reference updates from inside the CLI.
-- Added a reproducible `tools/ReleaseCheck.py` gate for compilation, pytest, logical integrity, profile validation, compatibility readiness, and optional end-to-end demo workflows.
-- Added pytest path configuration so both `pytest` and `python -m pytest` collect the repository consistently.
-- Added `tools/RetireLegacyCompatibility.py`, a guarded read-only audit / optional removal-and-commit workflow for eventually deleting pre-v3 compatibility.
-- Added regression coverage ensuring compatibility diagnostics remain silent normally, warn only in debug mode, and point legacy profiles toward migration.
-- Added explicit regression coverage for variable-length scanned article normalization, longest-prefix matching, exact matches, and `REVISAR |` fallback behavior.
-- Added Safe Saver tests for non-interactive locked-file handling and preserved CLI copy behavior.
-
-## [1.4.0] - 2026-09-23
-
-### Added
-
-- Native desktop GUI (`gui/app.py`) built on Tkinter/CustomTkinter, providing Cross Check, Stock Processing, and YoY Sales Report tabs plus a full graphical Configuration Hub as an alternative to the CLI
-- Linux/macOS shell launcher (`Inventory Toolkit.sh`)
-- Pydantic-based configuration schemas (`core/config_schemas.py`) for families, stores, cleaning rules, pricing, cross-check settings, and YoY reports, with automatic fallback to safe defaults on validation errors
-- Centralized SKU/article sanitization module (`core/data_sanitizer.py`) exposing `clean_sku_series()` and `sanitize_dataframe()`
-- Vectorized, regex-based family classification (`vectorize_assign_families`) for large datasets, replacing row-by-row `apply()`/`lambda` matching
-- Execution-timer utility (`core/telemetry.py`) for per-stage elapsed-time logging
-- Repository diagnostic tool (`tools/IntegrityCheck.py`) validating family rules, margin logic, date-offset/leap-year math, and running an end-to-end simulation against the demo profile
-- Performance benchmarking tool (`tools/StressTests.py`) comparing legacy vs. vectorized family classification on 50,000 synthetic SKUs, plus profile and environment audits
-- Persistent "last used paths" per profile (`profiles/<profile>/last_paths.json`), pre-filling file prompts on subsequent runs of Cross Check, Stock Processing, and YoY Reports
-- Optional "Include size breakdown" toggle for YoY Sales Reports
-- Consolidated "Global" (all-branches) comparison column block per family group in YoY Sales Reports, shown whenever a group spans more than one store
-- Expanded interactive Setup Wizard (`cli/wizard.py`), now covering active stores, columns to delete, YoY data-source columns, pricing columns, and Cross Check columns across 8 guided steps, each individually skippable
-- Fully redesigned Configuration Hub (`cli/config_menu.py`) with in-app search/filter, sub-dictionary support, and structured in-app editors for `reports.json` and `pricing.json` (no external editor required anymore)
-- Redesigned main menu with a boxed layout and ASCII-art logo (`cli/menu.py`)
-- Linear, guided "Create new profile" flow, with profile descriptions shown in the profile selector
-
-### Changed
-
-- `ConfigurationManager` rewritten to recursively index every `*.json` file under a profile by filename stem and validate it against Pydantic models, replacing the previous hand-rolled `schema.json` validation and `ConfigNode` dual dot/dict-access wrapper
-- `tkinter` is now an optional dependency across the CLI; file-browser prompts degrade gracefully when it is unavailable
-- `open_in_editor()` is now genuinely cross-platform, adding a dedicated Linux (`xdg-open`) branch
-- Inventory Cross Check and Stock Processing launchers now remember and pre-fill the last file paths used per profile
-- `.gitignore` updated to exclude `profiles/*/last_paths.json`
-
-### Fixed
-
-- Inefficient row-by-row family assignment replaced with vectorized matching, reducing processing time on large datasets
-- Duplicate `safe_pandas_to_excel` import removed from `engine/inventory_cross_check/generator.py`
+- Rewrote the root README and maintained module READMEs/docs to describe the current CLI-first application, experimental GUI, schema-v3 profile model, compatibility lifecycle, forensic logging, release tooling, and evolved engine architecture.
+- Added dedicated installation, GUI, release-process, troubleshooting, and legacy-compatibility documentation.
+- Documented `normalize_article()` and longest-prefix matching as protected business invariants, including why fixed-length slicing is not equivalent.
+- Replaced outdated or overstated language such as "bulletproof" or assumed production readiness with concrete, testable statements.
+- Added a version-oriented roadmap to the README while explicitly treating it as direction rather than a release-date promise.
 
 ### Notes
 
-This release focuses on usability, cross-platform reach, and performance: it introduces a full graphical interface as an alternative to the CLI, adds native Linux/macOS launcher support, and replaces ad-hoc JSON validation with a proper Pydantic schema layer. Family classification is now vectorized for large inventories, and both the Setup Wizard and the Configuration Hub have been substantially expanded.
+`1.4.0` is the complete release line represented by the repository diff from `v1.3.1` through this state. Although development happened in multiple waves, those waves are intentionally consolidated here rather than split into a historical `Unreleased` block. The release materially expands configuration, usability, diagnostics, testing, migration, documentation, and release engineering while preserving the established business behavior of the three core processing workflows unless a change is explicitly listed above.
+
+Final pre-release certification was completed on Windows 10 / Python 3.12.10 using the committed demo fixtures: all three workflows matched their approved golden masters, the pytest suite passed 37 tests, IntegrityCheck passed 30 checks with no failures or warnings, the demo profile validated, and the compatibility audit reported ready.
 
 ---
 
