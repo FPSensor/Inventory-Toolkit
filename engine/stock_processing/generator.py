@@ -17,15 +17,15 @@ def run_stock_processing(args):
     log.info(f"Loading configurations for profile: {args.stock_processing_profile}...")
     config = ConfigurationManager(args.stock_processing_profile)
 
-    families_raw = config.get_config('familias')
+    families_raw = config.get_familias()
     family_rules = build_family_rules(families_raw)
     databases_dict = config.get_config('databases')
     settings_dict = config.get_config('settings')
-    stores_dict = config.get_config('stores')
-    cleaning_dict = config.get_config('cleaning')
-    reports_dict = config.get_config('reports')
+    stores_dict = config.get_stores()
+    cleaning_dict = config.get_cleaning_rules()
+    reports_dict = config.get_reports()
     
-    pricing_dict = config.get_config('pricing') or settings_dict.get('pricing', {})
+    pricing_dict = config.get_pricing_rules() or settings_dict.get('pricing', {})
     
     active_stores = stores_dict.get("locales_activos", [])
     regional_groups = stores_dict.get("grupos_regionales", {})

@@ -21,7 +21,7 @@ def generate_sales_report(
   if not yoy_has_families:
     log.info("Loading family rules to dynamically generate groupings...")
     cm = ConfigurationManager(profile)
-    fam_dict = cm.get_config('familias')
+    fam_dict = cm.get_familias()
     family_rules = build_family_rules(fam_dict)
 
   log.info(f"Reading data from {yoy_file_path} and filtering dates...")

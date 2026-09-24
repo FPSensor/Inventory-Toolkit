@@ -57,21 +57,13 @@ class ConfigurationManager:
     raw = self.get_config(config_name)
     try:
       validated = model_class.model_validate(raw)
-      return (
-          validated.model_dump()
-          if hasattr(validated, 'model_dump')
-          else validated.root
-      )
+      return validated.model_dump()
     except Exception as e:
       log.error(
           f"ValidationError in '{config_name}.json': {e}. Using safe fallback."
       )
-      fallback = model_class()
-      return (
-          fallback.model_dump()
-          if hasattr(fallback, 'model_dump')
-          else fallback.root
-      )
+      fallback = model_class.model_validate({})
+      return fallback.model_dump()
 
   # ── Typed accessors (used by engines) ────────────────────────────────────
 
@@ -90,8 +82,12 @@ class ConfigurationManager:
   def get_cross_check_settings(self) -> dict:
     return self._safe_validate(CrossCheckSettings, 'cross_check_settings')
 
-  def get_yoy_settings(self) -> dict:
+  def get_reports(self) -> dict:
     return self._safe_validate(YoYReportsConfig, 'reports')
+
+  def get_yoy_settings(self) -> dict:
+    # Backward-compatible semantic alias used by the YoY workflow.
+    return self.get_reports()
 
   # Raw dicts — no Pydantic overhead needed for these
   def get_databases(self) -> dict:

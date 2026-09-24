@@ -18,9 +18,9 @@ def run_cross_check(args):
             return None
 
     config = ConfigurationManager(profile=args.cross_check_profile)
-    families_raw = config.get_config('familias')
+    families_raw = config.get_familias()
     family_rules = build_family_rules(families_raw)
-    cross_check_cfg = config.get_config('cross_check_settings', default={})
+    cross_check_cfg = config.get_cross_check_settings()
 
     ignored_articles = cross_check_cfg.get('articulos_ignorados', [])
     ignored_words = cross_check_cfg.get('palabras_ignoradas', [])
