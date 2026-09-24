@@ -2,7 +2,13 @@ from pathlib import Path
 
 from openpyxl import Workbook
 
-from tools.release_reference import compare_workbooks, workbook_semantic_sha256
+from tools.release_reference import (
+    _fixture_hash,
+    _fixture_hash_candidates,
+    _sha256_file,
+    compare_workbooks,
+    workbook_semantic_sha256,
+)
 
 
 def _save_sample(path: Path, value="=1+1", *, freeze="A2") -> None:
@@ -74,3 +80,33 @@ def test_release_reference_ignores_xlsx_zip_timestamps(tmp_path):
 
     assert result.matches
     assert workbook_semantic_sha256(expected) == workbook_semantic_sha256(repacked)
+
+
+def test_json_fixture_fingerprint_is_semantic_and_line_ending_independent(tmp_path):
+    lf_json = tmp_path / "lf.json"
+    crlf_json = tmp_path / "crlf.json"
+    lf_json.write_bytes(b'{\n  "b": 2,\n  "a": 1\n}\n')
+    crlf_json.write_bytes(b'{\r\n  "a": 1,\r\n  "b": 2\r\n}\r\n')
+
+    assert _fixture_hash(lf_json) == _fixture_hash(crlf_json)
+
+
+def test_json_fixture_accepts_legacy_lf_raw_hash_on_crlf_checkout(tmp_path):
+    lf_json = tmp_path / "fixture_lf.json"
+    crlf_json = tmp_path / "fixture_crlf.json"
+    lf_json.write_bytes(b'{\n    "version": 3,\n    "enabled": true\n}\n')
+    crlf_json.write_bytes(lf_json.read_bytes().replace(b"\n", b"\r\n"))
+
+    legacy_manifest_hash = _sha256_file(lf_json)
+
+    assert legacy_manifest_hash != _sha256_file(crlf_json)
+    assert legacy_manifest_hash in _fixture_hash_candidates(crlf_json)
+
+
+def test_json_fixture_fingerprint_detects_semantic_change(tmp_path):
+    first = tmp_path / "first.json"
+    second = tmp_path / "second.json"
+    first.write_text('{"version": 3, "enabled": true}\n', encoding="utf-8")
+    second.write_text('{"version": 3, "enabled": false}\n', encoding="utf-8")
+
+    assert _fixture_hash(first) != _fixture_hash(second)

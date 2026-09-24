@@ -63,12 +63,56 @@ class WorkbookComparison:
     truncated: bool = False
 
 
+def _sha256_bytes(payload: bytes) -> str:
+    return hashlib.sha256(payload).hexdigest()
+
+
 def _sha256_file(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as stream:
         for chunk in iter(lambda: stream.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def _canonical_json_bytes(path: Path) -> bytes:
+    """Serialize JSON fixture content independently of formatting/line endings."""
+    with path.open("r", encoding="utf-8-sig") as stream:
+        payload = json.load(stream)
+    return json.dumps(
+        payload,
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+
+
+def _normalized_text_sha256(path: Path) -> str:
+    """Hash text after normalizing CRLF/CR to LF for legacy manifests."""
+    payload = path.read_bytes().replace(b"\r\n", b"\n").replace(b"\r", b"\n")
+    return _sha256_bytes(payload)
+
+
+def _fixture_hash(path: Path) -> str:
+    """Return a stable fixture hash suitable for cross-platform certification."""
+    if path.suffix.lower() == ".json":
+        return _sha256_bytes(_canonical_json_bytes(path))
+    return _sha256_file(path)
+
+
+def _fixture_hash_candidates(path: Path) -> set[str]:
+    """Return hashes accepted for current and pre-canonical JSON manifests.
+
+    Schema-v1 manifests originally stored raw-byte SHA-256 values. Git may check
+    text files out as CRLF on Windows, so an unchanged JSON fixture could look
+    stale. Keep accepting the old raw/LF-normalized forms while new manifests use
+    canonical JSON hashing.
+    """
+    candidates = {_fixture_hash(path)}
+    if path.suffix.lower() == ".json":
+        candidates.add(_sha256_file(path))
+        candidates.add(_normalized_text_sha256(path))
+    return candidates
 
 
 def _fixture_paths() -> list[Path]:
@@ -79,11 +123,11 @@ def _fixture_paths() -> list[Path]:
 
 
 def fixture_fingerprint() -> dict[str, str]:
-    """Return hashes for every file that defines the demo release fixture."""
+    """Return stable hashes for every file that defines the demo release fixture."""
     fingerprint: dict[str, str] = {}
     for path in _fixture_paths():
         relative = path.relative_to(ROOT).as_posix()
-        fingerprint[relative] = _sha256_file(path) if path.exists() else "<missing>"
+        fingerprint[relative] = _fixture_hash(path) if path.exists() else "<missing>"
     return fingerprint
 
 
@@ -97,7 +141,9 @@ def compare_fixture_fingerprint(expected: dict[str, str]) -> list[str]:
         elif relative not in current:
             differences.append(f"removed fixture: {relative}")
         elif expected[relative] != current[relative]:
-            differences.append(f"changed fixture: {relative}")
+            path = ROOT / relative
+            if not path.exists() or expected[relative] not in _fixture_hash_candidates(path):
+                differences.append(f"changed fixture: {relative}")
     return differences
 
 
