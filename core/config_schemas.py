@@ -1,8 +1,10 @@
 """Pydantic schemas for Inventory Toolkit profile configuration."""
 
-from typing import Dict, List
+from typing import Dict, List, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
+
+from core.profile_config import CONFIG_VERSION
 
 from core.business_schema import (
     ARTICLE_COLUMN,
@@ -18,7 +20,7 @@ from core.business_schema import (
 
 class _Config(BaseModel):
     model_config = ConfigDict(extra="allow")
-    version: int = 3
+    version: Literal[CONFIG_VERSION] = CONFIG_VERSION
 
 
 class CatalogColumns(BaseModel):

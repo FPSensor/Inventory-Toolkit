@@ -1,5 +1,9 @@
 import json
 
+import pytest
+from pydantic import ValidationError
+
+from core.config_schemas import CatalogConfig
 from core.configuration_manager import ConfigurationManager
 from core.profile_config import CONFIG_VERSION, ensure_profile_config
 
@@ -40,6 +44,15 @@ def test_configuration_manager_loading():
     missing = config.get_config("missing/config", default={"default_key": True})
     assert missing == {"default_key": True}
 
+
+
+def test_current_schema_rejects_outdated_version():
+    with pytest.raises(ValidationError):
+        CatalogConfig.model_validate({
+            "version": CONFIG_VERSION - 1,
+            "columns": {"article": "SKU", "family": "Family"},
+            "default_family": "Other",
+        })
 
 def test_empty_profile_bootstraps_current_defaults(tmp_path, monkeypatch):
     profile_dir = tmp_path / "profiles" / "test_dummy" / "configs" / "general"

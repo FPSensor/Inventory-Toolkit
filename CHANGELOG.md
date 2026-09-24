@@ -16,6 +16,8 @@
 
 ### Fixed
 
+- Current Pydantic profile schemas now reject stale schema versions explicitly; compatibility migration still upgrades supported legacy profiles before validation.
+- Finished the non-business English cleanup in the Windows launcher comments.
 - Pydantic schemas now preserve the real profile JSON shapes, including family root mappings, regional groups, pricing aliases, Cross Check settings, and the shared Stock/YoY report configuration.
 - Engines now consume validated configuration accessors consistently instead of mixing raw and typed configuration paths.
 - Added the missing Pydantic runtime dependency and restored a green pytest suite.
