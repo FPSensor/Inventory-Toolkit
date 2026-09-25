@@ -22,13 +22,14 @@ Important examples include:
 - configurable family fallback parity across scalar/batch classification;
 - YoY metric/annual-comparison/group contracts;
 - logger/runtime-debug behavior;
-- release-reference semantic comparison.
+- release-reference semantic comparison;
+- application-resource CWD independence and foreign-CWD pollution protection.
 
 Tests should target stable behavior rather than implementation trivia where possible.
 
 ## 2. IntegrityCheck — `tools/IntegrityCheck.py`
 
-A focused logical diagnostic suite covering core invariants and representative calculations.
+A focused logical diagnostic suite covering core invariants and representative calculations, including application-root path ownership checks executed from a foreign temporary CWD.
 
 Run:
 

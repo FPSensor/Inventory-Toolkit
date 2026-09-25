@@ -19,9 +19,12 @@ import threading
 from pathlib import Path
 from typing import Any
 
+from core.paths import APPLICATION_ROOT, LOGS_ROOT
+
 _LOG_NAME = "InventoryToolkit"
-_ROOT = Path(__file__).resolve().parents[1]
-_LOG_DIR = _ROOT / "logs"
+
+_ROOT = APPLICATION_ROOT
+_LOG_DIR = LOGS_ROOT
 _SESSION_LOG = _LOG_DIR / "session.log"
 DEBUG_LEVEL_ENV = "INVENTORY_TOOLKIT_DEBUG_LEVEL"
 

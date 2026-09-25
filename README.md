@@ -221,6 +221,8 @@ profiles/<profile>/
         └── settings.json
 ```
 
+Application-owned resources are CWD-independent. `profiles/`, built-in examples, logs, developer tools, and release references are resolved from the Inventory Toolkit application root even when the CLI is invoked from another directory. User-provided relative workbook paths intentionally keep normal caller-CWD semantics.
+
 Configuration ownership is deliberate:
 
 - `general/` contains cross-workflow catalog and network concepts;
@@ -312,6 +314,7 @@ Inventory-Toolkit/
 │   ├── config_schemas.py
 │   ├── configuration_manager.py
 │   ├── profile_config.py
+│   ├── paths.py
 │   ├── logger.py
 │   ├── telemetry.py
 │   ├── data_sanitizer.py

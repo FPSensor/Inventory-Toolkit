@@ -84,9 +84,13 @@ python tools/ReleaseCheck.py --release
 
 For interactive developer tooling, launch the normal CLI, type the hidden command `debug`, select level 3, and open `D` / Developer Console.
 
-## Working-directory assumptions
+## Working-directory behavior
 
-The Windows and shell launchers explicitly change to the repository root. Direct commands should also be run from the repository root so relative project resources (`profiles/`, `examples/`, `tests/release_reference/`) resolve predictably.
+The Windows and shell launchers still change to the repository root for convenience, but Inventory Toolkit no longer relies on the process CWD to locate its own resources. Profiles, built-in examples, logs, tools, and release references are anchored to the application root.
+
+User-supplied relative workbook paths keep normal shell semantics and resolve from the directory where the command was invoked. For example, invoking `python C:/path/to/Inventory-Toolkit/cli.py` while standing in `C:/Work/Today` will still interpret `stock.xlsx` as `C:/Work/Today/stock.xlsx`, while the active profile continues to come from `C:/path/to/Inventory-Toolkit/profiles/`.
+
+The experimental GUI is still normally launched as a module from the repository root (`python -m gui.app`) because Python module discovery is separate from Inventory Toolkit resource-path resolution.
 
 ## Upgrading dependencies
 

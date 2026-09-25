@@ -14,12 +14,12 @@ from cli.utils import ask_yes_no, clear_screen, load_json, save_json
 from cli.wizard import run_setup_wizard
 from core.configuration_errors import ConfigurationError
 from core.configuration_manager import ConfigurationManager
+from core.paths import profile_configs_root
 from core.profile_config import config_path, ensure_profile_config, profile_readiness
 # BEGIN LEGACY_COMPATIBILITY
 from core.legacy_profile_migration import migrate_legacy_config
 # END LEGACY_COMPATIBILITY
 
-PROFILES_DIR = "profiles"
 
 
 def _pause(msg="Press Enter..."):
@@ -225,7 +225,7 @@ def _validate(profile: str):
 
 
 def configuration_menu(current_profile: str) -> None:
-    configs=Path(PROFILES_DIR)/current_profile/"configs"
+    configs = profile_configs_root(current_profile)
     try:
         # BEGIN LEGACY_COMPATIBILITY
         migrate_legacy_config(configs, remove_legacy=False)

@@ -24,8 +24,7 @@ except ImportError:
     TKINTER_AVAILABLE = False
 
 from core.logger import log, log_debug_event, log_exception
-
-PROFILES_DIR = "profiles"
+from core.paths import profile_root
 _LAST_PATHS_FILE = "last_paths.json"
 
 
@@ -102,18 +101,19 @@ def ask_file(message: str, default_val: str, is_output: bool = False) -> str:
 
 def load_last_paths(profile: str) -> dict:
     """Load the saved file paths for *profile*. Returns {} if none saved yet."""
-    path = os.path.join(PROFILES_DIR, profile, _LAST_PATHS_FILE)
-    payload = load_json(path) or {}
+    path = profile_root(profile) / _LAST_PATHS_FILE
+    payload = load_json(str(path)) or {}
     log_debug_event("last_paths_loaded", profile=profile, path=path, sections=sorted(payload.keys()))
     return payload
 
 
 def save_last_paths(profile: str, paths: dict) -> None:
     """Persist file paths for *profile* so the next run can pre-fill them."""
-    path = os.path.join(PROFILES_DIR, profile, _LAST_PATHS_FILE)
+    path = profile_root(profile) / _LAST_PATHS_FILE
+    path.parent.mkdir(parents=True, exist_ok=True)
     existing = load_last_paths(profile)
     existing.update(paths)
-    save_json(path, existing)
+    save_json(str(path), existing)
     log_debug_event("last_paths_saved", profile=profile, path=path, sections=sorted(paths.keys()))
 
 

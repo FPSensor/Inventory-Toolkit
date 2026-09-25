@@ -8,7 +8,7 @@ Launch the GUI from the repository root as a module:
 python -m gui.app
 ```
 
-Do not use `python gui/app.py`; direct-script execution can give Python the wrong import root.
+Do not use `python gui/app.py`; direct-script execution can give Python the wrong import root. This is a Python import-path concern only: once Inventory Toolkit is imported, its profiles/logs/examples are application-rooted rather than CWD-rooted.
 
 ## `.xls` cannot be opened / missing `xlrd`
 

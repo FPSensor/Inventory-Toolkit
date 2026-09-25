@@ -2,13 +2,15 @@
 
 `gui/app.py` is the current desktop frontend for Inventory Toolkit.
 
-Launch from the repository root:
+Launch as a module from the repository root (Python module discovery requirement, not an application-resource CWD requirement):
 
 ```bash
 python -m gui.app
 ```
 
 ## Status
+
+Profile/configuration resources used by the GUI are anchored to the Inventory Toolkit application root and do not follow the process CWD.
 
 The GUI is **experimental**. It is useful for testing the direction of a desktop workflow, but the CLI remains the primary supported interface and the reference surface for developer/release tooling.
 

@@ -5,6 +5,7 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
+from core import paths as app_paths
 from core.profile_config import DEFAULTS, _write, config_path
 from engine.inventory_cross_check.generator import run_cross_check
 from engine.stock_processing.generator import run_stock_processing
@@ -71,7 +72,7 @@ def test_stock_processing_honors_custom_catalog_and_pricing_columns(tmp_path, mo
             },
         },
     )
-    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(app_paths, "PROFILES_ROOT", tmp_path / "profiles")
 
     stock_path = tmp_path / "stock.xlsx"
     cost_path = tmp_path / "cost.xlsx"
@@ -165,7 +166,7 @@ def test_cross_check_honors_catalog_article_and_family_columns(tmp_path, monkeyp
             },
         },
     )
-    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(app_paths, "PROFILES_ROOT", tmp_path / "profiles")
 
     system_path = tmp_path / "system.xlsx"
     count_path = tmp_path / "count.xlsx"

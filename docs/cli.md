@@ -136,7 +136,7 @@ Current tools:
 6. Show current session log tail
 7. Legacy compatibility lifecycle, while the retirement tool still exists
 
-Developer tools run from the repository root in subprocesses so their failures and return codes remain isolated from the menu loop.
+Developer tools run in subprocesses anchored to the application root so their failures and return codes remain isolated from the menu loop. Normal runtime profile/config resolution is independently CWD-safe and does not depend on this subprocess working directory.
 
 ### Updating golden masters
 

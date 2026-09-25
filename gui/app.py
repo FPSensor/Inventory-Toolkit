@@ -65,6 +65,7 @@ except ImportError:
 from core.business_schema import ARTICLE_COLUMN, DATABASE_ORIGIN_COLUMN, DEFAULT_FAMILY, FAMILY_COLUMN, PRICE_COLUMN, RAW_DATA_SHEET, SIZE_COLUMN
 from core.configuration_manager import ConfigurationManager
 from core.logger import log
+from core import paths as app_paths
 from core.system_utils import InvalidExcelOutputPathError, normalize_xlsx_output_path
 from cli.wizard import initialize_profile_files, run_setup_wizard
 from cli.utils import save_json, load_json
@@ -72,7 +73,6 @@ from engine.inventory_cross_check.generator import run_cross_check
 from engine.stock_processing.generator import run_stock_processing
 from engine.yoy_reports.generator import generate_sales_report
 
-PROFILES_DIR = "profiles"
 
 # ── Widget helpers ────────────────────────────────────────────────────────────
 
@@ -175,7 +175,7 @@ class ConfigHubWindow(BaseToplevel):
 
     def _filepath(self):
         rel, _ = self._REGISTRY[self._active_key]
-        return os.path.join(PROFILES_DIR, self.profile, "configs", rel)
+        return str(app_paths.profile_configs_root(self.profile) / rel)
 
     def _reload(self):
         for w in self._workspace.winfo_children():
@@ -1230,19 +1230,19 @@ class NewProfileModal(BaseToplevel):
         if not raw_id:
             messagebox.showerror("Validation Error", "Profile ID is required.", parent=self)
             return
-        target_dir = os.path.join(PROFILES_DIR, raw_id)
+        target_dir = app_paths.profile_root(raw_id)
         if os.path.exists(target_dir):
             messagebox.showerror("Error", f"Profile '{raw_id}' already exists.", parent=self)
             return
 
-        configs_path = os.path.join(target_dir, "configs")
-        os.makedirs(configs_path, exist_ok=True)
-        save_json(os.path.join(target_dir, "profile.json"), {
+        configs_path = target_dir / "configs"
+        configs_path.mkdir(parents=True, exist_ok=True)
+        save_json(str(target_dir / "profile.json"), {
             "name":        self.prof_name.get().strip() or raw_id,
             "description": self.prof_desc.get().strip(),
             "version":     "1.4.0",
         })
-        initialize_profile_files(configs_path)
+        initialize_profile_files(str(configs_path))
         self.callback(raw_id)
         self.destroy()
 
@@ -1279,10 +1279,10 @@ class InventoryToolkitGUI(BaseWindow):
     # ── Profile helpers ───────────────────────────────────────────────────────
 
     def _refresh_profiles(self):
-        if os.path.exists(PROFILES_DIR):
+        if app_paths.PROFILES_ROOT.exists():
             self._profiles = sorted(
-                d for d in os.listdir(PROFILES_DIR)
-                if os.path.isdir(os.path.join(PROFILES_DIR, d))
+                path.name for path in app_paths.PROFILES_ROOT.iterdir()
+                if path.is_dir()
             )
         else:
             self._profiles = ["demo"]
@@ -1335,8 +1335,8 @@ class InventoryToolkitGUI(BaseWindow):
 
     def _open_wizard(self):
         profile = self.active_profile.get()
-        profile_dir = os.path.join(PROFILES_DIR, profile)
-        if not os.path.isdir(profile_dir):
+        profile_dir = app_paths.profile_root(profile)
+        if not profile_dir.is_dir():
             messagebox.showerror("Error", f"Profile '{profile}' not found.", parent=self)
             return
         # Run wizard in a thread so the GUI stays responsive; it's interactive

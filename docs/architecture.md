@@ -76,6 +76,8 @@ Engines are callable directly from Python and must remain independent from CLI p
 
 ### Configuration — `profiles/`
 
+Profile storage is resolved through the canonical application paths in `core/paths.py`; it does not move with the process current working directory. User-supplied relative workbook paths remain caller-CWD-relative.
+
 Profiles hold environment/business differences that should not require source-code forks. Current schema v3 gives each module clear ownership of its configuration.
 
 ## Business invariants

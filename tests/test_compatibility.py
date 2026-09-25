@@ -6,6 +6,8 @@ from core.compatibility import (
     reset_compatibility_diagnostics,
 )
 from core.configuration_manager import ConfigurationManager
+from core import paths as app_paths
+from core.paths import APPLICATION_ROOT
 
 
 def _write_json(path, payload):
@@ -14,7 +16,7 @@ def _write_json(path, payload):
 
 
 def test_legacy_api_warning_is_debug_only_and_emitted_once(tmp_path, monkeypatch, caplog):
-    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(app_paths, "PROFILES_ROOT", tmp_path / "profiles")
     config = ConfigurationManager("test")
 
     reset_compatibility_diagnostics()
@@ -35,7 +37,7 @@ def test_legacy_storage_warning_points_to_migration_action(tmp_path, monkeypatch
     base = tmp_path / "profiles" / "old" / "configs"
     _write_json(base / "general" / "settings.json", {"columna_articulo": "SKU"})
 
-    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(app_paths, "PROFILES_ROOT", tmp_path / "profiles")
     reset_compatibility_diagnostics()
     configure_compatibility_diagnostics(True)
 
@@ -52,7 +54,7 @@ def test_retirement_strips_its_developer_menu_entry_cleanly():
 
     from tools.RetireLegacyCompatibility import strip_compatibility_blocks
 
-    path = Path("cli/debug_menu.py")
+    path = APPLICATION_ROOT / "cli" / "debug_menu.py"
     stripped = strip_compatibility_blocks(path.read_text(encoding="utf-8"), path)
     assert "Legacy compatibility lifecycle" not in stripped
     assert "_legacy_compatibility_menu" not in stripped

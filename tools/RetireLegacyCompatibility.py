@@ -15,8 +15,13 @@ import subprocess
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
-PROFILES_ROOT = ROOT / "profiles"
+BOOTSTRAP_ROOT = Path(__file__).resolve().parents[1]
+if str(BOOTSTRAP_ROOT) not in sys.path:
+    sys.path.insert(0, str(BOOTSTRAP_ROOT))
+
+from core.paths import APPLICATION_ROOT, PROFILES_ROOT
+
+ROOT = APPLICATION_ROOT
 CURRENT_CONFIG_VERSION = 3
 AUTHOR = "FPSensor <gkartyt@gmail.com>"
 COMMIT_MESSAGE = "refactor: retire legacy configuration compatibility"

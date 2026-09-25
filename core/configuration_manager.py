@@ -6,7 +6,6 @@ its own ``settings.json`` without filename collisions.
 """
 
 import json
-from pathlib import Path
 from typing import Any, Dict, Type
 
 from pydantic import BaseModel
@@ -25,6 +24,7 @@ from core.compatibility import warn_legacy_api
 from core.legacy_config import build_legacy_view
 # END LEGACY_COMPATIBILITY
 from core.logger import log_debug_event
+from core.paths import profile_configs_root
 from core.profile_config import DEFAULTS, ensure_profile_config
 
 
@@ -41,7 +41,7 @@ _CONFIG_MODELS: Dict[str, Type[BaseModel]] = {
 class ConfigurationManager:
     def __init__(self, profile: str = "demo"):
         self.profile = profile
-        self.base_dir = Path("profiles") / profile / "configs"
+        self.base_dir = profile_configs_root(profile)
         log_debug_event(
             "config_manager_init",
             profile=profile,

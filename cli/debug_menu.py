@@ -4,12 +4,12 @@ from __future__ import annotations
 
 import subprocess
 import sys
-from pathlib import Path
 
 from cli.utils import clear_screen
 from core.logger import get_session_log_path, log, log_debug_event
+from core.paths import APPLICATION_ROOT, TOOLS_ROOT
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = APPLICATION_ROOT
 
 
 def _run_command(command: list[str], *, label: str) -> int:
@@ -69,7 +69,7 @@ def _confirm_reference_update() -> bool:
 # BEGIN LEGACY_COMPATIBILITY
 def _legacy_compatibility_menu() -> None:
     """Audit or permanently retire the temporary compatibility layer."""
-    retirement_tool = ROOT / "tools" / "RetireLegacyCompatibility.py"
+    retirement_tool = TOOLS_ROOT / "RetireLegacyCompatibility.py"
     if not retirement_tool.exists():
         print("\n  Legacy compatibility has already been retired.")
         input("  Press Enter to continue...")
@@ -142,7 +142,7 @@ def developer_tools_menu() -> None:
         print("    5  ›  Update golden-master references")
         print("    6  ›  Show current session log tail")
         # BEGIN LEGACY_COMPATIBILITY
-        retirement_available = (ROOT / "tools" / "RetireLegacyCompatibility.py").exists()
+        retirement_available = (TOOLS_ROOT / "RetireLegacyCompatibility.py").exists()
         if retirement_available:
             print("    7  ›  Legacy compatibility lifecycle")
         # END LEGACY_COMPATIBILITY

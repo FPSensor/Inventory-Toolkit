@@ -2,15 +2,21 @@ import sys
 import os
 from pathlib import Path
 import math
+import tempfile
 
 # Link project root directory
-ROOT_DIR = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(ROOT_DIR))
+BOOTSTRAP_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(BOOTSTRAP_ROOT))
+
+from core.paths import APPLICATION_ROOT, LOGS_ROOT, profile_configs_root
+
+ROOT_DIR = APPLICATION_ROOT
 
 import pandas as pd
 import numpy as np
 
 from core.configuration_manager import ConfigurationManager
+from core.logger import get_session_log_path
 from core.data_sanitizer import clean_sku_series, sanitize_dataframe
 from core.system_utils import InvalidExcelOutputPathError, normalize_xlsx_output_path
 from engine.shared.families import assign_families, build_family_rules, assign_family
@@ -62,6 +68,7 @@ class IntegrityAuditor:
         self.audit_stock_processing_margins_and_pricing()
         self.audit_yoy_time_series_offsets()
         self.audit_e2e_simulation_with_real_profile()
+        self.audit_application_path_resolution()
 
         print("\n" + "=" * 70)
         print(f" 📊 RESULTS: {self.passed} Passed | {self.failed} Failed | {self.warnings} Warnings")
@@ -77,7 +84,7 @@ class IntegrityAuditor:
     # 1. SKU SANITIZATION & DIRTY EXCEL ARTIFACTS
     # -------------------------------------------------------------------------
     def audit_sku_sanitization(self):
-        print("\n🧹 [1/6] Auditing SKU Sanitization and Corrupted Inputs...")
+        print("\n🧹 [1/7] Auditing SKU Sanitization and Corrupted Inputs...")
         raw_series = pd.Series([
             "00100-151",
             "12060-142.0",       # Excel float conversion artifact
@@ -101,7 +108,7 @@ class IntegrityAuditor:
     # 2. LONGEST-PREFIX MATCHING & FAMILY RESOLUTION
     # -------------------------------------------------------------------------
     def audit_prefix_matching_and_family_resolution(self):
-        print("\n🔍 [2/6] Auditing Longest-Prefix Priority & Family Resolution...")
+        print("\n🔍 [2/7] Auditing Longest-Prefix Priority & Family Resolution...")
         
         families_dict = {
             "Buzos": ["008", "08"],
@@ -156,7 +163,7 @@ class IntegrityAuditor:
     # 3. INVENTORY CROSS CHECK MATHEMATICS (DIFFERENCES & TOTALS)
     # -------------------------------------------------------------------------
     def audit_inventory_cross_check_math(self):
-        print("\n🧮 [3/6] Auditing Cross Check Arithmetic (Differences & Valuations)...")
+        print("\n🧮 [3/7] Auditing Cross Check Arithmetic (Differences & Valuations)...")
 
         # Boundary checks for calculate_difference
         self.assert_check("Standard shortage calculation (Stock: 10 vs Count: 7 -> -3)", calculate_difference(10, 7) == -3)
@@ -178,7 +185,7 @@ class IntegrityAuditor:
     # 4. STOCK PROCESSING MATHEMATICS (MARGINS & PRICING)
     # -------------------------------------------------------------------------
     def audit_stock_processing_margins_and_pricing(self):
-        print("\n📈 [4/6] Auditing Margin Formulas & Zero-Division Protections...")
+        print("\n📈 [4/7] Auditing Margin Formulas & Zero-Division Protections...")
 
         df_mock = pd.DataFrame({
             "Venta": [1000.0, 2000.0, 0.0, -500.0, 1500.0],
@@ -248,7 +255,7 @@ class IntegrityAuditor:
     # 5. TIME SERIES & OFFSET INTEGRITY (YOY SALES)
     # -------------------------------------------------------------------------
     def audit_yoy_time_series_offsets(self):
-        print("\n📅 [5/6] Auditing YoY Sales Date Offsets...")
+        print("\n📅 [5/7] Auditing YoY Sales Date Offsets...")
 
         start_dt = pd.to_datetime("2026-03-15")
         end_dt = pd.to_datetime("2026-03-31 23:59:59")
@@ -279,7 +286,7 @@ class IntegrityAuditor:
     # 6. END-TO-END PROFILE SIMULATION (DEMO)
     # -------------------------------------------------------------------------
     def audit_e2e_simulation_with_real_profile(self):
-        print("\n🚀 [6/6] End-to-End simulation with active profile configs...")
+        print("\n🚀 [6/7] End-to-End simulation with active profile configs...")
         
         try:
             cm = ConfigurationManager(profile="demo")
@@ -306,6 +313,39 @@ class IntegrityAuditor:
 
         except Exception as e:
             self.assert_check("ConfigurationManager execution without exceptions", False, str(e))
+
+    # -------------------------------------------------------------------------
+    # 7. APPLICATION PATH OWNERSHIP (CWD INDEPENDENCE)
+    # -------------------------------------------------------------------------
+    def audit_application_path_resolution(self):
+        print("\n🧭 [7/7] Auditing Application Path Ownership & CWD Independence...")
+
+        original_cwd = Path.cwd()
+        with tempfile.TemporaryDirectory(prefix="inventory_toolkit_foreign_cwd_") as temp_dir:
+            foreign_cwd = Path(temp_dir)
+            try:
+                os.chdir(foreign_cwd)
+                cm = ConfigurationManager(profile="demo")
+            finally:
+                os.chdir(original_cwd)
+
+            self.assert_check(
+                "Configuration profiles resolve from application root, not caller CWD",
+                cm.base_dir == profile_configs_root("demo"),
+                f"Resolved: {cm.base_dir}",
+            )
+            self.assert_check(
+                "Foreign caller CWD is not polluted with application profiles",
+                not (foreign_cwd / "profiles").exists(),
+                f"Unexpected path: {foreign_cwd / 'profiles'}",
+            )
+
+        self.assert_check(
+            "Persistent session log is application-owned",
+            get_session_log_path().parent == LOGS_ROOT
+            and LOGS_ROOT.parent == APPLICATION_ROOT,
+            f"Log path: {get_session_log_path()}",
+        )
 
 if __name__ == "__main__":
     auditor = IntegrityAuditor()

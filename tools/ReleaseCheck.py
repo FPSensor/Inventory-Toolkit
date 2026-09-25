@@ -24,10 +24,13 @@ import tempfile
 from pathlib import Path
 from types import SimpleNamespace
 
-ROOT = Path(__file__).resolve().parents[1]
-PROFILES_ROOT = ROOT / "profiles"
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
+BOOTSTRAP_ROOT = Path(__file__).resolve().parents[1]
+if str(BOOTSTRAP_ROOT) not in sys.path:
+    sys.path.insert(0, str(BOOTSTRAP_ROOT))
+
+from core.paths import APPLICATION_ROOT, PROFILES_ROOT, demo_root  # noqa: E402
+
+ROOT = APPLICATION_ROOT
 
 from core.logger import (  # noqa: E402
     debug_level_from_environment,
@@ -90,7 +93,6 @@ def _quick_gate() -> None:
 
 
 def _validate_profiles() -> None:
-    os.chdir(ROOT)
     from core.configuration_manager import ConfigurationManager
 
     profiles = sorted(path.name for path in PROFILES_ROOT.iterdir() if path.is_dir())
@@ -333,7 +335,6 @@ def _run_internal_demo(
 ) -> None:
     if not output_path:
         raise ValueError("Internal demo execution requires --_output.")
-    os.chdir(ROOT)
     output = Path(output_path).resolve()
     output.parent.mkdir(parents=True, exist_ok=True)
     if workflow == "cross":
@@ -360,7 +361,7 @@ def _run_cross_demo(cross_system_override: str | None, output: Path) -> None:
     )
     from engine.inventory_cross_check.generator import run_cross_check
 
-    demo = ROOT / "examples" / "demo"
+    demo = demo_root()
     cross_system = (
         Path(cross_system_override).resolve()
         if cross_system_override
@@ -406,7 +407,7 @@ def _run_stock_demo(output: Path) -> None:
     from core.configuration_manager import ConfigurationManager
     from engine.stock_processing.generator import run_stock_processing
 
-    demo = ROOT / "examples" / "demo"
+    demo = demo_root()
     result = run_stock_processing(
         SimpleNamespace(
             stock_processing_raw=str(demo / "stock_processing_raw_stock.xlsx"),
@@ -442,7 +443,7 @@ def _run_yoy_demo(output: Path) -> None:
     from core.configuration_manager import ConfigurationManager
     from engine.yoy_reports.generator import generate_sales_report
 
-    demo = ROOT / "examples" / "demo"
+    demo = demo_root()
     yoy_config = ConfigurationManager("demo").get_yoy_reports_config()
     date_column = yoy_config["input"]["date_column"]
     history = pd.read_excel(

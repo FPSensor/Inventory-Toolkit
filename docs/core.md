@@ -16,13 +16,19 @@ The current schema requires version `3`, not merely an arbitrary integer. All cu
 
 This matters after legacy migration is eventually removed: obsolete profiles should fail clearly rather than being interpreted as current. Supported legacy names are converted explicitly before current-schema validation.
 
+## `paths.py`
+
+Defines the canonical application root and application-owned resource roots. Internal resources such as `profiles/`, `examples/`, `logs/`, `tools/`, and release references are resolved from the Inventory Toolkit source/application tree, never from `Path.cwd()`.
+
+This does **not** redefine user paths: a user-supplied relative workbook path still resolves relative to the caller's current working directory. The boundary is ownership: application resources are application-rooted; user file arguments remain caller-rooted.
+
 ## `configuration_manager.py`
 
 Main typed configuration access layer.
 
 Responsibilities:
 
-- resolve `profiles/<profile>/configs/`;
+- resolve `profiles/<profile>/configs/` from the canonical application root;
 - ensure the profile can be consumed through the current schema;
 - load/cache configuration documents by logical path;
 - fail closed when an existing configuration file is malformed or unreadable;

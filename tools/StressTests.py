@@ -8,8 +8,12 @@ import gc
 from pathlib import Path
 
 # Link project root directory
-ROOT_DIR = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(ROOT_DIR))
+BOOTSTRAP_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(BOOTSTRAP_ROOT))
+
+from core.paths import APPLICATION_ROOT, LOGS_ROOT, PROFILES_ROOT
+
+ROOT_DIR = APPLICATION_ROOT
 
 try:
     import pandas as pd
@@ -31,7 +35,7 @@ def print_banner():
 # =========================================================================
 def audit_profiles():
     print("\n🔍 [1/3] Auditing profiles and configuration schemas...")
-    profiles_dir = ROOT_DIR / "profiles"
+    profiles_dir = PROFILES_ROOT
     if not profiles_dir.exists():
         print("  ⚠️ 'profiles/' directory not found.")
         return
@@ -145,7 +149,7 @@ def audit_system():
     print(f"  📦 Pandas Version: {pd.__version__}")
     
     # Audit logs directory
-    logs_dir = ROOT_DIR / "logs"
+    logs_dir = LOGS_ROOT
     if logs_dir.exists():
         session_log = logs_dir / "session.log"
         if session_log.exists():

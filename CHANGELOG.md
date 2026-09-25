@@ -6,6 +6,7 @@ All notable changes to Inventory Toolkit are documented in this file.
 
 ### Changed
 
+- Centralized application-owned path resolution in `core/paths.py`: profiles, built-in examples, logs, developer tools, and release references now resolve from the Inventory Toolkit application root instead of the caller's current working directory; user-supplied relative input/output paths intentionally remain CWD-relative.
 - Standardized the workbook output contract across Stock Processing, Cross Check, and YoY: legacy `.xls` remains supported as input where needed, while generated workbooks are validated and written only as `.xlsx`; extensionless output names are normalized before processing.
 - Refactored Stock Processing from one legacy-heavy orchestration function into explicit profile-contract, cleanup/classification, pricing, valuation, and rendering stages while preserving the approved demo workbook contract.
 - Made Stock Processing normalize profile-owned article/family labels at the engine boundary and use private internal keys during business processing, so non-default catalog column names work end to end without leaking implementation columns to Excel.
@@ -18,6 +19,7 @@ All notable changes to Inventory Toolkit are documented in this file.
 
 ### Fixed
 
+- Removed runtime CWD dependence from profile loading/creation, per-profile path persistence, Configuration Hub, and the experimental GUI, preventing accidental `profiles/` trees or configuration fallback behavior from appearing in unrelated working directories.
 - Fixed Stock Processing paths that validated a configured article column but later still read/merged the hardcoded `Artículo`/`Familias` labels.
 - Fixed Cross Check system-stock/article-family handling to honor `general/catalog.json`, and fixed the GUI preflight that incorrectly checked the cost-list article mapping against the system-stock workbook.
 - Prevented empty system-stock articles from becoming zero-length prefix candidates during Cross Check scanner normalization, preserving the `REVISAR | <original>` invariant for unknown readings even when the master contains blank/NaN article cells.

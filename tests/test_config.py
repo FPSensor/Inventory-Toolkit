@@ -6,6 +6,7 @@ from pydantic import ValidationError
 from core.config_schemas import CatalogConfig, YoYOutputConfig
 from core.configuration_errors import ConfigurationError
 from core.configuration_manager import ConfigurationManager
+from core import paths as app_paths
 from core.profile_config import CONFIG_VERSION, ensure_profile_config, profile_readiness
 
 
@@ -69,7 +70,7 @@ def test_empty_profile_bootstraps_current_defaults(tmp_path, monkeypatch):
     profile_dir = tmp_path / "profiles" / "test_dummy" / "configs" / "general"
     profile_dir.mkdir(parents=True)
 
-    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(app_paths, "PROFILES_ROOT", tmp_path / "profiles")
     config = ConfigurationManager(profile="test_dummy")
     assert config.get_catalog()["columns"]["article"] == "Artículo"
     assert config.get_family_config()["rules"]["REVISAR"] == ["REVISAR", "revisar"]
@@ -89,7 +90,7 @@ def test_existing_malformed_json_fails_closed(tmp_path, monkeypatch):
     catalog_path = configs / "general" / "catalog.json"
     catalog_path.write_text('{"version": 3, "columns": ', encoding="utf-8")
 
-    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(app_paths, "PROFILES_ROOT", tmp_path / "profiles")
     with pytest.raises(ConfigurationError, match="invalid JSON") as exc_info:
         ConfigurationManager("strict")
 
@@ -114,7 +115,7 @@ def test_unknown_top_level_key_is_rejected_instead_of_ignored(tmp_path, monkeypa
     payload["defaut_family"] = "Typo that must not be ignored"
     catalog_path.write_text(json.dumps(payload), encoding="utf-8")
 
-    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(app_paths, "PROFILES_ROOT", tmp_path / "profiles")
     with pytest.raises(ConfigurationError, match="defaut_family"):
         ConfigurationManager("strict")
 
@@ -126,7 +127,7 @@ def test_unknown_nested_key_is_rejected_instead_of_ignored(tmp_path, monkeypatch
     payload["pricing"]["columns"]["prce"] = "Typo"
     stock_path.write_text(json.dumps(payload), encoding="utf-8")
 
-    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(app_paths, "PROFILES_ROOT", tmp_path / "profiles")
     with pytest.raises(ConfigurationError, match="prce"):
         ConfigurationManager("strict")
 
@@ -138,7 +139,7 @@ def test_wrong_config_type_aborts_complete_profile_validation(tmp_path, monkeypa
     payload["active"] = "VIRREYES"
     network_path.write_text(json.dumps(payload), encoding="utf-8")
 
-    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(app_paths, "PROFILES_ROOT", tmp_path / "profiles")
     with pytest.raises(ConfigurationError, match="general/network.json"):
         ConfigurationManager("strict")
 
@@ -148,7 +149,7 @@ def test_non_object_current_config_fails_with_clear_error(tmp_path, monkeypatch)
     yoy_path = configs / "yoy_reports" / "settings.json"
     yoy_path.write_text("[]", encoding="utf-8")
 
-    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(app_paths, "PROFILES_ROOT", tmp_path / "profiles")
     with pytest.raises(ConfigurationError, match="expected a JSON object"):
         ConfigurationManager("strict")
 
@@ -161,7 +162,7 @@ def test_future_schema_version_is_rejected_without_rewriting_file(tmp_path, monk
     original = json.dumps(payload, indent=2)
     catalog_path.write_text(original, encoding="utf-8")
 
-    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(app_paths, "PROFILES_ROOT", tmp_path / "profiles")
     with pytest.raises(ConfigurationError, match="newer than supported"):
         ConfigurationManager("strict")
 
@@ -175,7 +176,7 @@ def test_existing_current_config_requires_explicit_schema_version(tmp_path, monk
     payload.pop("version")
     catalog_path.write_text(json.dumps(payload), encoding="utf-8")
 
-    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(app_paths, "PROFILES_ROOT", tmp_path / "profiles")
     with pytest.raises(ConfigurationError, match="schema version must be an integer"):
         ConfigurationManager("strict")
 
@@ -240,7 +241,7 @@ def test_legacy_profile_migrates_without_changing_business_contract(tmp_path, mo
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps(payload), encoding="utf-8")
 
-    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(app_paths, "PROFILES_ROOT", tmp_path / "profiles")
     config = ConfigurationManager("legacy")
 
     assert config.get_catalog()["columns"]["article"] == "SKU"

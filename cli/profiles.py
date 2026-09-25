@@ -12,15 +12,14 @@ import os
 import sys
 from cli.utils import clear_screen, load_json, save_json, ask_yes_no
 from cli.wizard import initialize_profile_files, run_setup_wizard
-
-PROFILES_DIR = "profiles"
+from core import paths as app_paths
 
 
 # ── Internal helpers ──────────────────────────────────────────────────────────
 
 def _profile_info(folder: str):
     """Return (display_name, description) for a profile folder."""
-    info_path = os.path.join(PROFILES_DIR, folder, "profile.json")
+    info_path = app_paths.profile_root(folder) / "profile.json"
     if os.path.exists(info_path):
         info = load_json(info_path) or {}
         return info.get("name", folder), info.get("description", "")
@@ -28,10 +27,10 @@ def _profile_info(folder: str):
 
 
 def _list_profiles():
-    os.makedirs(PROFILES_DIR, exist_ok=True)
+    app_paths.PROFILES_ROOT.mkdir(parents=True, exist_ok=True)
     return sorted(
-        d for d in os.listdir(PROFILES_DIR)
-        if os.path.isdir(os.path.join(PROFILES_DIR, d))
+        path.name for path in app_paths.PROFILES_ROOT.iterdir()
+        if path.is_dir()
     )
 
 
@@ -57,7 +56,7 @@ def _create_new_profile() -> str | None:
         if not folder:
             print("  ❌ Name cannot be empty.")
             continue
-        profile_path = os.path.join(PROFILES_DIR, folder)
+        profile_path = app_paths.profile_root(folder)
         if os.path.exists(profile_path):
             print(f"  ❌ A profile named '{folder}' already exists.")
             continue
@@ -68,23 +67,23 @@ def _create_new_profile() -> str | None:
     description  = input("  Description (optional): ").strip()
 
     # 3. Create structure
-    configs_path = os.path.join(profile_path, "configs")
-    os.makedirs(configs_path, exist_ok=True)
+    configs_path = profile_path / "configs"
+    configs_path.mkdir(parents=True, exist_ok=True)
     initialize_profile_files(configs_path)
 
-    save_json(os.path.join(profile_path, "profile.json"), {
+    save_json(str(profile_path / "profile.json"), {
         "name":        display_name,
         "description": description,
         "version":     "1.4.0"
     })
 
-    print(f"\n  ✅ Profile '{display_name}' created at: profiles/{folder}/\n")
+    print(f"\n  ✅ Profile '{display_name}' created at: {profile_path}\n")
 
     # 4. Wizard (optional but recommended)
     print("  The Setup Wizard reads a Stock file and configures")
     print("  columns and stores automatically in minutes.\n")
     if ask_yes_no("  Run the Setup Wizard now?"):
-        run_setup_wizard(profile_path, display_name)
+        run_setup_wizard(str(profile_path), display_name)
     else:
         print(
             "  ℹ️  You can run it later from:\n"

@@ -17,10 +17,12 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable
 
-ROOT = Path(__file__).resolve().parents[1]
-DEMO_ROOT = ROOT / "examples" / "demo"
-PROFILE_ROOT = ROOT / "profiles" / "demo"
-REFERENCE_ROOT = ROOT / "tests" / "release_reference"
+from core.paths import APPLICATION_ROOT, RELEASE_REFERENCE_ROOT, demo_root, profile_root
+
+ROOT = APPLICATION_ROOT
+DEMO_ROOT = demo_root()
+PROFILE_ROOT = profile_root("demo")
+REFERENCE_ROOT = RELEASE_REFERENCE_ROOT
 REFERENCE_WORKBOOK_ROOT = REFERENCE_ROOT / "workbooks"
 REFERENCE_MANIFEST_PATH = REFERENCE_ROOT / "manifest.json"
 REFERENCE_SCHEMA_VERSION = 1
