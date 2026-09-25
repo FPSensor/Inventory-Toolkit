@@ -61,6 +61,9 @@ def run_cross_check(args):
 
     config = ConfigurationManager(profile=args.cross_check_profile)
     family_rules = build_family_rules(config.get_family_rules())
+    catalog_columns = config.get_catalog_columns()
+    article_column = catalog_columns["article"]
+    family_column = catalog_columns["family"]
     default_family = config.get_default_family()
     cross_check_config = config.get_cross_check_config()
 
@@ -78,6 +81,8 @@ def run_cross_check(args):
     log_debug_event(
         "cross_check_config_loaded",
         family_rule_count=len(family_rules),
+        article_column=article_column,
+        family_column=family_column,
         default_family=default_family,
         ignored_article_count=len(ignored_articles),
         ignored_term_count=len(ignored_terms),
@@ -89,13 +94,21 @@ def run_cross_check(args):
 
     with execution_timer("Read and Validate Spreadsheets"):
         system_frame = pd.read_excel(args.cross_check_system)
-        if ARTICLE_COLUMN not in system_frame.columns or QUANTITY_COLUMN not in system_frame.columns:
+        if article_column not in system_frame.columns or QUANTITY_COLUMN not in system_frame.columns:
             log.error(
-                "Missing '%s' or '%s' in system stock.",
-                ARTICLE_COLUMN,
+                "Missing configured article column '%s' or required quantity column '%s' in system stock.",
+                article_column,
                 QUANTITY_COLUMN,
             )
             return None
+        if article_column != ARTICLE_COLUMN and ARTICLE_COLUMN in system_frame.columns:
+            log.error(
+                "System stock contains both configured article column '%s' and reserved canonical column '%s'.",
+                article_column,
+                ARTICLE_COLUMN,
+            )
+            return None
+        system_frame = system_frame.rename(columns={article_column: ARTICLE_COLUMN})
 
         count_frame = pd.read_excel(
             args.cross_check_count,
@@ -130,6 +143,20 @@ def run_cross_check(args):
             unique_articles=len(master_articles),
             ignored_empty_article_rows=int((system_frame[ARTICLE_COLUMN] == "").sum()),
         )
+
+        missing_cost_columns = [
+            column for column in (cost_article_column, cost_price_column) if column not in cost_frame.columns
+        ]
+        missing_sales_columns = [
+            column for column in (sales_article_column, sales_price_column) if column not in sales_frame.columns
+        ]
+        if missing_cost_columns or missing_sales_columns:
+            log.error(
+                "Configured Cross Check price-list columns are missing. cost=%s sales=%s",
+                missing_cost_columns,
+                missing_sales_columns,
+            )
+            return None
 
         cost_frame.rename(
             columns={cost_article_column: ARTICLE_COLUMN, cost_price_column: COST_COLUMN},
@@ -252,10 +279,16 @@ def run_cross_check(args):
             SALES_TOTAL_COLUMN,
         ]
         result = result[output_columns].sort_values(by=[FAMILY_COLUMN, ARTICLE_COLUMN])
+        result = result.rename(
+            columns={
+                FAMILY_COLUMN: family_column,
+                ARTICLE_COLUMN: article_column,
+            }
+        )
         log_debug_event(
             "cross_check_result_ready",
             difference_rows=len(result),
-            family_count=result[FAMILY_COLUMN].nunique(dropna=False),
+            family_count=result[family_column].nunique(dropna=False),
             positive_differences=int((result[DIFFERENCE_COLUMN] > 0).sum()),
             negative_differences=int((result[DIFFERENCE_COLUMN] < 0).sum()),
             zero_cost_total_rows=int((result[COST_TOTAL_COLUMN] == 0).sum()),

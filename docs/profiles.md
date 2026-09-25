@@ -48,7 +48,7 @@ This distinction is deliberate: defaults are bootstrap behavior for absent confi
 
 ### `general/catalog.json`
 
-Cross-workflow catalog vocabulary:
+Cross-workflow catalog vocabulary. Stock Processing and Cross Check consume these article/family labels at their workbook boundaries rather than assuming the demo names internally:
 
 ```json
 {

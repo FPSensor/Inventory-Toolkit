@@ -59,6 +59,8 @@ Unknown/review data stays visible in output rather than being silently discarded
 
 ### Output
 
+The system-stock article column and exported article/family labels follow `general/catalog.json`; internal reconciliation still uses stable canonical keys. Cost/sales price-list columns remain owned by `cross_check/settings.json`.
+
 The report includes family/article/system stock/physical count/difference and value totals. Positive/negative differences receive visual formatting. Header freezing/filtering are part of the generated workbook contract checked by golden-master certification.
 
 ---
@@ -69,27 +71,31 @@ Purpose: transform raw multi-branch stock into a cleaned, classified, priced, va
 
 ### Files
 
-- `data_processor.py` — pricing-list normalization and margin/value calculations.
-- `generator.py` — cleanup, store/region consolidation, family assignment, pricing, valuation, output preparation.
+- `contracts.py` — resolves the validated profile into one immutable Stock Processing plan and owns private article/family pipeline keys.
+- `data_processor.py` — raw-stock cleanup, deposit/region transforms, family assignment, and final output projection.
+- `pricing.py` — isolated price-list column resolution and pivot normalization.
+- `valuation.py` — unit-price attachment plus store/region cost and sales valuation.
+- `generator.py` — thin stage orchestration and diagnostics.
 - `excel_renderer.py` — detail and summary workbook rendering.
 
 ### Pipeline
 
-Typical stages:
+Stock Processing now treats profile vocabulary as an input/output boundary rather than an implementation detail:
 
-1. read raw stock and configured price lists;
-2. normalize configured text/numeric columns;
-3. drop configured unwanted columns;
-4. map raw stock database columns to active stores;
-5. calculate configured regional groups;
-6. classify article families;
-7. normalize/pivot pricing data;
-8. attach cost/sales values;
-9. calculate valuation/margins;
-10. select output columns;
-11. render configured summary sheets + raw-data sheet.
+1. resolve the validated profile into one `StockProcessingPlan`;
+2. read raw stock and validate the configured catalog article column;
+3. apply configured text/numeric/drop-column cleanup;
+4. convert the configurable article identity to a private internal key;
+5. merge configured deposit/database columns and calculate regional quantities;
+6. classify families into a private internal family key using the shared longest-prefix rules;
+7. normalize/pivot pricing data independently of raw-stock column names;
+8. attach unit prices and calculate store/regional cost and sales values;
+9. project the configured output layout and restore the profile-owned article/family labels;
+10. render configured summary sheets + raw-data sheet.
 
-The output layout is profile-owned under `stock_processing/settings.json`.
+The private `__itk_*` keys must never escape into generated workbooks. This boundary lets a profile use names such as `SKU`/`Family` without forcing the core valuation pipeline to carry those external strings through every operation.
+
+`output.base_columns` remains profile-owned. Historical canonical labels (`Artículo` / `Familias`) are accepted as compatibility aliases when the catalog vocabulary itself has been customized, so changing the catalog does not silently remove those fields from an otherwise untouched output layout.
 
 ---
 

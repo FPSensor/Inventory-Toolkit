@@ -1463,16 +1463,23 @@ class InventoryToolkitGUI(BaseWindow):
             try:
                 df_head = pd.read_excel(self.cc_sys.get(), nrows=0)
                 cm = ConfigurationManager(self.active_profile.get())
-                config = cm.get_cross_check_config()
-                art_col = config["price_lists"]["cost"]["article_column"]
+                art_col = cm.get_catalog_columns()["article"]
                 if art_col not in df_head.columns:
-                    messagebox.showwarning(
-                        "Column Warning",
-                        f"Expected column '{art_col}' not found in system stock file.\n"
-                        "Proceeding anyway — check your config if results look wrong.",
-                        parent=self)
-            except Exception:
-                pass
+                    messagebox.showerror(
+                        "Invalid System Stock",
+                        f"Configured article column '{art_col}' was not found in the system stock file.\n"
+                        "Update the profile or choose the matching workbook before running Cross Check.",
+                        parent=self,
+                    )
+                    return
+            except Exception as exc:
+                messagebox.showerror(
+                    "Cross Check Preflight Error",
+                    str(exc),
+                    parent=self,
+                )
+                return
+
 
         out = self.cc_out.get().strip()
         if not out.endswith((".xlsx", ".xls")):

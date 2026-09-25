@@ -14,7 +14,14 @@ from core.configuration_manager import ConfigurationManager
 from core.data_sanitizer import clean_sku_series, sanitize_dataframe
 from engine.shared.families import assign_families, build_family_rules, assign_family
 from engine.inventory_cross_check.data_processor import normalize_article, calculate_difference
-from engine.stock_processing.data_processor import calculate_margin, process_pricing
+from engine.stock_processing.contracts import StockProcessingPlan
+from engine.stock_processing.data_processor import (
+    calculate_margin,
+    classify_stock_families,
+    prepare_stock_frame,
+    process_pricing,
+    project_stock_output,
+)
 from engine.yoy_reports.data_processor import process_sales_data
 from engine.yoy_reports.metrics import configured_branches, resolve_metric_specs
 
@@ -184,6 +191,43 @@ class IntegrityAuditor:
         self.assert_check("Zero-division protection (sales=0 -> margin=0.0)", margins[2] == 0.0, f"Got: {margins[2]}")
         self.assert_check("Negative sales-value protection (sales <= 0 -> margin=0.0)", margins[3] == 0.0, f"Got: {margins[3]}")
         self.assert_check("Zero-margin baseline (sales == cost -> 0%)", margins[4] == 0.0)
+
+        custom_plan = StockProcessingPlan(
+            article_column="SKU_CUSTOM",
+            family_column="FAMILY_CUSTOM",
+            default_family="UNMAPPED",
+            family_rules={"Known": ["AA"]},
+            active_stores=(),
+            regional_groups={},
+            stock_database_columns={},
+            text_columns=(),
+            numeric_columns=(),
+            drop_columns=(),
+            pricing={},
+            base_columns=("Artículo", "Familias"),
+            raw_data_sheet="Data",
+            summaries=(),
+        )
+        custom_frame = prepare_stock_frame(
+            pd.DataFrame({"SKU_CUSTOM": [" AA1 ", "ZZ9"]}),
+            custom_plan,
+        )
+        custom_frame = classify_stock_families(
+            custom_frame,
+            build_family_rules(custom_plan.family_rules),
+            default_family=custom_plan.default_family,
+        )
+        custom_output = project_stock_output(custom_frame, custom_plan)
+        self.assert_check(
+            "Stock honors non-default catalog article/family labels",
+            list(custom_output.columns) == ["SKU_CUSTOM", "FAMILY_CUSTOM"]
+            and custom_output.iloc[0].tolist() == ["AA1", "Known"]
+            and custom_output.iloc[1].tolist() == ["ZZ9", "UNMAPPED"],
+        )
+        self.assert_check(
+            "Stock private pipeline keys never leak to projected output",
+            not any(str(column).startswith("__itk_") for column in custom_output.columns),
+        )
 
     # -------------------------------------------------------------------------
     # 5. TIME SERIES & OFFSET INTEGRITY (YOY SALES)

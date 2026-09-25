@@ -110,7 +110,7 @@ Approved demo output is stored as semantic golden masters. A refactor that claim
 
 Current internal configuration uses English keys and version `3`. External workbook labels may remain Spanish because those labels are part of real input/output contracts.
 
-`core/business_schema.py` is the explicit boundary for common external vocabulary.
+`core/business_schema.py` defines canonical v1.x business vocabulary, while profile-owned column mappings may replace those labels at workbook boundaries. Engines should resolve configurable external names once, then operate on stable internal contracts rather than repeatedly hard-coding or threading source labels through business logic. Stock Processing applies this rule explicitly with private article/family pipeline keys and restores the configured labels only when projecting the final workbook.
 
 Legacy v1/v2 storage and old API projections are temporary compatibility concerns, not the current architecture. See [legacy_compatibility.md](legacy_compatibility.md).
 

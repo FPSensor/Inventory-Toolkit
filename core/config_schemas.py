@@ -2,7 +2,7 @@
 
 from typing import Dict, List, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from core.profile_config import CONFIG_VERSION
 
@@ -31,6 +31,20 @@ class _Config(_StrictConfigModel):
 class CatalogColumns(_StrictConfigModel):
     article: str = ARTICLE_COLUMN
     family: str = FAMILY_COLUMN
+
+    @field_validator("article", "family")
+    @classmethod
+    def validate_catalog_column_name(cls, value: str) -> str:
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError("catalog column names cannot be empty")
+        return normalized
+
+    @model_validator(mode="after")
+    def validate_distinct_catalog_columns(self):
+        if self.article == self.family:
+            raise ValueError("catalog article and family columns must use different names")
+        return self
 
 
 class CatalogConfig(_Config):

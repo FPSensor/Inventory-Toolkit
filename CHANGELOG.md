@@ -6,6 +6,8 @@ All notable changes to Inventory Toolkit are documented in this file.
 
 ### Changed
 
+- Refactored Stock Processing from one legacy-heavy orchestration function into explicit profile-contract, cleanup/classification, pricing, valuation, and rendering stages while preserving the approved demo workbook contract.
+- Made Stock Processing normalize profile-owned article/family labels at the engine boundary and use private internal keys during business processing, so non-default catalog column names work end to end without leaking implementation columns to Excel.
 - Made profile configuration fail closed: existing JSON files must parse and the complete current schema must validate before a workflow can use the profile; missing current-schema files may still be initialized from documented defaults.
 - Made all schema-v3 Pydantic models reject unknown keys, including nested Stock, Cross Check, and YoY structures, so misspelled settings cannot silently disappear behind defaults.
 - Made the catalog `default_family` a real profile-owned business setting across Stock Processing, Cross Check, and dynamically classified YoY data instead of leaving the historical `Other` fallback hardcoded inside the shared classifier.
@@ -15,6 +17,8 @@ All notable changes to Inventory Toolkit are documented in this file.
 
 ### Fixed
 
+- Fixed Stock Processing paths that validated a configured article column but later still read/merged the hardcoded `Artículo`/`Familias` labels.
+- Fixed Cross Check system-stock/article-family handling to honor `general/catalog.json`, and fixed the GUI preflight that incorrectly checked the cost-list article mapping against the system-stock workbook.
 - Prevented empty system-stock articles from becoming zero-length prefix candidates during Cross Check scanner normalization, preserving the `REVISAR | <original>` invariant for unknown readings even when the master contains blank/NaN article cells.
 - Unified scalar and batch family-classification normalization so numeric/empty inputs and unmatched values share the same configurable fallback semantics.
 - Prevented YoY configurations with no usable report groups from producing invalid total formulas such as a bare `=`.

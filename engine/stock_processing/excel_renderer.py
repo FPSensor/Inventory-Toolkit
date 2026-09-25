@@ -56,6 +56,7 @@ def render_stock_excel(
     summaries,
     stock_columns,
     raw_data_sheet,
+    family_column=FAMILY_COLUMN,
     interactive=True,
 ):
     log.info("Generating dynamic reports and applying formats...")
@@ -102,9 +103,9 @@ def render_stock_excel(
             if sales_column in stock_columns:
                 aggregations[sales_column] = "sum"
 
-        summary_frame = stock_frame.groupby(FAMILY_COLUMN).agg(aggregations).reset_index()
+        summary_frame = stock_frame.groupby(family_column).agg(aggregations).reset_index()
 
-        export_columns = [FAMILY_COLUMN]
+        export_columns = [family_column]
         for entity in valid_entities:
             cost_column = f"{entity}.{COST_COLUMN}"
             sales_column = f"{entity}.{SALES_VALUE_LABEL}"
