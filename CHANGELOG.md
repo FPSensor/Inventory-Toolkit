@@ -6,6 +6,8 @@ All notable changes to Inventory Toolkit are documented in this file.
 
 ### Changed
 
+- Made profile configuration fail closed: existing JSON files must parse and the complete current schema must validate before a workflow can use the profile; missing current-schema files may still be initialized from documented defaults.
+- Made all schema-v3 Pydantic models reject unknown keys, including nested Stock, Cross Check, and YoY structures, so misspelled settings cannot silently disappear behind defaults.
 - Made the catalog `default_family` a real profile-owned business setting across Stock Processing, Cross Check, and dynamically classified YoY data instead of leaving the historical `Other` fallback hardcoded inside the shared classifier.
 - Promoted YoY `metrics` from stored metadata to an enforced output contract: `units` uses the configured quantity column and `sales` uses a new configurable sales-amount column (`Monto` in the demo profile), with metric-specific workbook formatting.
 - Made YoY `annual_comparison` control whether previous-year comparison blocks are rendered, and made `include_sizes` act as the runtime default in CLI/GUI unless explicitly overridden for the current run.

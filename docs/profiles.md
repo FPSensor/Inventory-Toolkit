@@ -33,6 +33,17 @@ Every current configuration document uses:
 
 plus its domain-specific fields.
 
+## Fail-closed validation
+
+Current profile configuration is intentionally strict:
+
+- a genuinely missing current-schema file may be created from the documented default structure;
+- an existing file with malformed JSON is an error and is never treated as missing;
+- an existing file with the wrong type, unsupported schema version, unknown key, or invalid nested value is an error;
+- the complete current profile is validated before a processing workflow is allowed to use it.
+
+This distinction is deliberate: defaults are bootstrap behavior for absent configuration, not a recovery path for configuration that exists but cannot be trusted. Supported pre-v3 storage is converted by the compatibility layer before strict current-schema validation.
+
 ## Ownership model
 
 ### `general/catalog.json`

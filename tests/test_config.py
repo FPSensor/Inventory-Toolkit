@@ -4,8 +4,9 @@ import pytest
 from pydantic import ValidationError
 
 from core.config_schemas import CatalogConfig
+from core.configuration_errors import ConfigurationError
 from core.configuration_manager import ConfigurationManager
-from core.profile_config import CONFIG_VERSION, ensure_profile_config
+from core.profile_config import CONFIG_VERSION, ensure_profile_config, profile_readiness
 
 
 def test_configuration_manager_loading():
@@ -75,6 +76,108 @@ def test_empty_profile_bootstraps_current_defaults(tmp_path, monkeypatch):
     assert config.get_stock_processing_config()["version"] == CONFIG_VERSION
     assert config.get_cross_check_config()["version"] == CONFIG_VERSION
     assert config.get_yoy_reports_config()["version"] == CONFIG_VERSION
+
+
+def _initialize_test_profile(tmp_path, profile="strict"):
+    configs = tmp_path / "profiles" / profile / "configs"
+    ensure_profile_config(configs)
+    return configs
+
+
+def test_existing_malformed_json_fails_closed(tmp_path, monkeypatch):
+    configs = _initialize_test_profile(tmp_path)
+    catalog_path = configs / "general" / "catalog.json"
+    catalog_path.write_text('{"version": 3, "columns": ', encoding="utf-8")
+
+    monkeypatch.chdir(tmp_path)
+    with pytest.raises(ConfigurationError, match="invalid JSON") as exc_info:
+        ConfigurationManager("strict")
+
+    message = str(exc_info.value)
+    assert "general/catalog.json" in message.replace("\\", "/")
+    assert "line 1" in message
+
+
+def test_profile_readiness_does_not_treat_corrupt_json_as_missing(tmp_path):
+    configs = _initialize_test_profile(tmp_path)
+    network_path = configs / "general" / "network.json"
+    network_path.write_text("{not valid json", encoding="utf-8")
+
+    with pytest.raises(ConfigurationError, match="invalid JSON"):
+        profile_readiness(configs)
+
+
+def test_unknown_top_level_key_is_rejected_instead_of_ignored(tmp_path, monkeypatch):
+    configs = _initialize_test_profile(tmp_path)
+    catalog_path = configs / "general" / "catalog.json"
+    payload = json.loads(catalog_path.read_text(encoding="utf-8"))
+    payload["defaut_family"] = "Typo that must not be ignored"
+    catalog_path.write_text(json.dumps(payload), encoding="utf-8")
+
+    monkeypatch.chdir(tmp_path)
+    with pytest.raises(ConfigurationError, match="defaut_family"):
+        ConfigurationManager("strict")
+
+
+def test_unknown_nested_key_is_rejected_instead_of_ignored(tmp_path, monkeypatch):
+    configs = _initialize_test_profile(tmp_path)
+    stock_path = configs / "stock_processing" / "settings.json"
+    payload = json.loads(stock_path.read_text(encoding="utf-8"))
+    payload["pricing"]["columns"]["prce"] = "Typo"
+    stock_path.write_text(json.dumps(payload), encoding="utf-8")
+
+    monkeypatch.chdir(tmp_path)
+    with pytest.raises(ConfigurationError, match="prce"):
+        ConfigurationManager("strict")
+
+
+def test_wrong_config_type_aborts_complete_profile_validation(tmp_path, monkeypatch):
+    configs = _initialize_test_profile(tmp_path)
+    network_path = configs / "general" / "network.json"
+    payload = json.loads(network_path.read_text(encoding="utf-8"))
+    payload["active"] = "VIRREYES"
+    network_path.write_text(json.dumps(payload), encoding="utf-8")
+
+    monkeypatch.chdir(tmp_path)
+    with pytest.raises(ConfigurationError, match="general/network.json"):
+        ConfigurationManager("strict")
+
+
+def test_non_object_current_config_fails_with_clear_error(tmp_path, monkeypatch):
+    configs = _initialize_test_profile(tmp_path)
+    yoy_path = configs / "yoy_reports" / "settings.json"
+    yoy_path.write_text("[]", encoding="utf-8")
+
+    monkeypatch.chdir(tmp_path)
+    with pytest.raises(ConfigurationError, match="expected a JSON object"):
+        ConfigurationManager("strict")
+
+
+def test_future_schema_version_is_rejected_without_rewriting_file(tmp_path, monkeypatch):
+    configs = _initialize_test_profile(tmp_path)
+    catalog_path = configs / "general" / "catalog.json"
+    payload = json.loads(catalog_path.read_text(encoding="utf-8"))
+    payload["version"] = CONFIG_VERSION + 1
+    original = json.dumps(payload, indent=2)
+    catalog_path.write_text(original, encoding="utf-8")
+
+    monkeypatch.chdir(tmp_path)
+    with pytest.raises(ConfigurationError, match="newer than supported"):
+        ConfigurationManager("strict")
+
+    assert catalog_path.read_text(encoding="utf-8") == original
+
+
+def test_existing_current_config_requires_explicit_schema_version(tmp_path, monkeypatch):
+    configs = _initialize_test_profile(tmp_path)
+    catalog_path = configs / "general" / "catalog.json"
+    payload = json.loads(catalog_path.read_text(encoding="utf-8"))
+    payload.pop("version")
+    catalog_path.write_text(json.dumps(payload), encoding="utf-8")
+
+    monkeypatch.chdir(tmp_path)
+    with pytest.raises(ConfigurationError, match="schema version must be an integer"):
+        ConfigurationManager("strict")
 
 
 # BEGIN LEGACY_COMPATIBILITY

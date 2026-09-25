@@ -18,12 +18,17 @@ from core.business_schema import (
 )
 
 
-class _Config(BaseModel):
-    model_config = ConfigDict(extra="allow")
-    version: Literal[CONFIG_VERSION] = CONFIG_VERSION
+class _StrictConfigModel(BaseModel):
+    """Reject unknown configuration keys instead of silently ignoring typos."""
+
+    model_config = ConfigDict(extra="forbid")
 
 
-class CatalogColumns(BaseModel):
+class _Config(_StrictConfigModel):
+    version: Literal[CONFIG_VERSION]
+
+
+class CatalogColumns(_StrictConfigModel):
     article: str = ARTICLE_COLUMN
     family: str = FAMILY_COLUMN
 
@@ -51,30 +56,30 @@ class NetworkConfig(_Config):
     stock_database_columns: Dict[str, str] = Field(default_factory=dict)
 
 
-class CleaningConfig(BaseModel):
+class CleaningConfig(_StrictConfigModel):
     text_columns: List[str] = Field(default_factory=list)
     drop_columns: List[str] = Field(default_factory=list)
     numeric_columns: List[str] = Field(default_factory=list)
 
 
-class PricingColumns(BaseModel):
+class PricingColumns(_StrictConfigModel):
     article: str = ARTICLE_COLUMN
     database: str = DATABASE_ORIGIN_COLUMN
     price: str = PRICE_COLUMN
 
 
-class PricingConfig(BaseModel):
+class PricingConfig(_StrictConfigModel):
     columns: PricingColumns = Field(default_factory=PricingColumns)
     aliases: Dict[str, str] = Field(default_factory=dict)
 
 
-class StockSummaryConfig(BaseModel):
+class StockSummaryConfig(_StrictConfigModel):
     sheet_name: str = "Summary"
     entities: List[str] = Field(default_factory=list)
     titles: List[str] = Field(default_factory=list)
 
 
-class StockOutputConfig(BaseModel):
+class StockOutputConfig(_StrictConfigModel):
     raw_data_sheet: str = RAW_DATA_SHEET
     base_columns: List[str] = Field(default_factory=lambda: [ARTICLE_COLUMN, FAMILY_COLUMN])
     summaries: List[StockSummaryConfig] = Field(default_factory=list)
@@ -86,17 +91,17 @@ class StockProcessingConfig(_Config):
     output: StockOutputConfig = Field(default_factory=StockOutputConfig)
 
 
-class CrossCheckFilters(BaseModel):
+class CrossCheckFilters(_StrictConfigModel):
     ignored_articles: List[str] = Field(default_factory=list)
     ignored_terms: List[str] = Field(default_factory=list)
 
 
-class PriceListColumns(BaseModel):
+class PriceListColumns(_StrictConfigModel):
     article_column: str = ARTICLE_COLUMN
     price_column: str = PRICE_COLUMN
 
 
-class CrossCheckPriceLists(BaseModel):
+class CrossCheckPriceLists(_StrictConfigModel):
     cost: PriceListColumns = Field(default_factory=PriceListColumns)
     sales: PriceListColumns = Field(default_factory=PriceListColumns)
 
@@ -106,7 +111,7 @@ class CrossCheckConfig(_Config):
     price_lists: CrossCheckPriceLists = Field(default_factory=CrossCheckPriceLists)
 
 
-class YoYInputConfig(BaseModel):
+class YoYInputConfig(_StrictConfigModel):
     date_column: str = "Fecha"
     quantity_column: str = QUANTITY_COLUMN
     sales_column: str = "Monto"
@@ -116,7 +121,7 @@ class YoYInputConfig(BaseModel):
     size_column: str = SIZE_COLUMN
 
 
-class YoYOutputConfig(BaseModel):
+class YoYOutputConfig(_StrictConfigModel):
     default_path: str = "analysis_report.xlsx"
     metrics: List[Literal["units", "sales"]] = Field(
         default_factory=lambda: ["units", "sales"],

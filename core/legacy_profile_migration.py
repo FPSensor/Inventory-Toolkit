@@ -22,6 +22,7 @@ from core.business_schema import (
     SIZE_COLUMN,
 )
 from core.compatibility import warn_legacy_storage, warn_modular_upgrade
+from core.configuration_errors import ConfigurationFileError
 
 LEGACY_FILES = (
     "general/settings.json",
@@ -179,25 +180,58 @@ def upgrade_profile_config(configs_dir: Path) -> bool:
         if not path.exists():
             continue
 
-        data = profile._read(path, deepcopy(default)) or deepcopy(default)
+        data = profile._read(path, deepcopy(default))
+        if not isinstance(data, dict):
+            raise ConfigurationFileError(
+                path,
+                f"expected a JSON object, got {type(data).__name__}",
+            )
+        data = data or deepcopy(default)
         original = deepcopy(data)
         version = data.get("version")
-        if isinstance(version, int) and version < profile.CONFIG_VERSION:
-            old_versions.add(version)
+
+        if type(version) is not int:
+            raise ConfigurationFileError(
+                path,
+                f"schema version must be an integer; got {version!r}",
+            )
+        if version > profile.CONFIG_VERSION:
+            raise ConfigurationFileError(
+                path,
+                f"schema version {version} is newer than supported version {profile.CONFIG_VERSION}",
+            )
+        if version == profile.CONFIG_VERSION:
+            continue
+
+        old_versions.add(version)
 
         if logical_name == "stock_processing/settings":
             output = data.setdefault("output", {})
-            output["summaries"] = [
-                _upgrade_summary(summary) for summary in output.get("summaries", [])
-            ]
+            if not isinstance(output, dict):
+                raise ConfigurationFileError(path, "'output' must be a JSON object")
+            summaries = output.get("summaries", [])
+            if not isinstance(summaries, list):
+                raise ConfigurationFileError(path, "'output.summaries' must be a JSON array")
+            try:
+                output["summaries"] = [_upgrade_summary(summary) for summary in summaries]
+            except (TypeError, ValueError) as exc:
+                raise ConfigurationFileError(
+                    path,
+                    f"invalid legacy Stock summary structure: {exc}",
+                ) from exc
         elif logical_name == "yoy_reports/settings":
             input_config = data.setdefault("input", {})
+            if not isinstance(input_config, dict):
+                raise ConfigurationFileError(path, "'input' must be a JSON object")
             input_config.setdefault("sales_column", "Monto")
             output = data.setdefault("output", {})
+            if not isinstance(output, dict):
+                raise ConfigurationFileError(path, "'output' must be a JSON object")
+            metrics = output.get("metrics", [])
+            if not isinstance(metrics, list):
+                raise ConfigurationFileError(path, "'output.metrics' must be a JSON array")
             metric_map = {"unidades": "units", "ventas": "sales"}
-            output["metrics"] = [
-                metric_map.get(metric, metric) for metric in output.get("metrics", [])
-            ]
+            output["metrics"] = [metric_map.get(metric, metric) for metric in metrics]
 
         data["version"] = profile.CONFIG_VERSION
         if data != original:
@@ -216,12 +250,15 @@ def _has_modular_config(configs_dir: Path) -> bool:
 
 def _upgrade_summary(summary: dict) -> dict:
     upgraded = dict(summary)
-    if "sheet_name" not in upgraded and "nombre_hoja" in upgraded:
-        upgraded["sheet_name"] = upgraded.pop("nombre_hoja")
-    if "entities" not in upgraded and "locales_a_incluir" in upgraded:
-        upgraded["entities"] = upgraded.pop("locales_a_incluir")
-    if "titles" not in upgraded and "titulos" in upgraded:
-        upgraded["titles"] = upgraded.pop("titulos")
+    legacy_aliases = {
+        "nombre_hoja": "sheet_name",
+        "locales_a_incluir": "entities",
+        "titulos": "titles",
+    }
+    for legacy_key, current_key in legacy_aliases.items():
+        if current_key not in upgraded and legacy_key in upgraded:
+            upgraded[current_key] = upgraded[legacy_key]
+        upgraded.pop(legacy_key, None)
     return upgraded
 
 

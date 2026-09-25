@@ -12,7 +12,9 @@ The purpose is to keep implementation identifiers English while acknowledging th
 
 Pydantic models for configuration schema v3.
 
-The current schema requires version `3`, not merely an arbitrary integer. This matters after legacy migration is eventually removed: obsolete profiles should fail clearly rather than being interpreted as current.
+The current schema requires version `3`, not merely an arbitrary integer. All current models, including nested structures, reject unknown keys. A misspelled setting is therefore a configuration error rather than an ignored field that silently falls back to another value.
+
+This matters after legacy migration is eventually removed: obsolete profiles should fail clearly rather than being interpreted as current. Supported legacy names are converted explicitly before current-schema validation.
 
 ## `configuration_manager.py`
 
@@ -23,7 +25,8 @@ Responsibilities:
 - resolve `profiles/<profile>/configs/`;
 - ensure the profile can be consumed through the current schema;
 - load/cache configuration documents by logical path;
-- validate through Pydantic;
+- fail closed when an existing configuration file is malformed or unreadable;
+- validate the complete current profile through Pydantic before workflows can use it;
 - expose current English accessors such as:
   - `get_catalog()`;
   - `get_family_config()` / `get_family_rules()`;

@@ -12,6 +12,7 @@ from pathlib import Path
 
 from cli.utils import ask_yes_no, clear_screen, load_json, save_json
 from cli.wizard import run_setup_wizard
+from core.configuration_errors import ConfigurationError
 from core.configuration_manager import ConfigurationManager
 from core.profile_config import config_path, ensure_profile_config, profile_readiness
 # BEGIN LEGACY_COMPATIBILITY
@@ -225,13 +226,27 @@ def _validate(profile: str):
 
 def configuration_menu(current_profile: str) -> None:
     configs=Path(PROFILES_DIR)/current_profile/"configs"
-    # BEGIN LEGACY_COMPATIBILITY
-    migrate_legacy_config(configs, remove_legacy=False)
-    # END LEGACY_COMPATIBILITY
-    ensure_profile_config(configs)
+    try:
+        # BEGIN LEGACY_COMPATIBILITY
+        migrate_legacy_config(configs, remove_legacy=False)
+        # END LEGACY_COMPATIBILITY
+        ensure_profile_config(configs)
+    except ConfigurationError as exc:
+        clear_screen(); _header("Configuration Error", current_profile)
+        print(f"  ❌ Profile configuration cannot be opened safely:\n\n  {exc}")
+        print("\n  Fix the reported JSON file before continuing. Existing invalid")
+        print("  configuration is never replaced with defaults automatically.")
+        _pause()
+        return
     while True:
         clear_screen(); _header("Configuration Hub",current_profile)
-        ready=profile_readiness(configs)
+        try:
+            ready=profile_readiness(configs)
+        except ConfigurationError as exc:
+            print(f"\n  ❌ Profile configuration became invalid:\n\n  {exc}")
+            print("\n  No configuration changes were written.")
+            _pause()
+            return
         for n,(key,label) in enumerate((("catalog","Catalog & families"),("stores","Stores & network"),("stock","Stock Processing"),("cross_check","Cross Check"),("yoy","YoY Reports")),1):
             ok,detail=ready[key]; print(f"  [{n}] {'✅' if ok else '⚠️ '} {label:<22} {detail}")
         print("\n  [W] Guided Setup   [V] Validate profile   [0] Back")

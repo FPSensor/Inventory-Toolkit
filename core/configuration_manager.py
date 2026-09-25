@@ -15,16 +15,27 @@ from core.config_schemas import (
     CatalogConfig,
     CrossCheckConfig,
     FamiliesConfig,
-    StockProcessingConfig,
     NetworkConfig,
+    StockProcessingConfig,
     YoYReportsConfig,
 )
+from core.configuration_errors import ConfigurationError, ConfigurationFileError
 # BEGIN LEGACY_COMPATIBILITY
 from core.compatibility import warn_legacy_api
 from core.legacy_config import build_legacy_view
 # END LEGACY_COMPATIBILITY
-from core.logger import log, log_debug_event
+from core.logger import log_debug_event
 from core.profile_config import DEFAULTS, ensure_profile_config
+
+
+_CONFIG_MODELS: Dict[str, Type[BaseModel]] = {
+    "general/catalog": CatalogConfig,
+    "general/families": FamiliesConfig,
+    "general/network": NetworkConfig,
+    "stock_processing/settings": StockProcessingConfig,
+    "cross_check/settings": CrossCheckConfig,
+    "yoy_reports/settings": YoYReportsConfig,
+}
 
 
 class ConfigurationManager:
@@ -36,11 +47,18 @@ class ConfigurationManager:
             profile=profile,
             base_dir=str(self.base_dir),
         )
-        ensure_profile_config(self.base_dir)
-        self._index: Dict[str, Any] = {}
-        self.reload()
+        try:
+            ensure_profile_config(self.base_dir)
+            self._index: Dict[str, Any] = {}
+            self.reload()
+            self.validate_all()
+        except ConfigurationError as exc:
+            raise ConfigurationError(
+                f"Profile '{self.profile}' configuration is not safe to use: {exc}"
+            ) from exc
 
     def reload(self) -> None:
+        """Reload all active JSON files without substituting defaults on read errors."""
         self._index.clear()
         if not self.base_dir.exists():
             log_debug_event(
@@ -50,20 +68,43 @@ class ConfigurationManager:
                 base_dir=str(self.base_dir),
             )
             return
+
         loaded_files = []
         for json_file in self.base_dir.rglob("*.json"):
-            logical_name = json_file.relative_to(self.base_dir).with_suffix("").as_posix()
+            relative = json_file.relative_to(self.base_dir)
+            if relative.parts and relative.parts[0] == "_legacy_v1_backup":
+                continue
+            logical_name = relative.with_suffix("").as_posix()
             try:
                 with json_file.open("r", encoding="utf-8") as handle:
                     self._index[logical_name] = json.load(handle)
                 loaded_files.append(logical_name)
-            except Exception as exc:
-                log.error("Error loading %s: %s", json_file, exc)
+            except json.JSONDecodeError as exc:
+                raise ConfigurationFileError(
+                    json_file,
+                    f"invalid JSON at line {exc.lineno}, column {exc.colno}: {exc.msg}",
+                ) from exc
+            except (OSError, UnicodeError) as exc:
+                raise ConfigurationFileError(
+                    json_file,
+                    f"could not be read: {exc}",
+                ) from exc
+
         log_debug_event(
             "config_reload_complete",
             profile=self.profile,
             config_count=len(self._index),
             configs=sorted(loaded_files),
+        )
+
+    def validate_all(self) -> None:
+        """Validate the complete current profile before any workflow can use it."""
+        for logical_name, model in _CONFIG_MODELS.items():
+            self._validated(logical_name, model)
+        log_debug_event(
+            "config_profile_validation_ok",
+            profile=self.profile,
+            config_count=len(_CONFIG_MODELS),
         )
 
     def get_config(self, logical_name: str, default: Any = None) -> Any:
@@ -92,6 +133,7 @@ class ConfigurationManager:
     def _validated(self, logical_name: str, model: Type[BaseModel]) -> dict:
         source = "profile" if logical_name in self._index else "default"
         raw = self._index.get(logical_name, DEFAULTS[logical_name])
+        path = self.base_dir / f"{logical_name}.json"
         log_debug_event(
             "config_validate",
             profile=self.profile,
@@ -109,9 +151,9 @@ class ConfigurationManager:
             )
             return validated
         except Exception as exc:
-            raise ValueError(
+            raise ConfigurationError(
                 f"Invalid configuration '{logical_name}.json' for profile "
-                f"'{self.profile}': {exc}"
+                f"'{self.profile}' at '{path}': {exc}"
             ) from exc
 
     # Native configuration accessors -------------------------------------

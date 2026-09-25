@@ -7,6 +7,8 @@ from copy import deepcopy
 from pathlib import Path
 from typing import Any, Dict, Tuple
 
+from core.configuration_errors import ConfigurationFileError
+
 from core.business_schema import (
     ARTICLE_COLUMN,
     DATABASE_ORIGIN_COLUMN,
@@ -96,11 +98,24 @@ def config_path(configs_dir: Path, logical_name: str) -> Path:
 
 
 def _read(path: Path, default: Any = None) -> Any:
+    """Read JSON while failing closed for an existing but unreadable file.
+
+    A missing file may legitimately fall back to the caller-provided default.
+    Once a file exists, however, malformed JSON must never be treated as if
+    configuration were absent.
+    """
     try:
         with path.open("r", encoding="utf-8") as handle:
             return json.load(handle)
-    except (FileNotFoundError, json.JSONDecodeError):
+    except FileNotFoundError:
         return deepcopy(default)
+    except json.JSONDecodeError as exc:
+        raise ConfigurationFileError(
+            path,
+            f"invalid JSON at line {exc.lineno}, column {exc.colno}: {exc.msg}",
+        ) from exc
+    except (OSError, UnicodeError) as exc:
+        raise ConfigurationFileError(path, f"could not be read: {exc}") from exc
 
 
 def _write(path: Path, data: Any) -> None:
