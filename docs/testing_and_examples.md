@@ -19,6 +19,8 @@ Important examples include:
 - difference arithmetic including negative stock cases;
 - stock margin/zero handling;
 - config schema/migration behavior;
+- configurable family fallback parity across scalar/batch classification;
+- YoY metric/annual-comparison/group contracts;
 - logger/runtime-debug behavior;
 - release-reference semantic comparison.
 

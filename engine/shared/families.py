@@ -22,18 +22,30 @@ def build_family_rules(family_map: Dict[str, List[str]]) -> List[Tuple[str, str]
     return rules
 
 
-def assign_family(code, rules: List[Tuple[str, str]]) -> str:
-    if pd.isna(code) or not isinstance(code, str):
-        return _DEFAULT_UNMATCHED_FAMILY
+def _normalize_family_code(code) -> str:
+    if pd.isna(code):
+        return ""
+    normalized = str(code).strip()
+    if normalized in {"nan", "None", "<NA>", "NAN"}:
+        return ""
+    if normalized.endswith(".0"):
+        normalized = normalized[:-2]
+    return normalized.upper()
 
-    normalized_code = str(code).strip().upper()
+
+def assign_family(
+    code,
+    rules: List[Tuple[str, str]],
+    default_family: str = _DEFAULT_UNMATCHED_FAMILY,
+) -> str:
+    normalized_code = _normalize_family_code(code)
     if normalized_code.startswith(REVIEW_FAMILY):
         return REVIEW_FAMILY
 
     for prefix, family in rules:
         if normalized_code.startswith(prefix):
             return family
-    return _DEFAULT_UNMATCHED_FAMILY
+    return default_family
 
 
 def _build_prefix_trie(rules: List[Tuple[str, str]]) -> dict:
@@ -48,7 +60,7 @@ def _build_prefix_trie(rules: List[Tuple[str, str]]) -> dict:
     return root
 
 
-def _assign_family_from_trie(code: str, trie: dict) -> str:
+def _assign_family_from_trie(code: str, trie: dict, default_family: str) -> str:
     if code.startswith(REVIEW_FAMILY):
         return REVIEW_FAMILY
 
@@ -62,17 +74,21 @@ def _assign_family_from_trie(code: str, trie: dict) -> str:
         if _TRIE_FAMILY_KEY in node:
             best_family = node[_TRIE_FAMILY_KEY]
 
-    return best_family if best_family is not None else _DEFAULT_UNMATCHED_FAMILY
+    return best_family if best_family is not None else default_family
 
 
-def assign_families(series: pd.Series, rules: List[Tuple[str, str]]) -> pd.Series:
+def assign_families(
+    series: pd.Series,
+    rules: List[Tuple[str, str]],
+    default_family: str = _DEFAULT_UNMATCHED_FAMILY,
+) -> pd.Series:
     """Batch-classify a Series with the exact semantics of ``assign_family``."""
     clean_series = clean_sku_series(series).str.upper()
     if not rules:
-        return pd.Series(_DEFAULT_UNMATCHED_FAMILY, index=clean_series.index, dtype="object")
+        return pd.Series(default_family, index=clean_series.index, dtype="object")
 
     trie = _build_prefix_trie(rules)
-    return clean_series.map(lambda code: _assign_family_from_trie(code, trie))
+    return clean_series.map(lambda code: _assign_family_from_trie(code, trie, default_family))
 
 
 # Public compatibility alias retained for integrations written before the trie

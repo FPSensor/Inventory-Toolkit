@@ -85,6 +85,7 @@ def build_legacy_view(config: Any, name: str) -> dict | None:
             "data_source": {
                 "date_column": source["date_column"],
                 "quantity_column": source["quantity_column"],
+                "sales_column": source["sales_column"],
                 "grouping_column": source["grouping_column"],
                 "item_column": source["item_column"],
                 "branch_column": source["branch_column"],

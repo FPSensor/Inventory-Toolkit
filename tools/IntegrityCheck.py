@@ -16,6 +16,7 @@ from engine.shared.families import assign_families, build_family_rules, assign_f
 from engine.inventory_cross_check.data_processor import normalize_article, calculate_difference
 from engine.stock_processing.data_processor import calculate_margin, process_pricing
 from engine.yoy_reports.data_processor import process_sales_data
+from engine.yoy_reports.metrics import configured_branches, resolve_metric_specs
 
 class IntegrityAuditor:
     def __init__(self):
@@ -118,6 +119,15 @@ class IntegrityAuditor:
         batch_result = assign_families(test_skus, rules)
         self.assert_check("Exact parity: Vectorized == Iterative", (res_iter == batch_result).all())
 
+        custom_iter = test_skus.apply(
+            lambda value: assign_family(value, rules, default_family="Otro")
+        )
+        custom_batch = assign_families(test_skus, rules, default_family="Otro")
+        self.assert_check(
+            "Configured default family is shared by scalar and batch classifiers",
+            (custom_iter == custom_batch).all() and custom_batch.iloc[3] == "Otro",
+        )
+
         # Invariant 4: Physical count normalization against Master Base
         master_base = ["0085-100", "0085-100-M", "00100-XL"]
         master_set = set(master_base)
@@ -193,6 +203,18 @@ class IntegrityAuditor:
         leap_dt = pd.to_datetime("2024-02-29")
         leap_prev = leap_dt - pd.DateOffset(years=1)
         self.assert_check("Safe Leap Year offset resolution (2024-02-29 -> 2023-02-28)", leap_prev.month == 2 and leap_prev.day == 28)
+
+        yoy_config = ConfigurationManager(profile="demo").get_yoy_reports_config()
+        metrics = resolve_metric_specs(yoy_config)
+        self.assert_check(
+            "YoY configured metrics resolve to real input columns",
+            [(metric.key, metric.column) for metric in metrics]
+            == [("units", "Cantidad"), ("sales", "Monto")],
+        )
+        self.assert_check(
+            "YoY report groups resolve to at least one concrete branch",
+            len(configured_branches(yoy_config)) > 0,
+        )
 
     # -------------------------------------------------------------------------
     # 6. END-TO-END PROFILE SIMULATION (DEMO)

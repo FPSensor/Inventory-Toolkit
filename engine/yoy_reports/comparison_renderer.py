@@ -15,9 +15,12 @@ def render_yoy_comparison_blocks(
     previous_start,
     grouping_column,
     branch_column,
-    quantity_column,
+    value_column,
     groups,
     current_row,
+    *,
+    metric_label="Units",
+    number_format="#,##0",
 ):
     """Render all configured YoY comparison groups and return the next row."""
     for group_name, branches in groups.items():
@@ -39,7 +42,7 @@ def render_yoy_comparison_blocks(
             worksheet.cell(
                 row=current_row,
                 column=1,
-                value=f'YoY Comparison - {group_name.replace("_", " ").title()}',
+                value=f'YoY {metric_label} Comparison - {group_name.replace("_", " ").title()}',
             ),
             is_header=True,
         )
@@ -144,7 +147,7 @@ def render_yoy_comparison_blocks(
 
         previous_pivot = pd.pivot_table(
             previous_frame[previous_frame[branch_column].isin(branches)],
-            values=quantity_column,
+            values=value_column,
             index=grouping_column,
             columns=branch_column,
             aggfunc="sum",
@@ -152,7 +155,7 @@ def render_yoy_comparison_blocks(
         )
         current_pivot = pd.pivot_table(
             current_frame[current_frame[branch_column].isin(branches)],
-            values=quantity_column,
+            values=value_column,
             index=grouping_column,
             columns=branch_column,
             aggfunc="sum",
@@ -190,7 +193,7 @@ def render_yoy_comparison_blocks(
                         column=column_index,
                         value=previous_value if previous_value != 0 else None,
                     ),
-                    num_format="#,##0",
+                    num_format=number_format,
                 )
                 apply_style(
                     worksheet.cell(
@@ -198,7 +201,7 @@ def render_yoy_comparison_blocks(
                         column=column_index + 1,
                         value=current_value if current_value != 0 else None,
                     ),
-                    num_format="#,##0",
+                    num_format=number_format,
                 )
 
                 previous_letter = get_column_letter(column_index)
@@ -229,7 +232,7 @@ def render_yoy_comparison_blocks(
                         column=column_index,
                         value="=" + "+".join(previous_cells),
                     ),
-                    num_format="#,##0",
+                    num_format=number_format,
                 )
                 apply_style(
                     worksheet.cell(
@@ -237,7 +240,7 @@ def render_yoy_comparison_blocks(
                         column=column_index + 1,
                         value="=" + "+".join(current_cells),
                     ),
-                    num_format="#,##0",
+                    num_format=number_format,
                 )
                 apply_style(
                     worksheet.cell(
@@ -276,7 +279,7 @@ def render_yoy_comparison_blocks(
                     ),
                 ),
                 is_total=True,
-                num_format="#,##0",
+                num_format=number_format,
             )
             apply_style(
                 worksheet.cell(
@@ -288,7 +291,7 @@ def render_yoy_comparison_blocks(
                     ),
                 ),
                 is_total=True,
-                num_format="#,##0",
+                num_format=number_format,
             )
             apply_style(
                 worksheet.cell(
@@ -318,7 +321,7 @@ def render_yoy_comparison_blocks(
                     ),
                 ),
                 is_total=True,
-                num_format="#,##0",
+                num_format=number_format,
             )
             apply_style(
                 worksheet.cell(
@@ -330,7 +333,7 @@ def render_yoy_comparison_blocks(
                     ),
                 ),
                 is_total=True,
-                num_format="#,##0",
+                num_format=number_format,
             )
             apply_style(
                 worksheet.cell(

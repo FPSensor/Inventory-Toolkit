@@ -74,6 +74,7 @@ DEFAULTS: Dict[str, dict] = {
         "input": {
             "date_column": "Fecha",
             "quantity_column": QUANTITY_COLUMN,
+            "sales_column": "Monto",
             "grouping_column": FAMILY_COLUMN,
             "item_column": "Articulo",
             "branch_column": "Base",
@@ -143,6 +144,21 @@ def profile_readiness(configs_dir: Path) -> Dict[str, Tuple[bool, str]]:
     pricing_columns = stock.get("pricing", {}).get("columns", {})
     price_lists = cross_check.get("price_lists", {})
     yoy_input = yoy.get("input", {})
+    yoy_output = yoy.get("output", {})
+    yoy_groups = yoy.get("groups", {})
+    yoy_metrics = yoy_output.get("metrics", [])
+    yoy_branches = [
+        branch
+        for branches in yoy_groups.values()
+        for branch in branches
+        if str(branch).strip()
+    ]
+    metric_columns_ready = (
+        bool(yoy_metrics)
+        and all(metric in {"units", "sales"} for metric in yoy_metrics)
+        and ("units" not in yoy_metrics or bool(yoy_input.get("quantity_column")))
+        and ("sales" not in yoy_metrics or bool(yoy_input.get("sales_column")))
+    )
 
     return {
         "catalog": (
@@ -167,12 +183,13 @@ def profile_readiness(configs_dir: Path) -> Dict[str, Tuple[bool, str]]:
                 yoy_input.get(key)
                 for key in (
                     "date_column",
-                    "quantity_column",
                     "grouping_column",
                     "item_column",
                     "branch_column",
                 )
-            ),
-            f"{len(yoy.get('groups', {}))} report groups",
+            )
+            and metric_columns_ready
+            and bool(yoy_branches),
+            f"{len(yoy_groups)} report groups / {len(yoy_metrics)} metrics",
         ),
     }

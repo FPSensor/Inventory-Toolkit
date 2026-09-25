@@ -926,19 +926,20 @@ class ConfigHubWindow(BaseToplevel):
         groups = data.setdefault("groups", {})
 
         input_fields = [
-            ("date_column", "Date column"),
-            ("quantity_column", "Quantity column"),
-            ("item_column", "Item / SKU column"),
-            ("grouping_column", "Grouping / Family column"),
-            ("branch_column", "Branch / Store column"),
-            ("size_column", "Size column"),
+            ("date_column", "Date column", "Fecha"),
+            ("quantity_column", "Quantity column", "Cantidad"),
+            ("sales_column", "Sales amount column", "Monto"),
+            ("item_column", "Item / SKU column", "Articulo"),
+            ("grouping_column", "Grouping / Family column", "Familias"),
+            ("branch_column", "Branch / Store column", "Base"),
+            ("size_column", "Size column", "Talle"),
         ]
         input_vars = {}
-        for row_index, (key, label) in enumerate(input_fields):
+        for row_index, (key, label, default) in enumerate(input_fields):
             _lbl(input_tab, text=label).grid(
                 row=row_index, column=0, sticky="w", padx=8, pady=5
             )
-            variable = tk.StringVar(value=input_config.get(key, ""))
+            variable = tk.StringVar(value=input_config.get(key, default))
             _entry(input_tab, textvariable=variable).grid(
                 row=row_index, column=1, sticky="ew", padx=8, pady=5
             )
@@ -959,51 +960,68 @@ class ConfigHubWindow(BaseToplevel):
         output_path_var = tk.StringVar(
             value=output_config.get("default_path", "analysis_report.xlsx")
         )
-        metrics_var = tk.StringVar(value=", ".join(output_config.get("metrics", [])))
-        annual_var = tk.StringVar(
-            value=str(output_config.get("annual_comparison", True)).lower()
+        enabled_metrics = output_config.get("metrics", ["units", "sales"])
+        units_var = tk.BooleanVar(value="units" in enabled_metrics)
+        sales_var = tk.BooleanVar(value="sales" in enabled_metrics)
+        annual_var = tk.BooleanVar(value=output_config.get("annual_comparison", True))
+        sizes_var = tk.BooleanVar(value=output_config.get("include_sizes", False))
+
+        _lbl(output_tab, text="Default output path").grid(
+            row=0, column=0, sticky="w", padx=8, pady=5
         )
-        sizes_var = tk.StringVar(
-            value=str(output_config.get("include_sizes", False)).lower()
+        _entry(output_tab, textvariable=output_path_var).grid(
+            row=0, column=1, sticky="ew", padx=8, pady=5
         )
-        output_fields = [
-            ("Default output path", output_path_var),
-            ("Metrics (comma-separated)", metrics_var),
-            ("Annual comparison (true/false)", annual_var),
-            ("Include sizes (true/false)", sizes_var),
-        ]
-        for row_index, (label, variable) in enumerate(output_fields):
-            _lbl(output_tab, text=label).grid(
-                row=row_index, column=0, sticky="w", padx=8, pady=5
-            )
-            _entry(output_tab, textvariable=variable).grid(
-                row=row_index, column=1, sticky="ew", padx=8, pady=5
-            )
         output_tab.columnconfigure(1, weight=1)
 
+        metric_frame = BaseFrame(output_tab)
+        metric_frame.grid(row=1, column=0, columnspan=2, sticky="w", padx=8, pady=5)
+        _lbl(metric_frame, text="Enabled metrics:").pack(side="left", padx=(0, 8))
+        if USE_CTK:
+            ctk.CTkCheckBox(metric_frame, text="Units", variable=units_var).pack(side="left", padx=6)
+            ctk.CTkCheckBox(metric_frame, text="Sales amount", variable=sales_var).pack(side="left", padx=6)
+            ctk.CTkCheckBox(output_tab, text="Annual comparison", variable=annual_var).grid(
+                row=2, column=0, columnspan=2, sticky="w", padx=8, pady=5
+            )
+            ctk.CTkCheckBox(output_tab, text="Include size breakdown", variable=sizes_var).grid(
+                row=3, column=0, columnspan=2, sticky="w", padx=8, pady=5
+            )
+        else:
+            ttk.Checkbutton(metric_frame, text="Units", variable=units_var).pack(side="left", padx=6)
+            ttk.Checkbutton(metric_frame, text="Sales amount", variable=sales_var).pack(side="left", padx=6)
+            ttk.Checkbutton(output_tab, text="Annual comparison", variable=annual_var).grid(
+                row=2, column=0, columnspan=2, sticky="w", padx=8, pady=5
+            )
+            ttk.Checkbutton(output_tab, text="Include size breakdown", variable=sizes_var).grid(
+                row=3, column=0, columnspan=2, sticky="w", padx=8, pady=5
+            )
+
         def save_output():
+            metrics = []
+            if units_var.get():
+                metrics.append("units")
+            if sales_var.get():
+                metrics.append("sales")
+            if not metrics:
+                messagebox.showerror(
+                    "Validation Error",
+                    "Enable at least one YoY metric (Units or Sales amount).",
+                    parent=self,
+                )
+                return
+
             output_config["default_path"] = (
                 output_path_var.get().strip() or "analysis_report.xlsx"
             )
-            output_config["metrics"] = [
-                value.strip() for value in metrics_var.get().split(",") if value.strip()
-            ]
-            output_config["annual_comparison"] = annual_var.get().strip().lower() in (
-                "true",
-                "yes",
-                "1",
-            )
-            output_config["include_sizes"] = sizes_var.get().strip().lower() in (
-                "true",
-                "yes",
-                "1",
-            )
+            output_config["metrics"] = metrics
+            output_config["annual_comparison"] = bool(annual_var.get())
+            output_config["include_sizes"] = bool(sizes_var.get())
             data["output"] = output_config
             self._save(data)
             messagebox.showinfo("Saved", "YoY output settings saved.", parent=self)
 
         _btn(output_tab, "💾 Save Output", save_output).grid(
-            row=len(output_fields), column=1, sticky="e", padx=8, pady=8
+            row=4, column=1, sticky="e", padx=8, pady=8
         )
 
         def rebuild_groups():
@@ -1240,6 +1258,8 @@ class InventoryToolkitGUI(BaseWindow):
         self._refresh_profiles()
         self._build_top_bar()
         self._build_tabs()
+        self._apply_yoy_profile_defaults()
+        self.active_profile.trace_add("write", self._on_profile_changed)
         self._build_status_bar()
         self.bind("<Control-Shift-I>", self._show_easter_egg)
 
@@ -1351,6 +1371,21 @@ class InventoryToolkitGUI(BaseWindow):
         self._setup_cc_tab()
         self._setup_stock_tab()
         self._setup_yoy_tab()
+
+    def _on_profile_changed(self, *_args):
+        if hasattr(self, "yoy_sizes"):
+            self._apply_yoy_profile_defaults()
+
+    def _apply_yoy_profile_defaults(self):
+        """Reflect profile-owned YoY defaults in the main GUI controls."""
+        try:
+            output = ConfigurationManager(self.active_profile.get()).get_yoy_reports_config()["output"]
+        except Exception:
+            return
+        self.yoy_sizes.set(bool(output.get("include_sizes", False)))
+        default_path = str(output.get("default_path", "")).strip()
+        if default_path:
+            self.yoy_out.set(default_path)
 
     def _file_row(self, parent, label_text: str, var: tk.StringVar,
                   is_output: bool = False, row: int = 0):

@@ -61,7 +61,7 @@ Store mappings, family rules, cleaning rules, pricing mappings, and summary layo
 
 ### YoY Reports
 
-`cli/yoy_reports_launcher.py` collects the historical sales workbook, date range, segmentation/options, and output path, then calls `engine/yoy_reports/`.
+`cli/yoy_reports_launcher.py` collects the historical sales workbook, date range, segmentation/options, and output path, then calls `engine/yoy_reports/`. Enabled unit/sales metrics, annual-comparison behavior, and the default size-breakdown choice come from the active profile; the CLI may override size breakdown for a single run.
 
 ## Configuration Hub
 

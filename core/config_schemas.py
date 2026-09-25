@@ -2,7 +2,7 @@
 
 from typing import Dict, List, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from core.profile_config import CONFIG_VERSION
 
@@ -31,6 +31,14 @@ class CatalogColumns(BaseModel):
 class CatalogConfig(_Config):
     columns: CatalogColumns = Field(default_factory=CatalogColumns)
     default_family: str = DEFAULT_FAMILY
+
+    @field_validator("default_family")
+    @classmethod
+    def validate_default_family(cls, value: str) -> str:
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError("default_family cannot be empty")
+        return normalized
 
 
 class FamiliesConfig(_Config):
@@ -101,6 +109,7 @@ class CrossCheckConfig(_Config):
 class YoYInputConfig(BaseModel):
     date_column: str = "Fecha"
     quantity_column: str = QUANTITY_COLUMN
+    sales_column: str = "Monto"
     grouping_column: str = FAMILY_COLUMN
     item_column: str = "Articulo"
     branch_column: str = "Base"
@@ -109,7 +118,10 @@ class YoYInputConfig(BaseModel):
 
 class YoYOutputConfig(BaseModel):
     default_path: str = "analysis_report.xlsx"
-    metrics: List[str] = Field(default_factory=lambda: ["units", "sales"])
+    metrics: List[Literal["units", "sales"]] = Field(
+        default_factory=lambda: ["units", "sales"],
+        min_length=1,
+    )
     annual_comparison: bool = True
     include_sizes: bool = False
 

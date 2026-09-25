@@ -1,4 +1,4 @@
-"""Render the current-period sales block of a YoY worksheet."""
+"""Render current-period metric blocks of a YoY worksheet."""
 
 import pandas as pd
 from openpyxl.styles import Font
@@ -14,38 +14,43 @@ def render_current_sales_block(
     end_date,
     grouping_column,
     branch_column,
-    quantity_column,
+    value_column,
     size_column,
     all_branches,
     include_sizes=False,
+    *,
+    start_row=1,
+    metric_label="Sales",
+    number_format="#,##0",
 ):
-    """Render current-period totals and return the first row after the block."""
+    """Render one current-period metric block and return the first row after it."""
     main_block_width = len(all_branches) + 2
 
     worksheet.merge_cells(
-        start_row=1,
+        start_row=start_row,
         start_column=1,
-        end_row=1,
+        end_row=start_row,
         end_column=main_block_width,
     )
-    title_cell = worksheet["A1"]
+    title_cell = worksheet.cell(row=start_row, column=1)
     if pd.isna(start_date) or pd.isna(end_date):
-        title_cell.value = "Sales (No Data)"
+        title_cell.value = f"{metric_label} (No Data)"
     else:
         title_cell.value = (
-            f'Sales from {start_date.strftime("%B %d, %Y")} '
+            f'{metric_label} from {start_date.strftime("%B %d, %Y")} '
             f'to {end_date.strftime("%B %d, %Y")}'
         )
     apply_style(title_cell, is_header=True)
 
+    header_row = start_row + 1
     main_headers = [grouping_column] + all_branches + ["Totals"]
     for column_index, header in enumerate(main_headers, 1):
         apply_style(
-            worksheet.cell(row=2, column=column_index, value=header),
+            worksheet.cell(row=header_row, column=column_index, value=header),
             is_header=True,
         )
 
-    current_row = 3
+    current_row = start_row + 2
     main_start_row = current_row
 
     if include_sizes and size_column in current_frame.columns:
@@ -57,7 +62,7 @@ def render_current_sales_block(
 
         pivot = pd.pivot_table(
             clean_current_frame,
-            values=quantity_column,
+            values=value_column,
             index=[grouping_column, size_column],
             columns=branch_column,
             aggfunc="sum",
@@ -98,7 +103,7 @@ def render_current_sales_block(
                             column=2 + index,
                             value=value if value != 0 else None,
                         ),
-                        num_format="#,##0",
+                        num_format=number_format,
                     )
 
                 branch_letters = [
@@ -115,7 +120,7 @@ def render_current_sales_block(
                             for column_letter in branch_letters
                         ),
                     ),
-                    num_format="#,##0",
+                    num_format=number_format,
                 )
 
                 worksheet.row_dimensions[current_row].outlineLevel = 1
@@ -135,12 +140,12 @@ def render_current_sales_block(
                         ),
                     ),
                     is_total=True,
-                    num_format="#,##0",
+                    num_format=number_format,
                 )
     else:
         current_pivot = pd.pivot_table(
             current_frame,
-            values=quantity_column,
+            values=value_column,
             index=grouping_column,
             columns=branch_column,
             aggfunc="sum",
@@ -161,7 +166,7 @@ def render_current_sales_block(
                         column=2 + index,
                         value=value if value != 0 else None,
                     ),
-                    num_format="#,##0",
+                    num_format=number_format,
                 )
 
             branch_letters = [
@@ -178,7 +183,7 @@ def render_current_sales_block(
                         for column_letter in branch_letters
                     ),
                 ),
-                num_format="#,##0",
+                num_format=number_format,
                 is_total=True,
             )
             current_row += 1
@@ -206,7 +211,7 @@ def render_current_sales_block(
         apply_style(
             worksheet.cell(row=current_row, column=2 + index, value=formula),
             is_total=True,
-            num_format="#,##0",
+            num_format=number_format,
         )
 
     return current_row + 3

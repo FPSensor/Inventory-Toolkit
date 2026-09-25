@@ -4,6 +4,7 @@ import pandas as pd
 
 from core.logger import log_debug_event
 from engine.shared.families import assign_families
+from engine.yoy_reports.metrics import resolve_metric_specs
 
 
 def process_sales_data(
@@ -12,10 +13,13 @@ def process_sales_data(
     yoy_end_dt,
     yoy_config,
     family_rules=None,
+    default_family="Other",
+    grouping_column=None,
 ):
     input_config = yoy_config["input"]
     date_column = input_config["date_column"]
     quantity_column = input_config["quantity_column"]
+    metric_specs = resolve_metric_specs(yoy_config)
 
     dataframe = pd.read_excel(yoy_file_path, sheet_name=0)
     log_debug_event(
@@ -29,15 +33,34 @@ def process_sales_data(
 
     if date_column in dataframe.columns:
         dataframe = dataframe[dataframe[date_column] != date_column]
+    resolved_grouping_column = grouping_column or input_config["grouping_column"]
+    grouping_source_column = (
+        input_config["item_column"] if family_rules is not None else resolved_grouping_column
+    )
+    required_columns = {
+        date_column,
+        input_config["branch_column"],
+        grouping_source_column,
+        *(metric.column for metric in metric_specs),
+    }
+    missing_columns = sorted(column for column in required_columns if column not in dataframe.columns)
+    if missing_columns:
+        raise ValueError(f"YoY input is missing required columns: {missing_columns}")
+
     dataframe[date_column] = pd.to_datetime(dataframe[date_column], errors="coerce")
-    dataframe[quantity_column] = pd.to_numeric(
-        dataframe[quantity_column], errors="coerce"
-    ).fillna(0)
+    for metric in metric_specs:
+        dataframe[metric.column] = pd.to_numeric(
+            dataframe[metric.column], errors="coerce"
+        ).fillna(0)
 
     if family_rules is not None:
         item_column = input_config["item_column"]
         family_column = input_config["grouping_column"]
-        dataframe[family_column] = assign_families(dataframe[item_column], family_rules)
+        dataframe[family_column] = assign_families(
+            dataframe[item_column],
+            family_rules,
+            default_family=default_family,
+        )
         log_debug_event(
             "yoy_dynamic_family_assignment",
             family_rule_count=len(family_rules),

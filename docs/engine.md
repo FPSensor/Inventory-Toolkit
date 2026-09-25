@@ -108,18 +108,20 @@ YoY has more renderer modules because worksheet formulas/layout became substanti
 - `current_sales_renderer.py` — current-period blocks and optional size breakdowns.
 - `comparison_renderer.py` — YoY comparison blocks/formulas.
 - `styles.py` — shared worksheet style primitives.
+- `metrics.py` — configured metric resolution and report-group/branch validation.
 
 ### Pipeline
 
 1. load historical sales;
-2. parse configured date/quantity/article/store fields;
+2. parse configured date/quantity/sales-amount/article/store fields;
 3. generate family classification when the source lacks a usable family column;
 4. filter selected current period and aligned previous-year period;
 5. segment by month if requested;
-6. render current/comparison blocks per configured branch/group;
-7. optionally include size breakdowns;
-8. create Full Report and/or period sheets;
-9. save safely.
+6. render each enabled metric (`units` and/or `sales`) using its configured input column;
+7. render YoY comparison blocks only when `annual_comparison` is enabled;
+8. optionally include size breakdowns using the profile default or an explicit runtime override;
+9. create Full Report and/or period sheets;
+10. save safely.
 
 Formula/layout changes are especially sensitive to regression and should be checked with strict golden-master certification.
 

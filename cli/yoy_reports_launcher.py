@@ -11,6 +11,7 @@ import pandas as pd
 from cli.utils import ask_file, load_last_paths, save_last_paths
 from core.configuration_manager import ConfigurationManager
 from core.logger import log, log_debug_event, log_exception
+from engine.yoy_reports.metrics import resolve_metric_specs
 
 
 def launch_yoy_reports(active_profile: str) -> None:
@@ -59,15 +60,17 @@ def launch_yoy_reports(active_profile: str) -> None:
 
     try:
         header_frame = pd.read_excel(sales_file, nrows=0)
+        metric_specs = resolve_metric_specs(yoy_config)
         required_columns = [
             input_config["date_column"],
-            input_config["quantity_column"],
             input_config["branch_column"],
+            *(metric.column for metric in metric_specs),
         ]
         if grouping_option == "f":
             required_columns.append(grouping_column if has_families else item_column)
         else:
             required_columns.append(item_column)
+        required_columns = list(dict.fromkeys(required_columns))
 
         missing_columns = [
             column for column in required_columns if column not in header_frame.columns
@@ -111,14 +114,18 @@ def launch_yoy_reports(active_profile: str) -> None:
         print("  ❌ Enter 'Y' or 'N'.")
     segmented = segmented_option == "y"
 
+    configured_include_sizes = yoy_config.get("output", {}).get("include_sizes", False)
+    size_default = "Y" if configured_include_sizes else "N"
     while True:
         size_option = input(
-            "  Include size breakdown? [Y/N, default N]: "
+            f"  Include size breakdown? [Y/N, default {size_default} from profile]: "
         ).strip().lower()
         if size_option in ("y", "n", ""):
             break
         print("  ❌ Enter 'Y' or 'N'.")
-    include_sizes = size_option == "y"
+    include_sizes = (
+        configured_include_sizes if size_option == "" else size_option == "y"
+    )
 
     default_output = yoy_config.get("output", {}).get(
         "default_path",

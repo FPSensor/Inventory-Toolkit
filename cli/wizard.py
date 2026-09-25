@@ -29,6 +29,7 @@ _DATE_HINTS = ("fecha", "date", "fec")
 _QTY_HINTS = ("cantidad", "qty", "quantity", "cant")
 _BRANCH_HINTS = ("base", "sucursal", "local", "branch", "tienda", "store")
 _PRICE_HINTS = ("precio", "price", "costo", "cost")
+_SALES_HINTS = ("monto", "importe", "sales", "amount", "venta")
 _DB_HINTS = ("origen", "base de datos", "database", "db", "base")
 _SIZE_HINTS = ("talle", "size", "medida")
 _NON_STORE = ("ean", "id", "cod", "barcode", "precio", "costo", "stock", "total", "fecha", "cantidad")
@@ -226,6 +227,7 @@ def _setup_yoy(configs: Path) -> None:
         fields = [
             ("date_column", "Date column", _DATE_HINTS, "Fecha"),
             ("quantity_column", "Quantity column", _QTY_HINTS, "Cantidad"),
+            ("sales_column", "Sales amount column", _SALES_HINTS, "Monto"),
             ("item_column", "Item/SKU column", _ARTICLE_HINTS, "Articulo"),
             ("grouping_column", "Grouping/family column", _FAMILY_HINTS, "Familias"),
             ("branch_column", "Branch/store column", _BRANCH_HINTS, "Base"),
@@ -235,10 +237,35 @@ def _setup_yoy(configs: Path) -> None:
             inp[key] = _pick(label, columns, inp.get(key, default), hints)
     out = cfg.setdefault("output", {})
     raw = input(f"  Default output path [Enter={out.get('default_path','analysis_report.xlsx')}]: ").strip()
-    if raw: out["default_path"] = raw
-    inc = input(f"  Include size breakdown? [y/N, current={out.get('include_sizes',False)}]: ").strip().lower()
-    if inc in ("y", "yes"): out["include_sizes"] = True
-    elif inc in ("n", "no"): out["include_sizes"] = False
+    if raw:
+        out["default_path"] = raw
+
+    current_metrics = out.get("metrics", ["units", "sales"])
+    raw = input(
+        f"  Enabled metrics (units,sales) [Enter={', '.join(current_metrics)}]: "
+    ).strip().lower()
+    if raw:
+        metrics = [value.strip() for value in raw.split(",") if value.strip()]
+        unsupported = [value for value in metrics if value not in {"units", "sales"}]
+        if unsupported:
+            print(f"  ⚠️ Unsupported metrics ignored: {', '.join(unsupported)}")
+            metrics = [value for value in metrics if value in {"units", "sales"}]
+        if metrics:
+            out["metrics"] = list(dict.fromkeys(metrics))
+
+    annual = input(
+        f"  Include annual comparison? [y/n, current={out.get('annual_comparison',True)}]: "
+    ).strip().lower()
+    if annual in ("y", "yes"):
+        out["annual_comparison"] = True
+    elif annual in ("n", "no"):
+        out["annual_comparison"] = False
+
+    inc = input(f"  Include size breakdown? [y/n, current={out.get('include_sizes',False)}]: ").strip().lower()
+    if inc in ("y", "yes"):
+        out["include_sizes"] = True
+    elif inc in ("n", "no"):
+        out["include_sizes"] = False
     _save(configs, "yoy_reports/settings", cfg)
     print("  ✅ YoY settings saved. Report groups can be edited in Config Hub.")
     input("  Press Enter...")

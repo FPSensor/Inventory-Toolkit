@@ -4,9 +4,19 @@ All notable changes to Inventory Toolkit are documented in this file.
 
 ## [1.4.1] - Unreleased
 
+### Changed
+
+- Made the catalog `default_family` a real profile-owned business setting across Stock Processing, Cross Check, and dynamically classified YoY data instead of leaving the historical `Other` fallback hardcoded inside the shared classifier.
+- Promoted YoY `metrics` from stored metadata to an enforced output contract: `units` uses the configured quantity column and `sales` uses a new configurable sales-amount column (`Monto` in the demo profile), with metric-specific workbook formatting.
+- Made YoY `annual_comparison` control whether previous-year comparison blocks are rendered, and made `include_sizes` act as the runtime default in CLI/GUI unless explicitly overridden for the current run.
+- Tightened YoY profile readiness and runtime validation so at least one supported metric and one concrete report-group branch are required before workbook generation.
+
 ### Fixed
 
 - Prevented empty system-stock articles from becoming zero-length prefix candidates during Cross Check scanner normalization, preserving the `REVISAR | <original>` invariant for unknown readings even when the master contains blank/NaN article cells.
+- Unified scalar and batch family-classification normalization so numeric/empty inputs and unmatched values share the same configurable fallback semantics.
+- Prevented YoY configurations with no usable report groups from producing invalid total formulas such as a bare `=`.
+- Wired the GUI YoY output path and size-breakdown defaults to the active profile instead of silently starting from hardcoded values.
 
 ## [1.4.0] - 2026-09-24
 

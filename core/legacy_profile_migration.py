@@ -191,6 +191,8 @@ def upgrade_profile_config(configs_dir: Path) -> bool:
                 _upgrade_summary(summary) for summary in output.get("summaries", [])
             ]
         elif logical_name == "yoy_reports/settings":
+            input_config = data.setdefault("input", {})
+            input_config.setdefault("sales_column", "Monto")
             output = data.setdefault("output", {})
             metric_map = {"unidades": "units", "ventas": "sales"}
             output["metrics"] = [
@@ -244,6 +246,7 @@ def _legacy_yoy_input(data: dict) -> dict:
     return {
         "date_column": source.get("date_column", "Fecha"),
         "quantity_column": source.get("quantity_column", QUANTITY_COLUMN),
+        "sales_column": source.get("sales_column", "Monto"),
         "grouping_column": source.get("grouping_column", FAMILY_COLUMN),
         "item_column": source.get("item_column", "Articulo"),
         "branch_column": source.get("branch_column", "Base"),

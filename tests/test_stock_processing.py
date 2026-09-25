@@ -12,6 +12,7 @@ def test_classify_family():
     assert assign_family("30-ABC", rules) == "Accesorios"
     assert assign_family("23-XYZ", rules) == "Jeans"
     assert assign_family("99-ZZZ", rules) == "Other"
+    assert assign_family("99-ZZZ", rules, default_family="Otro") == "Otro"
 
 def test_calculate_margin():
     df = pd.DataFrame({
@@ -43,12 +44,14 @@ def test_batch_family_classifier_matches_iterative_semantics():
         None,
     ])
 
-    cleaned = raw.astype(object)
-    from core.data_sanitizer import clean_sku_series
-    cleaned = clean_sku_series(cleaned).str.upper()
-    iterative = cleaned.apply(lambda code: assign_family(code, rules))
-    batched = assign_families(raw, rules)
+    iterative = raw.apply(
+        lambda code: assign_family(code, rules, default_family="Sin clasificar")
+    )
+    batched = assign_families(raw, rules, default_family="Sin clasificar")
 
     assert batched.equals(iterative)
     # Duplicate equal prefixes keep stable first-rule priority.
     assert batched.iloc[3] == "Generic"
+    # Numeric/None inputs and unmatched values share the configured fallback.
+    assert batched.iloc[6] == "Sin clasificar"
+    assert batched.iloc[7] == "Sin clasificar"

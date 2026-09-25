@@ -6,7 +6,8 @@
         "grouping_column": "Familias",
         "item_column": "Articulo",
         "branch_column": "Base",
-        "size_column": "Talle"
+        "size_column": "Talle",
+        "sales_column": "Monto"
     },
     "output": {
         "default_path": "analysis_report.xlsx",

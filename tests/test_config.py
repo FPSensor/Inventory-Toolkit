@@ -13,6 +13,7 @@ def test_configuration_manager_loading():
 
     families = config.get_family_rules()
     assert families["Buzos C Capucha"] == ["0085", "185", "085"]
+    assert config.get_default_family() == "Otro"
 
     network = config.get_network_config()
     assert "VIRREYES" in network["active"]
@@ -39,6 +40,7 @@ def test_configuration_manager_loading():
 
     yoy = config.get_yoy_reports_config()
     assert yoy["input"]["date_column"] == "Fecha"
+    assert yoy["input"]["sales_column"] == "Monto"
     assert yoy["output"]["metrics"] == ["units", "sales"]
 
     missing = config.get_config("missing/config", default={"default_key": True})
@@ -52,6 +54,14 @@ def test_current_schema_rejects_outdated_version():
             "version": CONFIG_VERSION - 1,
             "columns": {"article": "SKU", "family": "Family"},
             "default_family": "Other",
+        })
+
+def test_catalog_rejects_empty_default_family():
+    with pytest.raises(ValidationError):
+        CatalogConfig.model_validate({
+            "version": CONFIG_VERSION,
+            "columns": {"article": "SKU", "family": "Family"},
+            "default_family": "   ",
         })
 
 def test_empty_profile_bootstraps_current_defaults(tmp_path, monkeypatch):
@@ -170,5 +180,6 @@ def test_v2_modular_profile_upgrades_internal_keys_to_english(tmp_path):
         "titles": ["Familias"],
     }]
     assert yoy["version"] == CONFIG_VERSION
+    assert yoy["input"]["sales_column"] == "Monto"
     assert yoy["output"]["metrics"] == ["units", "sales"]
 # END LEGACY_COMPATIBILITY

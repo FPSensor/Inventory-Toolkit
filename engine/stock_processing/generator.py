@@ -17,7 +17,7 @@ from core.business_schema import (
 )
 from core.configuration_manager import ConfigurationManager
 from core.logger import log, log_debug_event
-from engine.shared.families import assign_family, build_family_rules
+from engine.shared.families import assign_families, build_family_rules
 from engine.stock_processing.data_processor import process_pricing
 from engine.stock_processing.excel_renderer import render_stock_excel
 
@@ -44,6 +44,7 @@ def run_stock_processing(args):
 
     family_rules = build_family_rules(config.get_family_rules())
     catalog = config.get_catalog()
+    default_family = catalog["default_family"]
     network = config.get_network_config()
     stock_config = config.get_stock_processing_config()
 
@@ -64,6 +65,7 @@ def run_stock_processing(args):
     log_debug_event(
         "stock_processing_config_loaded",
         family_rule_count=len(family_rules),
+        default_family=default_family,
         active_store_count=len(active_stores),
         regional_group_count=len(regional_groups),
         stock_database_mapping_count=len(stock_database_columns),
@@ -133,8 +135,10 @@ def run_stock_processing(args):
     for group_name, branches in regional_groups.items():
         stock_frame[group_name] = sum(stock_frame.get(branch, 0) for branch in branches)
 
-    stock_frame[FAMILY_COLUMN] = stock_frame[ARTICLE_COLUMN].apply(
-        lambda article: assign_family(article, family_rules)
+    stock_frame[FAMILY_COLUMN] = assign_families(
+        stock_frame[ARTICLE_COLUMN],
+        family_rules,
+        default_family=default_family,
     )
     family_counts = stock_frame[FAMILY_COLUMN].value_counts(dropna=False)
     log_debug_event(

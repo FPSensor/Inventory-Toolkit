@@ -61,6 +61,7 @@ def run_cross_check(args):
 
     config = ConfigurationManager(profile=args.cross_check_profile)
     family_rules = build_family_rules(config.get_family_rules())
+    default_family = config.get_default_family()
     cross_check_config = config.get_cross_check_config()
 
     filters = cross_check_config["filters"]
@@ -77,6 +78,7 @@ def run_cross_check(args):
     log_debug_event(
         "cross_check_config_loaded",
         family_rule_count=len(family_rules),
+        default_family=default_family,
         ignored_article_count=len(ignored_articles),
         ignored_term_count=len(ignored_terms),
         cost_article_column=cost_article_column,
@@ -224,6 +226,7 @@ def run_cross_check(args):
         reconciliation[FAMILY_COLUMN] = assign_families(
             reconciliation[ARTICLE_COLUMN],
             family_rules,
+            default_family=default_family,
         )
 
         result = reconciliation.merge(
