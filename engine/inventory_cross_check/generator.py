@@ -119,12 +119,14 @@ def run_cross_check(args):
             system_frame[QUANTITY_COLUMN],
             errors="coerce",
         ).fillna(0)
-        master_articles = system_frame[ARTICLE_COLUMN].unique().tolist()
+        raw_master_articles = system_frame[ARTICLE_COLUMN].unique().tolist()
+        master_articles = [article for article in raw_master_articles if article]
         master_set = {str(article).upper().strip() for article in master_articles}
         log_debug_event(
             "cross_check_master_catalog",
             system_rows=len(system_frame),
             unique_articles=len(master_articles),
+            ignored_empty_article_rows=int((system_frame[ARTICLE_COLUMN] == "").sum()),
         )
 
         cost_frame.rename(

@@ -126,6 +126,14 @@ class IntegrityAuditor:
         self.assert_check("Longest matching prefix available", normalize_article("0085-100-M-RED", master_base, master_set) == "0085-100-M")
         self.assert_check("Unmatched item marked as REVISAR", normalize_article("99999-NOPE", master_base, master_set) == "REVISAR | 99999-NOPE")
 
+        master_with_blank = ["", *master_base]
+        master_with_blank_set = {article.upper() for article in master_with_blank}
+        self.assert_check(
+            "Empty master article cannot absorb unknown scanner reading",
+            normalize_article("99999-NOPE", master_with_blank, master_with_blank_set)
+            == "REVISAR | 99999-NOPE",
+        )
+
     # -------------------------------------------------------------------------
     # 3. INVENTORY CROSS CHECK MATHEMATICS (DIFFERENCES & TOTALS)
     # -------------------------------------------------------------------------

@@ -57,6 +57,20 @@ def test_normalize_article_exact_match_and_review_fallback():
     assert normalize_article(raw_unknown, master_base, master_set) == f"REVISAR | {raw_unknown}"
 
 
+def test_normalize_article_ignores_empty_master_entries():
+    master_base = ["", "   ", "ABC", "ABC-123"]
+    master_set = {str(article).upper().strip() for article in master_base}
+
+    # A zero-length master article must never win prefix matching. Unknown
+    # scanner readings must remain visible for manual review.
+    raw_unknown = "UNKNOWN-XXLH1"
+    assert normalize_article(raw_unknown, master_base, master_set) == f"REVISAR | {raw_unknown}"
+
+    # Existing invariants still hold in the presence of invalid blank masters.
+    assert normalize_article("abc", master_base, master_set) == "ABC"
+    assert normalize_article("ABC-123XLRED", master_base, master_set) == "ABC-123"
+
+
 def test_cross_check_renderer_owns_header_style(tmp_path):
     """Cross Check headers must not inherit version-dependent Pandas styling."""
     import pandas as pd

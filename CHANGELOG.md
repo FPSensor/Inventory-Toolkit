@@ -2,6 +2,12 @@
 
 All notable changes to Inventory Toolkit are documented in this file.
 
+## [1.4.1] - Unreleased
+
+### Fixed
+
+- Prevented empty system-stock articles from becoming zero-length prefix candidates during Cross Check scanner normalization, preserving the `REVISAR | <original>` invariant for unknown readings even when the master contains blank/NaN article cells.
+
 ## [1.4.0] - 2026-09-24
 
 `1.4.0` is a broad evolution of the `1.3.1` architecture rather than a narrowly scoped feature release. Across the full development line, Inventory Toolkit gained a first desktop GUI, a redesigned profile/configuration system, stronger Cross Check and YoY behavior, substantially deeper diagnostics, guarded migration tooling, reproducible release certification, and a complete documentation overhaul while preserving the established business-output contracts of the three core workflows.

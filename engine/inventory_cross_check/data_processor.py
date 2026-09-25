@@ -23,13 +23,18 @@ def normalize_article(reading, master_articles, master_set):
         return None
 
     normalized_reading = str(reading).upper().strip()
-    if normalized_reading in master_set:
+    if normalized_reading and normalized_reading in master_set:
         return normalized_reading
 
+    # Empty master articles are invalid prefix candidates: every string starts
+    # with "", so allowing one here would silently normalize an unknown scanner
+    # reading to an empty article instead of preserving it for manual review.
     matches = [
         article
         for article in master_articles
-        if normalized_reading.startswith(str(article).upper())
+        if not pd.isna(article)
+        and str(article).strip()
+        and normalized_reading.startswith(str(article).upper().strip())
     ]
     if not matches:
         return f"{REVIEW_PREFIX}{reading}"
