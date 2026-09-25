@@ -5,6 +5,7 @@ from typing import Dict, List, Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from core.profile_config import CONFIG_VERSION
+from core.system_utils import normalize_xlsx_output_path
 
 from core.business_schema import (
     ARTICLE_COLUMN,
@@ -137,6 +138,11 @@ class YoYInputConfig(_StrictConfigModel):
 
 class YoYOutputConfig(_StrictConfigModel):
     default_path: str = "analysis_report.xlsx"
+
+    @field_validator("default_path")
+    @classmethod
+    def validate_default_output_path(cls, value: str) -> str:
+        return normalize_xlsx_output_path(value)
     metrics: List[Literal["units", "sales"]] = Field(
         default_factory=lambda: ["units", "sales"],
         min_length=1,

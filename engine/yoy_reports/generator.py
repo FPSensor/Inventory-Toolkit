@@ -2,6 +2,7 @@
 
 from core.configuration_manager import ConfigurationManager
 from core.logger import log, log_debug_event
+from core.system_utils import normalize_xlsx_output_path
 from engine.shared.families import build_family_rules
 from engine.yoy_reports.data_processor import process_sales_data
 from engine.yoy_reports.excel_renderer import render_yoy_sales_excel
@@ -21,6 +22,7 @@ def generate_sales_report(
     yoy_include_sizes=None,
     non_interactive=False,
 ):
+    yoy_output_path = normalize_xlsx_output_path(yoy_output_path)
     output_config = yoy_config["output"]
     include_sizes = (
         output_config.get("include_sizes", False)

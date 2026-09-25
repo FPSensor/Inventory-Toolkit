@@ -8,6 +8,7 @@ import pandas as pd
 
 from core.configuration_manager import ConfigurationManager
 from core.logger import log, log_debug_event
+from core.system_utils import normalize_xlsx_output_path
 from core.telemetry import execution_timer
 from engine.shared.families import build_family_rules
 from engine.stock_processing.contracts import StockProcessingPlan
@@ -52,6 +53,7 @@ def _log_plan(plan: StockProcessingPlan) -> None:
 
 def run_stock_processing(args):
     """Execute the profile-driven stock cleanup, pricing, valuation and export pipeline."""
+    output_path = normalize_xlsx_output_path(args.stock_processing_out)
     interactive = not getattr(args, "non_interactive", False)
     log_debug_event(
         "stock_processing_start",
@@ -59,7 +61,7 @@ def run_stock_processing(args):
         stock_file=args.stock_processing_raw,
         cost_file=args.shared_cost,
         sales_file=args.shared_sales,
-        output_file=args.stock_processing_out,
+        output_file=output_path,
         interactive=interactive,
     )
 
@@ -150,7 +152,7 @@ def run_stock_processing(args):
 
     with execution_timer("Stock Excel Rendering"):
         final_path = render_stock_excel(
-            args.stock_processing_out,
+            output_path,
             result_frame,
             plan.summaries,
             result_frame.columns,

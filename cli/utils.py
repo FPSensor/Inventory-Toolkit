@@ -77,7 +77,7 @@ def ask_file(message: str, default_val: str, is_output: bool = False) -> str:
                 title="Save result as...",
                 initialfile=default_val,
                 defaultextension=".xlsx",
-                filetypes=[("Excel", "*.xlsx *.xls")],
+                filetypes=[("Excel Workbook", "*.xlsx")],
             )
         else:
             path = filedialog.askopenfilename(

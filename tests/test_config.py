@@ -3,7 +3,7 @@ import json
 import pytest
 from pydantic import ValidationError
 
-from core.config_schemas import CatalogConfig
+from core.config_schemas import CatalogConfig, YoYOutputConfig
 from core.configuration_errors import ConfigurationError
 from core.configuration_manager import ConfigurationManager
 from core.profile_config import CONFIG_VERSION, ensure_profile_config, profile_readiness
@@ -179,6 +179,16 @@ def test_existing_current_config_requires_explicit_schema_version(tmp_path, monk
     with pytest.raises(ConfigurationError, match="schema version must be an integer"):
         ConfigurationManager("strict")
 
+
+
+def test_yoy_default_output_path_is_normalized_to_xlsx():
+    config = YoYOutputConfig.model_validate({"default_path": "report"})
+    assert config.default_path == "report.xlsx"
+
+
+def test_yoy_default_output_path_rejects_legacy_xls():
+    with pytest.raises(ValidationError, match="must use the .xlsx format"):
+        YoYOutputConfig.model_validate({"default_path": "report.xls"})
 
 # BEGIN LEGACY_COMPATIBILITY
 def test_legacy_profile_migrates_without_changing_business_contract(tmp_path, monkeypatch):

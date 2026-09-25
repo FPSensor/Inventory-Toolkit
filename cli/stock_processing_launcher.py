@@ -13,6 +13,7 @@ from cli.utils import (
     load_last_paths, save_last_paths,
 )
 from core.logger import log, log_debug_event, log_exception
+from core.system_utils import InvalidExcelOutputPathError, normalize_xlsx_output_path
 
 
 def launch_stock_processing(active_profile: str) -> None:
@@ -33,8 +34,13 @@ def launch_stock_processing(active_profile: str) -> None:
         return
 
     out_file = ask_file("\n4. Output file name", sp.get("out", "Stock_Final_Report.xlsx"), is_output=True)
-    if not out_file.endswith((".xlsx", ".xls")):
-        out_file += ".xlsx"
+    try:
+        out_file = normalize_xlsx_output_path(out_file)
+    except InvalidExcelOutputPathError as exc:
+        log.error("Invalid output path: %s", exc)
+        print(f"\n  ❌ {exc}")
+        input("  Press Enter to return to the menu...")
+        return
 
     save_last_paths(active_profile, {
         "stock_processing": {

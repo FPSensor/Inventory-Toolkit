@@ -21,7 +21,7 @@ from core.business_schema import (
 from core.configuration_manager import ConfigurationManager
 from core.data_sanitizer import clean_sku_series
 from core.logger import log, log_debug_event
-from core.system_utils import safe_pandas_to_excel
+from core.system_utils import normalize_xlsx_output_path, safe_pandas_to_excel
 from core.telemetry import execution_timer
 from engine.inventory_cross_check.data_processor import (
     calculate_difference,
@@ -35,6 +35,7 @@ _SCAN_COUNT_COLUMN = "__scan_count"
 
 
 def run_cross_check(args):
+    output_path = normalize_xlsx_output_path(args.cross_check_out)
     interactive = not getattr(args, "non_interactive", False)
     log_debug_event(
         "cross_check_start",
@@ -43,7 +44,7 @@ def run_cross_check(args):
         count_file=args.cross_check_count,
         cost_file=args.shared_cost,
         sales_file=args.shared_sales,
-        output_file=args.cross_check_out,
+        output_file=output_path,
         consolidate=args.cross_check_consolidate,
         partial=args.cross_check_partial,
         interactive=interactive,
@@ -298,7 +299,7 @@ def run_cross_check(args):
     with execution_timer("Excel Rendering & Formatting"):
         final_path = safe_pandas_to_excel(
             result,
-            args.cross_check_out,
+            output_path,
             index=False,
             interactive=interactive,
         )

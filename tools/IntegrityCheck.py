@@ -12,6 +12,7 @@ import numpy as np
 
 from core.configuration_manager import ConfigurationManager
 from core.data_sanitizer import clean_sku_series, sanitize_dataframe
+from core.system_utils import InvalidExcelOutputPathError, normalize_xlsx_output_path
 from engine.shared.families import assign_families, build_family_rules, assign_family
 from engine.inventory_cross_check.data_processor import normalize_article, calculate_difference
 from engine.stock_processing.contracts import StockProcessingPlan
@@ -227,6 +228,20 @@ class IntegrityAuditor:
         self.assert_check(
             "Stock private pipeline keys never leak to projected output",
             not any(str(column).startswith("__itk_") for column in custom_output.columns),
+        )
+
+        self.assert_check(
+            "Extensionless Excel outputs normalize to .xlsx",
+            normalize_xlsx_output_path("inventory-report") == "inventory-report.xlsx",
+        )
+        try:
+            normalize_xlsx_output_path("inventory-report.xls")
+            legacy_output_rejected = False
+        except InvalidExcelOutputPathError:
+            legacy_output_rejected = True
+        self.assert_check(
+            "Legacy .xls remains input-only and is rejected for outputs",
+            legacy_output_rejected,
         )
 
     # -------------------------------------------------------------------------

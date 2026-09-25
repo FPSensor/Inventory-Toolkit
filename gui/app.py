@@ -65,6 +65,7 @@ except ImportError:
 from core.business_schema import ARTICLE_COLUMN, DATABASE_ORIGIN_COLUMN, DEFAULT_FAMILY, FAMILY_COLUMN, PRICE_COLUMN, RAW_DATA_SHEET, SIZE_COLUMN
 from core.configuration_manager import ConfigurationManager
 from core.logger import log
+from core.system_utils import InvalidExcelOutputPathError, normalize_xlsx_output_path
 from cli.wizard import initialize_profile_files, run_setup_wizard
 from cli.utils import save_json, load_json
 from engine.inventory_cross_check.generator import run_cross_check
@@ -1010,9 +1011,13 @@ class ConfigHubWindow(BaseToplevel):
                 )
                 return
 
-            output_config["default_path"] = (
-                output_path_var.get().strip() or "analysis_report.xlsx"
-            )
+            try:
+                output_config["default_path"] = normalize_xlsx_output_path(
+                    output_path_var.get().strip() or "analysis_report.xlsx"
+                )
+            except InvalidExcelOutputPathError as exc:
+                messagebox.showerror("Validation Error", str(exc), parent=self)
+                return
             output_config["metrics"] = metrics
             output_config["annual_comparison"] = bool(annual_var.get())
             output_config["include_sizes"] = bool(sizes_var.get())
@@ -1387,6 +1392,13 @@ class InventoryToolkitGUI(BaseWindow):
         if default_path:
             self.yoy_out.set(default_path)
 
+    def _resolve_xlsx_output(self, value: str):
+        try:
+            return normalize_xlsx_output_path(value)
+        except InvalidExcelOutputPathError as exc:
+            messagebox.showerror("Invalid Output File", str(exc), parent=self)
+            return None
+
     def _file_row(self, parent, label_text: str, var: tk.StringVar,
                   is_output: bool = False, row: int = 0):
         """Single file-input row: label + entry + Browse button."""
@@ -1400,7 +1412,7 @@ class InventoryToolkitGUI(BaseWindow):
             if is_output:
                 f = filedialog.asksaveasfilename(
                     title="Save as...", defaultextension=".xlsx",
-                    filetypes=[("Excel Files", "*.xlsx *.xls")], parent=self)
+                    filetypes=[("Excel Workbook", "*.xlsx")], parent=self)
             else:
                 f = filedialog.askopenfilename(
                     title="Select file",
@@ -1481,9 +1493,9 @@ class InventoryToolkitGUI(BaseWindow):
                 return
 
 
-        out = self.cc_out.get().strip()
-        if not out.endswith((".xlsx", ".xls")):
-            out += ".xlsx"
+        out = self._resolve_xlsx_output(self.cc_out.get().strip())
+        if not out:
+            return
 
         args = Namespace(
             cross_check_system=self.cc_sys.get(),
@@ -1531,9 +1543,9 @@ class InventoryToolkitGUI(BaseWindow):
                 messagebox.showerror("Missing File",
                                      f"Required file not found:\n'{f}'", parent=self)
                 return
-        out = self.sp_out.get().strip()
-        if not out.endswith((".xlsx", ".xls")):
-            out += ".xlsx"
+        out = self._resolve_xlsx_output(self.sp_out.get().strip())
+        if not out:
+            return
         args = Namespace(
             stock_processing_raw=self.sp_raw.get(),
             shared_cost=self.sp_cost.get(),
@@ -1643,9 +1655,9 @@ class InventoryToolkitGUI(BaseWindow):
             if self.yoy_group.get() == "Family"
             else input_config["item_column"]
         )
-        out = self.yoy_out.get().strip()
-        if not out.endswith((".xlsx", ".xls")):
-            out += ".xlsx"
+        out = self._resolve_xlsx_output(self.yoy_out.get().strip())
+        if not out:
+            return
 
         # Capture every Tk variable on the UI thread before starting the worker.
         segmented = self.yoy_seg.get()

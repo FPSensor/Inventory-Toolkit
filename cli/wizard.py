@@ -13,6 +13,7 @@ from typing import Iterable, Optional
 
 from cli.utils import ask_file, clear_screen, load_json, save_json
 from core.profile_config import config_path, ensure_profile_config, profile_readiness
+from core.system_utils import InvalidExcelOutputPathError, normalize_xlsx_output_path
 # BEGIN LEGACY_COMPATIBILITY
 from core.legacy_profile_migration import migrate_legacy_config
 # END LEGACY_COMPATIBILITY
@@ -236,9 +237,17 @@ def _setup_yoy(configs: Path) -> None:
         for key, label, hints, default in fields:
             inp[key] = _pick(label, columns, inp.get(key, default), hints)
     out = cfg.setdefault("output", {})
-    raw = input(f"  Default output path [Enter={out.get('default_path','analysis_report.xlsx')}]: ").strip()
-    if raw:
-        out["default_path"] = raw
+    while True:
+        raw = input(
+            f"  Default output path [Enter={out.get('default_path','analysis_report.xlsx')}]: "
+        ).strip()
+        if not raw:
+            break
+        try:
+            out["default_path"] = normalize_xlsx_output_path(raw)
+            break
+        except InvalidExcelOutputPathError as exc:
+            print(f"  ❌ {exc}")
 
     current_metrics = out.get("metrics", ["units", "sales"])
     raw = input(

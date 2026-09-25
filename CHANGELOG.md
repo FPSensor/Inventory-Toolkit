@@ -6,6 +6,7 @@ All notable changes to Inventory Toolkit are documented in this file.
 
 ### Changed
 
+- Standardized the workbook output contract across Stock Processing, Cross Check, and YoY: legacy `.xls` remains supported as input where needed, while generated workbooks are validated and written only as `.xlsx`; extensionless output names are normalized before processing.
 - Refactored Stock Processing from one legacy-heavy orchestration function into explicit profile-contract, cleanup/classification, pricing, valuation, and rendering stages while preserving the approved demo workbook contract.
 - Made Stock Processing normalize profile-owned article/family labels at the engine boundary and use private internal keys during business processing, so non-default catalog column names work end to end without leaking implementation columns to Excel.
 - Made profile configuration fail closed: existing JSON files must parse and the complete current schema must validate before a workflow can use the profile; missing current-schema files may still be initialized from documented defaults.

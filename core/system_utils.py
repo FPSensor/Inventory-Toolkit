@@ -7,6 +7,59 @@ import os
 from core.logger import log, log_debug_event
 
 
+class InvalidExcelOutputPathError(ValueError):
+    """Raised when an Excel output path is not a supported .xlsx target."""
+
+    def __init__(self, filepath):
+        try:
+            self.filepath = os.fspath(filepath) if filepath is not None else filepath
+        except TypeError:
+            self.filepath = filepath
+        super().__init__(
+            "Excel outputs must use the .xlsx format; legacy .xls is input-only. "
+            f"Unsupported output path: {self.filepath!r}"
+        )
+
+
+def normalize_xlsx_output_path(filepath):
+    """Return a validated .xlsx output path, appending the suffix when omitted.
+
+    Legacy ``.xls`` files remain valid *inputs*, but every workbook written by
+    Inventory Toolkit is an OOXML workbook and therefore must use ``.xlsx``.
+    """
+    if filepath is None:
+        raise InvalidExcelOutputPathError(filepath)
+
+    try:
+        path = os.fspath(filepath)
+    except TypeError as exc:
+        raise InvalidExcelOutputPathError(filepath) from exc
+    if not isinstance(path, str):
+        raise InvalidExcelOutputPathError(filepath)
+
+    path = path.strip()
+    if not path:
+        raise InvalidExcelOutputPathError(filepath)
+
+    _base, ext = os.path.splitext(path)
+    if not ext:
+        resolved = f"{path}.xlsx"
+        log_debug_event(
+            "xlsx_output_path_normalized",
+            requested_path=path,
+            resolved_path=resolved,
+        )
+        return resolved
+    if ext.lower() != ".xlsx":
+        log_debug_event(
+            "xlsx_output_path_rejected",
+            path=path,
+            extension=ext,
+        )
+        raise InvalidExcelOutputPathError(path)
+    return path
+
+
 class OutputFileLockedError(PermissionError):
     """Raised when an output file is locked and prompting is not possible."""
 
@@ -43,6 +96,7 @@ def _handle_locked_file(current_path, base, ext, attempt, *, interactive, messag
 
 
 def safe_pandas_to_excel(df, filepath, *, interactive=True, **kwargs):
+    filepath = normalize_xlsx_output_path(filepath)
     base, ext = os.path.splitext(filepath)
     attempt = 1
     current_path = filepath
@@ -67,6 +121,7 @@ def safe_pandas_to_excel(df, filepath, *, interactive=True, **kwargs):
 
 
 def safe_openpyxl_save(wb, filepath, *, interactive=True):
+    filepath = normalize_xlsx_output_path(filepath)
     base, ext = os.path.splitext(filepath)
     attempt = 1
     current_path = filepath

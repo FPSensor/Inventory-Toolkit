@@ -11,6 +11,7 @@ import pandas as pd
 from cli.utils import ask_file, load_last_paths, save_last_paths
 from core.configuration_manager import ConfigurationManager
 from core.logger import log, log_debug_event, log_exception
+from core.system_utils import InvalidExcelOutputPathError, normalize_xlsx_output_path
 from engine.yoy_reports.metrics import resolve_metric_specs
 
 
@@ -136,8 +137,13 @@ def launch_yoy_reports(active_profile: str) -> None:
         previous_paths.get("out", default_output),
         is_output=True,
     )
-    if not output_path.lower().endswith((".xlsx", ".xls")):
-        output_path += ".xlsx"
+    try:
+        output_path = normalize_xlsx_output_path(output_path)
+    except InvalidExcelOutputPathError as exc:
+        log.error("Invalid output path: %s", exc)
+        print(f"\n  ❌ {exc}")
+        input("  Press Enter to return to the main menu...")
+        return
 
     save_last_paths(
         profile,
