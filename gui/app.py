@@ -1539,7 +1539,7 @@ class InventoryToolkitGUI(BaseWindow):
             non_interactive=True,
             column_overrides=overrides,
         )
-        self._run_async(lambda: run_cross_check(args), "Cross Check completed!")
+        self._run_async(lambda progress: run_cross_check(args), "Cross Check completed!", progress_target=args)
 
     # ── Tab 2: Stock Processing ───────────────────────────────────────────────
 
@@ -1602,7 +1602,7 @@ class InventoryToolkitGUI(BaseWindow):
             column_overrides=overrides,
             warnings=warnings,
         )
-        self._run_async(lambda: run_stock_processing(args), "Stock Processing completed!", warnings=warnings)
+        self._run_async(lambda progress: run_stock_processing(args), "Stock Processing completed!", warnings=warnings, progress_target=args)
 
     # ── Tab 3: YoY Reports ────────────────────────────────────────────────────
 
@@ -1756,17 +1756,24 @@ class InventoryToolkitGUI(BaseWindow):
             messagebox.showerror("Path Persistence Error", str(exc), parent=self)
             return
 
-        def task():
+        def task(progress):
             return generate_sales_report(
                 f_path, out, s_dt, e_dt, yoy_config, grouping_column,
                 segmented, has_families, profile, include_sizes,
                 non_interactive=True,
+                progress=progress,
             )
         self._run_async(task, "YoY Sales Report generated!")
 
     # ── Status bar & async runner ─────────────────────────────────────────────
 
     def _build_status_bar(self):
+        if USE_CTK:
+            self._activity = ctk.CTkTextbox(self, height=100, wrap="word")
+        else:
+            self._activity = tk.Text(self, height=5, wrap="word")
+        self._activity.pack(side="bottom", fill="x", padx=12, pady=(0, 6))
+        self._activity.configure(state="disabled")
         if USE_CTK:
             bar = ctk.CTkFrame(self, height=34, corner_radius=0)
             bar.pack(side="bottom", fill="x")
@@ -1780,31 +1787,53 @@ class InventoryToolkitGUI(BaseWindow):
             bar.pack(side="bottom", fill="x")
             self._status = ttk.Label(bar, text="⚡ Ready.", anchor="w")
             self._status.pack(side="left", padx=12, pady=4)
-            self._progress = None
+            self._progress = ttk.Progressbar(bar, orient="horizontal", mode="determinate", maximum=100, length=160)
+            self._progress.pack(side="right", padx=12, pady=6)
+
+    def _show_progress(self, event):
+        """Display worker updates only after they reach the Tk event loop."""
+        self._set_status(f"⏳ {event.fraction:.0%} | {event.message}")
+        if USE_CTK:
+            self._progress.set(event.fraction)
+        else:
+            self._progress["value"] = event.fraction * 100
+        self._activity.configure(state="normal")
+        self._activity.insert("end", f"[{event.completed}/{event.total}] {event.message}\n")
+        self._activity.see("end")
+        self._activity.configure(state="disabled")
 
     def _set_status(self, text: str):
         """Update the status bar from the Tk main thread."""
         self._status.configure(text=text)
 
     def _finish_progress(self, success: bool):
-        if self._progress and USE_CTK:
-            self._progress.stop()
-            self._progress.configure(mode="determinate")
-            self._progress.set(1 if success else 0)
+        if success:
+            if USE_CTK:
+                self._progress.set(1)
+            else:
+                self._progress["value"] = 100
 
-    def _run_async(self, func, success_msg: str, warnings=None):
+    def _run_async(self, func, success_msg: str, warnings=None, progress_target=None):
         """Run engine work off-thread while keeping every Tk call on the UI thread."""
         t_start = time.time()
         result_queue = queue.Queue(maxsize=1)
+        progress_queue = queue.Queue()
+
+        self._activity.configure(state="normal")
+        self._activity.delete("1.0", "end")
+        self._activity.configure(state="disabled")
+        if USE_CTK:
+            self._progress.set(0)
+        else:
+            self._progress["value"] = 0
 
         self._set_status("⏳ Running task in background... Please wait.")
-        if self._progress and USE_CTK:
-            self._progress.configure(mode="indeterminate")
-            self._progress.start()
 
         def worker():
             try:
-                out_path = func()
+                if progress_target is not None:
+                    progress_target.progress = progress_queue.put
+                out_path = func(progress_queue.put)
                 if not out_path:
                     raise RuntimeError(
                         "The operation finished without producing an output file. "
@@ -1816,6 +1845,11 @@ class InventoryToolkitGUI(BaseWindow):
                 result_queue.put(("error", exc, time.time() - t_start))
 
         def poll_result():
+            while True:
+                try:
+                    self._show_progress(progress_queue.get_nowait())
+                except queue.Empty:
+                    break
             try:
                 kind, payload, elapsed = result_queue.get_nowait()
             except queue.Empty:
