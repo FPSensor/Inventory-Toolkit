@@ -8,6 +8,7 @@ import pandas as pd
 
 from core.configuration_manager import ConfigurationManager
 from core.logger import log, log_debug_event
+from core.progress import report_progress
 from core.system_utils import normalize_xlsx_output_path
 from core.telemetry import execution_timer
 from engine.shared.families import build_family_rules
@@ -57,6 +58,8 @@ def run_stock_processing(args):
     """Execute the profile-driven stock cleanup, pricing, valuation and export pipeline."""
     output_path = normalize_xlsx_output_path(args.stock_processing_out)
     interactive = not getattr(args, "non_interactive", False)
+    progress = getattr(args, "progress", None)
+    report_progress(progress, 0, 4, "Reading stock and checking input columns...")
     log_debug_event(
         "stock_processing_start",
         profile=args.stock_processing_profile,
@@ -82,10 +85,12 @@ def run_stock_processing(args):
     with execution_timer("Stock Input & Cleaning"):
         log.info("Processing Stock data...")
         raw_frame = pd.read_excel(args.stock_processing_raw)
+        input_rows, input_columns = raw_frame.shape
         source_article = overrides.get("stock", {}).get("article", plan.article_column)
         if source_article != plan.article_column:
             raw_frame = raw_frame.rename(columns={source_article: plan.article_column})
         raw_frame, missing_article_warning = remove_unidentified_stock(raw_frame, plan)
+        excluded_rows = input_rows - len(raw_frame)
         if missing_article_warning:
             log.warning(missing_article_warning)
             warnings = getattr(args, "warnings", None)
@@ -108,6 +113,7 @@ def run_stock_processing(args):
                 f"is NOT a valid Stock file. {exc}"
             )
             return None
+    report_progress(progress, 1, 4, f"Read {input_rows:,} stock rows and {input_columns} columns; rows without an article excluded: {excluded_rows:,}. Classifying stock...")
 
     with execution_timer("Stock Network & Classification"):
         stock_frame, merged_deposits = merge_stock_database_columns(
@@ -126,6 +132,7 @@ def run_stock_processing(args):
             family_rules,
             default_family=plan.default_family,
         )
+    report_progress(progress, 2, 4, f"Classified {len(stock_frame):,} rows; {len(plan.active_stores)} stores configured. Reading price lists and valuing stock...")
 
     with execution_timer("Stock Pricing & Valuation"):
         log.info("Processing pricing files...")
@@ -164,6 +171,7 @@ def run_stock_processing(args):
             shape=result_frame.shape,
             columns=list(result_frame.columns),
         )
+    report_progress(progress, 3, 4, f"Prepared {len(result_frame):,} output rows and {len(result_frame.columns)} columns. Writing workbook...")
 
     with execution_timer("Stock Excel Rendering"):
         final_path = render_stock_excel(
@@ -177,6 +185,7 @@ def run_stock_processing(args):
         )
 
     log.info("Process completed. File saved at: %s", final_path)
+    report_progress(progress, 4, 4, f"Saved stock report: {len(result_frame):,} rows.")
     log_debug_event(
         "stock_processing_complete",
         output_file=final_path,
