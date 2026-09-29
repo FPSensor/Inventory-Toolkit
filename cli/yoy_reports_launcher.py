@@ -42,6 +42,8 @@ def launch_yoy_reports(active_profile: str) -> None:
         input("  Press Enter to return...")
         return
 
+    save_last_paths(profile, {"yoy_reports": {**previous_paths, "file": sales_file}})
+
     while True:
         grouping_option = input("  Group by Family (F) or Item (I)? [F/I]: ").strip().lower()
         if grouping_option in ("f", "i"):

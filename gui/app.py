@@ -71,7 +71,7 @@ from core.logger import log
 from core import paths as app_paths
 from core.system_utils import InvalidExcelOutputPathError, normalize_xlsx_output_path
 from cli.wizard import initialize_profile_files, run_setup_wizard
-from cli.utils import save_json, load_json
+from cli.utils import save_json, load_json, load_last_paths, save_last_paths
 from engine.inventory_cross_check.generator import run_cross_check
 from engine.stock_processing.generator import run_stock_processing
 from engine.yoy_reports.generator import generate_sales_report
@@ -1405,15 +1405,16 @@ class InventoryToolkitGUI(BaseWindow):
             self._apply_yoy_profile_defaults()
 
     def _apply_yoy_profile_defaults(self):
-        """Reflect profile-owned YoY defaults in the main GUI controls."""
+        """Restore YoY file paths and profile-owned defaults for the active profile."""
         try:
-            output = ConfigurationManager(self.active_profile.get()).get_yoy_reports_config()["output"]
+            profile = self.active_profile.get()
+            output = ConfigurationManager(profile).get_yoy_reports_config()["output"]
+            saved = load_last_paths(profile).get("yoy_reports", {})
         except Exception:
             return
         self.yoy_sizes.set(bool(output.get("include_sizes", False)))
-        default_path = str(output.get("default_path", "")).strip()
-        if default_path:
-            self.yoy_out.set(default_path)
+        self.yoy_file.set(saved.get("file", ""))
+        self.yoy_out.set(saved.get("out") or str(output.get("default_path", "yoy_analysis.xlsx")))
 
     def _resolve_xlsx_output(self, value: str, default: str):
         try:
@@ -1725,6 +1726,12 @@ class InventoryToolkitGUI(BaseWindow):
             grouping_column = yoy_config["input"]["grouping_column" if self.yoy_group.get() == "Family" else "item_column"]
         except Exception as exc:
             messagebox.showerror("Input Column Error", str(exc), parent=self)
+            return
+
+        try:
+            save_last_paths(profile, {"yoy_reports": {"file": f_path, "out": out}})
+        except Exception as exc:
+            messagebox.showerror("Path Persistence Error", str(exc), parent=self)
             return
 
         def task():

@@ -8,6 +8,7 @@ from cli import profiles as cli_profiles
 from cli.utils import load_last_paths, save_last_paths, validate_files_exist
 from core import paths as app_paths
 from core.configuration_manager import ConfigurationManager
+from gui.app import InventoryToolkitGUI
 
 
 def test_application_resource_roots_are_absolute_and_repo_anchored():
@@ -44,6 +45,42 @@ def test_profile_last_paths_storage_is_application_owned(tmp_path, monkeypatch):
     assert stored.exists()
     assert load_last_paths("test")["stock_processing"]["stock"] == "relative-input.xlsx"
     assert not (foreign_cwd / "profiles").exists()
+
+
+def test_gui_yoy_restores_saved_paths_for_each_profile(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+
+    class Variable:
+        def __init__(self, value=None):
+            self.value = value
+
+        def get(self):
+            return self.value
+
+        def set(self, value):
+            self.value = value
+
+    monkeypatch.setattr(app_paths, "PROFILES_ROOT", tmp_path / "profiles")
+    save_last_paths("first", {"yoy_reports": {"file": "sales.xlsx", "out": "report.xlsx"}})
+    monkeypatch.setattr(
+        "gui.app.ConfigurationManager",
+        lambda _profile: SimpleNamespace(
+            get_yoy_reports_config=lambda: {"output": {"default_path": "default.xlsx"}}
+        ),
+    )
+    view = SimpleNamespace(
+        active_profile=Variable("first"),
+        yoy_file=Variable(),
+        yoy_out=Variable(),
+        yoy_sizes=Variable(),
+    )
+
+    InventoryToolkitGUI._apply_yoy_profile_defaults(view)
+    assert (view.yoy_file.get(), view.yoy_out.get()) == ("sales.xlsx", "report.xlsx")
+
+    view.active_profile.set("second")
+    InventoryToolkitGUI._apply_yoy_profile_defaults(view)
+    assert (view.yoy_file.get(), view.yoy_out.get()) == ("", "default.xlsx")
 
 
 def test_user_relative_paths_still_follow_caller_cwd(tmp_path, monkeypatch):
