@@ -247,8 +247,9 @@ class ConfigHubWindow(BaseToplevel):
 
     def _save(self, data=None):
         data = data if data is not None else self.current_data
-        raw = load_json(self._filepath()) or {"version": 3}
-        raw["version"] = 3
+        raw = load_json(self._filepath())
+        if raw is None:
+            raise ValueError(f"Profile configuration file is missing: {self._filepath()}")
         key = self._active_key
 
         if key == "Product Families":
@@ -290,7 +291,12 @@ class ConfigHubWindow(BaseToplevel):
             raw["groups"] = data.get("groups", {})
         else:
             raw = data
-        save_json(self._filepath(), raw)
+        try:
+            save_json(self._filepath(), raw)
+        except Exception as exc:
+            messagebox.showerror("Configuration Not Saved", str(exc), parent=self)
+            return False
+        return True
 
     # ── A. Dict-list editor ───────────────────────────────────────────────────
 

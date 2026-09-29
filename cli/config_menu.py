@@ -255,17 +255,21 @@ def configuration_menu(current_profile: str) -> None:
         # END LEGACY_COMPATIBILITY
         cmd=input("\n  Select a module: ").strip().upper()
         if cmd=="0": return
-        if cmd=="1": _catalog_menu(configs,current_profile)
-        elif cmd=="2": _network_menu(configs,current_profile)
-        elif cmd=="3": _stock_menu(configs,current_profile)
-        elif cmd=="4": _cross_menu(configs,current_profile)
-        elif cmd=="5": _yoy_menu(configs,current_profile)
-        elif cmd=="W": run_setup_wizard(str(configs.parent),current_profile)
-        elif cmd=="V": _validate(current_profile)
-        # BEGIN LEGACY_COMPATIBILITY
-        elif cmd=="M":
-            migrated = migrate_legacy_config(configs, remove_legacy=True)
-            print("  ✅ Legacy configuration migrated and archived in configs/_legacy_v1_backup/." if migrated
-                  else "  ℹ️  No legacy v1 files were found.")
+        try:
+            if cmd=="1": _catalog_menu(configs,current_profile)
+            elif cmd=="2": _network_menu(configs,current_profile)
+            elif cmd=="3": _stock_menu(configs,current_profile)
+            elif cmd=="4": _cross_menu(configs,current_profile)
+            elif cmd=="5": _yoy_menu(configs,current_profile)
+            elif cmd=="W": run_setup_wizard(str(configs.parent),current_profile)
+            elif cmd=="V": _validate(current_profile)
+            # BEGIN LEGACY_COMPATIBILITY
+            elif cmd=="M":
+                migrated = migrate_legacy_config(configs, remove_legacy=True)
+                print("  ✅ Legacy configuration migrated and archived in configs/_legacy_v1_backup/." if migrated
+                      else "  ℹ️  No legacy v1 files were found.")
+                _pause()
+            # END LEGACY_COMPATIBILITY
+        except ConfigurationError as exc:
+            print(f"  ❌ Configuration was not changed: {exc}")
             _pause()
-        # END LEGACY_COMPATIBILITY

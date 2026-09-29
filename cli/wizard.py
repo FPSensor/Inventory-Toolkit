@@ -13,6 +13,7 @@ from typing import Iterable, Optional
 
 from cli.utils import ask_file, clear_screen, load_json, save_json
 from core.profile_config import config_path, ensure_profile_config, profile_readiness
+from core.configuration_errors import ConfigurationError
 from core.system_utils import InvalidExcelOutputPathError, normalize_xlsx_output_path
 # BEGIN LEGACY_COMPATIBILITY
 from core.legacy_profile_migration import migrate_legacy_config
@@ -300,6 +301,16 @@ def run_setup_wizard(profile_dir: str, profile_name: str = "") -> None:
                    "4": _setup_cross, "5": _setup_yoy}
         if choice == "0": return
         if choice == "A":
-            for action in actions.values(): action(configs)
+            for action in actions.values():
+                try:
+                    action(configs)
+                except ConfigurationError as exc:
+                    print(f"  ❌ Configuration was not changed: {exc}")
+                    input("  Press Enter...")
+                    break
         elif choice in actions:
-            actions[choice](configs)
+            try:
+                actions[choice](configs)
+            except ConfigurationError as exc:
+                print(f"  ❌ Configuration was not changed: {exc}")
+                input("  Press Enter...")
