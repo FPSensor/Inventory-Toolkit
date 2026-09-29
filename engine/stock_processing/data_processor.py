@@ -98,6 +98,18 @@ def remove_unidentified_stock(raw_frame: pd.DataFrame, plan: StockProcessingPlan
     return raw_frame.loc[~missing].copy(), warning
 
 
+def validate_stock_network(frame: pd.DataFrame, plan: StockProcessingPlan) -> None:
+    missing_stores = [store for store in plan.active_stores if store not in frame.columns]
+    missing_deposits = [col for col in plan.stock_database_columns.values() if col not in frame.columns]
+    absent_branches = [branch for branches in plan.regional_groups.values() for branch in branches if branch not in plan.active_stores]
+    if missing_stores or missing_deposits or absent_branches:
+        raise ValueError(
+            "Stock network columns/groups are incomplete: "
+            f"missing stores={missing_stores}, missing deposits={missing_deposits}, "
+            f"unknown regional members={absent_branches}"
+        )
+
+
 def merge_stock_database_columns(
     frame: pd.DataFrame,
     mappings: Mapping[str, str],

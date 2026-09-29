@@ -19,6 +19,7 @@ from engine.stock_processing.data_processor import (
     prepare_stock_frame,
     project_stock_output,
     remove_unidentified_stock,
+    validate_stock_network,
 )
 from engine.stock_processing.excel_renderer import render_stock_excel
 from engine.stock_processing.pricing import process_pricing
@@ -99,6 +100,7 @@ def run_stock_processing(args):
         )
         try:
             stock_frame = prepare_stock_frame(raw_frame, plan)
+            validate_stock_network(stock_frame, plan)
         except ValueError as exc:
             log.error("APB Error: %s", exc)
             print(
