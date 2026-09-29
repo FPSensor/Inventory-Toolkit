@@ -81,10 +81,10 @@ def test_stock_processing_honors_custom_catalog_and_pricing_columns(tmp_path, mo
 
     pd.DataFrame(
         {
-            "SKU_TEST": [" AA1 ", "ZZ9"],
-            "Color": [" Red ", "Blue"],
-            "STORE_A": [2, 1],
-            "DEP_A": [3, 0],
+            "SKU_TEST": [" AA1 ", "ZZ9", None],
+            "Color": [" Red ", "Blue", ""],
+            "STORE_A": [2, 1, 7],
+            "DEP_A": [3, 0, 0],
         }
     ).to_excel(stock_path, index=False)
     pd.DataFrame(
@@ -102,6 +102,7 @@ def test_stock_processing_honors_custom_catalog_and_pricing_columns(tmp_path, mo
         }
     ).to_excel(sales_path, index=False)
 
+    warnings = []
     result = run_stock_processing(
         Namespace(
             stock_processing_raw=str(stock_path),
@@ -110,11 +111,14 @@ def test_stock_processing_honors_custom_catalog_and_pricing_columns(tmp_path, mo
             stock_processing_out=str(output_path),
             stock_processing_profile=profile,
             non_interactive=True,
+            warnings=warnings,
         )
     )
     assert result == str(output_path)
+    assert len(warnings) == 1 and "4 (7 units)" in warnings[0]
 
     raw = pd.read_excel(output_path, sheet_name="RAW")
+    assert len(raw) == 2
     assert list(raw.columns) == [
         "SKU_TEST",
         "Color",

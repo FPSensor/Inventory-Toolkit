@@ -1586,6 +1586,7 @@ class InventoryToolkitGUI(BaseWindow):
         except Exception as exc:
             messagebox.showerror("Input Column Error", str(exc), parent=self)
             return
+        warnings = []
         args = Namespace(
             stock_processing_raw=self.sp_raw.get(),
             shared_cost=self.sp_cost.get(),
@@ -1594,8 +1595,9 @@ class InventoryToolkitGUI(BaseWindow):
             stock_processing_profile=self.active_profile.get(),
             non_interactive=True,
             column_overrides=overrides,
+            warnings=warnings,
         )
-        self._run_async(lambda: run_stock_processing(args), "Stock Processing completed!")
+        self._run_async(lambda: run_stock_processing(args), "Stock Processing completed!", warnings=warnings)
 
     # ── Tab 3: YoY Reports ────────────────────────────────────────────────────
 
@@ -1756,7 +1758,7 @@ class InventoryToolkitGUI(BaseWindow):
             self._progress.configure(mode="determinate")
             self._progress.set(1 if success else 0)
 
-    def _run_async(self, func, success_msg: str):
+    def _run_async(self, func, success_msg: str, warnings=None):
         """Run engine work off-thread while keeping every Tk call on the UI thread."""
         t_start = time.time()
         result_queue = queue.Queue(maxsize=1)

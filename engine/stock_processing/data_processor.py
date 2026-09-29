@@ -18,7 +18,7 @@ from engine.stock_processing.contracts import (
 
 
 def _normalize_text(series: pd.Series) -> pd.Series:
-    return series.astype(str).str.strip()
+    return series.fillna("").astype(str).str.strip()
 
 
 def _normalize_numeric(series: pd.Series) -> pd.Series:
@@ -66,6 +66,36 @@ def prepare_stock_frame(raw_frame: pd.DataFrame, plan: StockProcessingPlan) -> p
         article_internal_column=INTERNAL_ARTICLE_COLUMN,
     )
     return frame
+
+
+def remove_unidentified_stock(raw_frame: pd.DataFrame, plan: StockProcessingPlan) -> tuple[pd.DataFrame, str | None]:
+    """Omit unidentified rows, reporting quantities that require source review."""
+    if plan.article_column not in raw_frame.columns:
+        return raw_frame, None  # prepare_stock_frame reports the missing column.
+    missing = raw_frame[plan.article_column].isna() | raw_frame[plan.article_column].astype(str).str.strip().eq("")
+    if not missing.any():
+        return raw_frame, None
+    quantities = [col for col in (*plan.active_stores, *plan.stock_database_columns.values()) if col in raw_frame.columns]
+    with_quantity = pd.Series(False, index=raw_frame.index)
+    row_totals = pd.Series(0.0, index=raw_frame.index)
+    if quantities:
+        numeric = raw_frame[quantities].apply(pd.to_numeric, errors="coerce").fillna(0)
+        with_quantity = numeric.ne(0).any(axis=1)
+        row_totals = numeric.sum(axis=1)
+    affected = raw_frame.index[missing & with_quantity]
+    warning = None
+    if len(affected):
+        rows = [int(raw_frame.index.get_loc(idx)) + 2 for idx in affected]
+        preview = ", ".join(
+            f"{number} ({row_totals.loc[idx]:g} units)"
+            for number, idx in zip(rows[:20], affected[:20])
+        ) + ("..." if len(rows) > 20 else "")
+        warning = (
+            f"{len(rows)} stock rows with quantities but no article were excluded "
+            f"({row_totals.loc[affected].sum():g} net units). "
+            f"Source Excel rows: {preview}. Review the original file."
+        )
+    return raw_frame.loc[~missing].copy(), warning
 
 
 def merge_stock_database_columns(

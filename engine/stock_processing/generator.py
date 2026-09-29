@@ -18,6 +18,7 @@ from engine.stock_processing.data_processor import (
     merge_stock_database_columns,
     prepare_stock_frame,
     project_stock_output,
+    remove_unidentified_stock,
 )
 from engine.stock_processing.excel_renderer import render_stock_excel
 from engine.stock_processing.pricing import process_pricing
@@ -83,6 +84,14 @@ def run_stock_processing(args):
         source_article = overrides.get("stock", {}).get("article", plan.article_column)
         if source_article != plan.article_column:
             raw_frame = raw_frame.rename(columns={source_article: plan.article_column})
+        raw_frame, missing_article_warning = remove_unidentified_stock(raw_frame, plan)
+        if missing_article_warning:
+            log.warning(missing_article_warning)
+            warnings = getattr(args, "warnings", None)
+            if warnings is not None:
+                warnings.append(missing_article_warning)
+            else:
+                print(f"\n⚠️ {missing_article_warning}")
         log_debug_event(
             "stock_processing_input_loaded",
             shape=raw_frame.shape,
