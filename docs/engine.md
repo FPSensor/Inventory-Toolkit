@@ -69,6 +69,13 @@ The report includes family/article/system stock/physical count/difference and va
 
 Purpose: transform raw multi-branch stock into a cleaned, classified, priced, valued dataset plus configured summary sheets.
 
+Input column names are selected by the profile. If a configured name is absent,
+CLI and GUI can ask the operator to try that field's documented default for
+the current run. An unattended engine call fails unless given an explicit
+per-run override. Price-list parsing failures stop the workflow. Stock rows
+with quantity but no article are omitted and reported with their source Excel
+row numbers and quantities; a valid output can therefore carry warnings.
+
 ### Files
 
 - `contracts.py` — resolves the validated profile into one immutable Stock Processing plan and owns private article/family pipeline keys.

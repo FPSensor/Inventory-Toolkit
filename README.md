@@ -403,6 +403,12 @@ Target: make the current 1.4 architecture boringly reliable before adding major 
 - Harden packaging/release hygiene so distributed archives exclude caches, logs, Git internals, and operational leftovers.
 - Resolve remaining low-risk CLI/GUI rough edges without changing business calculations.
 
+For a source archive containing only application files, demo inputs, and
+release references, run `python tools/BuildDistribution.py dist/Inventory-Toolkit.zip`.
+The builder excludes local workbooks, logs, caches, Git internals, and
+non-demo profiles. Run `python tools/ReleaseCheck.py --release` before sharing
+the archive.
+
 ## v1.5.0 — GUI beta and interface parity
 
 Target: make the desktop GUI a credible beta instead of an experimental companion.

@@ -19,6 +19,14 @@ All notable changes to Inventory Toolkit are documented in this file.
 
 ### Fixed
 
+- Kept existing corrupt/future profile documents intact in CLI and GUI editors; validated and atomically saved edited JSON instead of treating a failed read as missing configuration.
+- Required explicit per-run operator consent before using a documented default input column when a configured column is absent; unattended engine calls fail with the missing-column error.
+- Prevented Stock from silently treating unreadable price lists as absent and valuing their inventory at zero, and rejected missing configured network columns before valuation.
+- Excluded Stock rows with no article while reporting original Excel row numbers and omitted quantities to the operator.
+- Treated Cross Check ignored text terms literally instead of interpreting them as regular expressions.
+- Removed a Linux-dependent false failure in the debug subprocess test.
+- Added an explicit source-bundle builder that excludes Git internals, workbooks outside the demo/references, caches, and logs.
+
 - Removed runtime CWD dependence from profile loading/creation, per-profile path persistence, Configuration Hub, and the experimental GUI, preventing accidental `profiles/` trees or configuration fallback behavior from appearing in unrelated working directories.
 - Fixed Stock Processing paths that validated a configured article column but later still read/merged the hardcoded `Artículo`/`Familias` labels.
 - Fixed Cross Check system-stock/article-family handling to honor `general/catalog.json`, and fixed the GUI preflight that incorrectly checked the cost-list article mapping against the system-stock workbook.
