@@ -236,7 +236,7 @@ def run_cross_check(args):
             reconciliation = reconciliation[
                 ~reconciliation[ARTICLE_COLUMN]
                 .astype(str)
-                .str.contains(ignored_term, case=False, na=False)
+                .str.contains(ignored_term, case=False, na=False, regex=False)
             ]
 
         log_debug_event(
