@@ -7,6 +7,7 @@ from core.config_schemas import YoYReportsConfig
 from engine.yoy_reports.generator import generate_sales_report
 from engine.yoy_reports.metrics import configured_branches, resolve_metric_specs
 from engine.yoy_reports.sheet_renderer import render_report_sheet
+from engine.yoy_reports.excel_renderer import render_yoy_sales_excel
 
 
 def _config(*, metrics=None, annual_comparison=True, include_sizes=False, groups=None):
@@ -133,6 +134,69 @@ def test_yoy_annual_comparison_setting_controls_comparison_blocks():
     values = [str(value) for value in _sheet_values(worksheet)]
     assert any(value.startswith("YoY Units Sold Comparison") for value in values)
     assert any(value.startswith("YoY Sales Amount Comparison") for value in values)
+
+
+def test_full_report_can_omit_extra_annual_comparison_without_losing_metrics(tmp_path):
+    from openpyxl import load_workbook
+
+    current, previous = _frames()
+    config = _config(annual_comparison=False)
+    path = tmp_path / "full_report.xlsx"
+    render_yoy_sales_excel(
+        str(path), current, previous,
+        pd.Timestamp("2026-01-01"), pd.Timestamp("2026-01-31"),
+        pd.Timestamp("2025-01-01"), config, "Familias", False,
+        interactive=False,
+    )
+
+    workbook = load_workbook(path, read_only=True)
+    assert workbook.sheetnames == ["Sales"]
+    titles = [row[0].value for row in workbook.active if row[0].value]
+    assert any(str(title).startswith("Units Sold from") for title in titles)
+    assert any(str(title).startswith("Sales Amount from") for title in titles)
+    assert not any(str(title).startswith("YoY ") for title in titles)
+
+
+def test_cli_full_report_comparison_is_opt_in_and_reuses_last_paths(tmp_path, monkeypatch):
+    from cli.yoy_reports_launcher import launch_yoy_reports
+    from core import paths as app_paths
+
+    monkeypatch.setattr(app_paths, "PROFILES_ROOT", tmp_path / "profiles")
+    config = _config(metrics=["units"], annual_comparison=True)
+    monkeypatch.setattr(
+        "cli.yoy_reports_launcher.ConfigurationManager",
+        lambda profile: type("Manager", (), {"get_yoy_reports_config": lambda self: config})(),
+    )
+    monkeypatch.setattr(
+        "cli.yoy_reports_launcher.pd.read_excel",
+        lambda *_args, **_kwargs: pd.DataFrame(columns=config["input"].values()),
+    )
+    monkeypatch.setattr(
+        "cli.yoy_reports_launcher.choose_input_columns",
+        lambda _file, configured, _defaults, _confirm: configured,
+    )
+    requested_defaults = []
+
+    def choose_file(message, default, is_output=False):
+        requested_defaults.append((message, default))
+        return default if default else "sales.xlsx"
+
+    monkeypatch.setattr("cli.yoy_reports_launcher.ask_file", choose_file)
+    comparisons = []
+
+    def generate(_input, output, _start, _end, resolved, *_args):
+        comparisons.append(resolved["output"]["annual_comparison"])
+        return output
+
+    monkeypatch.setattr("engine.yoy_reports.generator.generate_sales_report", generate)
+    for comparison_answer in ("", "y"):
+        responses = iter(("f", "y", "2026-01-01", "2026-01-31", "n", comparison_answer, "", ""))
+        monkeypatch.setattr("builtins.input", lambda _prompt: next(responses))
+        launch_yoy_reports("test")
+
+    assert comparisons == [False, True]
+    assert requested_defaults[2] == ("Sales data file", "sales.xlsx")
+    assert requested_defaults[3] == ("Output file", "report.xlsx")
 
 
 def test_generate_sales_report_uses_profile_include_sizes_default(monkeypatch, tmp_path):

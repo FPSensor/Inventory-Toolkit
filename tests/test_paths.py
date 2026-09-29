@@ -73,6 +73,7 @@ def test_gui_yoy_restores_saved_paths_for_each_profile(tmp_path, monkeypatch):
         yoy_file=Variable(),
         yoy_out=Variable(),
         yoy_sizes=Variable(),
+        yoy_compare=Variable(),
     )
 
     InventoryToolkitGUI._apply_yoy_profile_defaults(view)

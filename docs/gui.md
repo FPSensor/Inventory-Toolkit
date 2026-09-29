@@ -34,6 +34,11 @@ Top-level GUI actions include:
 - Stock Processing tab;
 - YoY Reports tab.
 
+YoY restores its last input/output paths for the active profile. For a
+non-segmented report, the extra annual-comparison block beneath the full report
+is off by default and can be enabled for that run. Segmented reports continue
+to use the profile's annual-comparison setting.
+
 ## Configuration Hub
 
 The graphical hub edits the current schema-v3 files for:

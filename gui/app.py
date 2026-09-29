@@ -1413,6 +1413,7 @@ class InventoryToolkitGUI(BaseWindow):
         except Exception:
             return
         self.yoy_sizes.set(bool(output.get("include_sizes", False)))
+        self.yoy_compare.set(False)
         self.yoy_file.set(saved.get("file", ""))
         self.yoy_out.set(saved.get("out") or str(output.get("default_path", "yoy_analysis.xlsx")))
 
@@ -1612,6 +1613,7 @@ class InventoryToolkitGUI(BaseWindow):
         self.yoy_group   = tk.StringVar(value="Family")
         self.yoy_has_fam = tk.BooleanVar(value=True)
         self.yoy_seg     = tk.BooleanVar(value=False)
+        self.yoy_compare = tk.BooleanVar(value=False)
         self.yoy_sizes   = tk.BooleanVar(value=False)
         self.yoy_out     = tk.StringVar(value="yoy_analysis.xlsx")
 
@@ -1654,6 +1656,24 @@ class InventoryToolkitGUI(BaseWindow):
                             ).pack(side="left", padx=6)
             ttk.Checkbutton(opts, text="Size breakdown",  variable=self.yoy_sizes
                             ).pack(side="left", padx=6)
+
+        if USE_CTK:
+            compare_control = ctk.CTkCheckBox(
+                self.tab_yoy, text="Annual comparison below full report",
+                variable=self.yoy_compare,
+            )
+        else:
+            compare_control = ttk.Checkbutton(
+                self.tab_yoy, text="Annual comparison below full report",
+                variable=self.yoy_compare,
+            )
+        compare_control.pack(anchor="w", padx=20, pady=4)
+
+        def update_comparison_control(*_args):
+            compare_control.configure(state="disabled" if self.yoy_seg.get() else "normal")
+
+        self.yoy_seg.trace_add("write", update_comparison_control)
+        update_comparison_control()
 
         _lbl(self.tab_yoy, text="Output File", font=("Arial", 11, "bold") if not USE_CTK else None
              ).pack(anchor="w", padx=15, pady=(8, 2))
@@ -1710,6 +1730,8 @@ class InventoryToolkitGUI(BaseWindow):
 
         # Capture every Tk variable on the UI thread before starting the worker.
         segmented = self.yoy_seg.get()
+        if not segmented:
+            yoy_config["output"]["annual_comparison"] = self.yoy_compare.get()
         has_families = self.yoy_has_fam.get()
         profile = self.active_profile.get()
         include_sizes = self.yoy_sizes.get()

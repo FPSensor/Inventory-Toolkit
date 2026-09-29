@@ -131,7 +131,7 @@ YoY has more renderer modules because worksheet formulas/layout became substanti
 4. filter selected current period and aligned previous-year period;
 5. segment by month if requested;
 6. render each enabled metric (`units` and/or `sales`) using its configured input column;
-7. render YoY comparison blocks only when `annual_comparison` is enabled;
+7. render YoY comparison blocks when `annual_comparison` is enabled; for a non-segmented CLI/GUI run, the operator explicitly opts into these extra blocks (default: off), without changing the stored profile setting;
 8. optionally include size breakdowns using the profile default or an explicit runtime override;
 9. create Full Report and/or period sheets;
 10. save safely.

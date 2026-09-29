@@ -108,6 +108,15 @@ def launch_yoy_reports(active_profile: str) -> None:
             break
         print("  ❌ Enter 'Y' or 'N'.")
     segmented = segmented_option == "y"
+    if not segmented:
+        while True:
+            comparison_option = input(
+                "  Include annual comparison below the full report? [y/N]: "
+            ).strip().lower()
+            if comparison_option in ("y", "n", ""):
+                break
+            print("  ❌ Enter 'Y' or 'N'.")
+        yoy_config["output"]["annual_comparison"] = comparison_option == "y"
 
     configured_include_sizes = yoy_config.get("output", {}).get("include_sizes", False)
     size_default = "Y" if configured_include_sizes else "N"
