@@ -26,6 +26,7 @@ import json
 import queue
 import threading
 import time
+from copy import deepcopy
 from argparse import Namespace
 
 import tkinter as tk
@@ -64,6 +65,8 @@ except ImportError:
 
 from core.business_schema import ARTICLE_COLUMN, DATABASE_ORIGIN_COLUMN, DEFAULT_FAMILY, FAMILY_COLUMN, PRICE_COLUMN, RAW_DATA_SHEET, SIZE_COLUMN
 from core.configuration_manager import ConfigurationManager
+from core.input_columns import choose_input_columns
+from core.profile_config import DEFAULTS
 from core.logger import log
 from core import paths as app_paths
 from core.system_utils import InvalidExcelOutputPathError, normalize_xlsx_output_path
@@ -1358,7 +1361,21 @@ class InventoryToolkitGUI(BaseWindow):
         )
 
     def _open_config_hub(self):
-        ConfigHubWindow(self, self.active_profile.get())
+        try:
+            ConfigurationManager(self.active_profile.get())
+            ConfigHubWindow(self, self.active_profile.get())
+        except Exception as exc:
+            messagebox.showerror("Configuration Error", str(exc), parent=self)
+
+    def _select_columns(self, file_path, configured, defaults):
+        def confirm(field, wanted, default):
+            return messagebox.askyesno(
+                "Missing configured column",
+                f"{file_path}\n\nColumn '{wanted}' for {field} is absent.\n"
+                f"Try default '{default}' for this run?",
+                parent=self,
+            )
+        return choose_input_columns(file_path, configured, defaults, confirm)
 
     # ── Tabs ──────────────────────────────────────────────────────────────────
 
@@ -1470,6 +1487,9 @@ class InventoryToolkitGUI(BaseWindow):
                        command=self._exec_cc).pack(pady=18)
 
     def _exec_cc(self):
+        if not PANDAS_AVAILABLE:
+            messagebox.showerror("Missing Dependency", "pandas is required.", parent=self)
+            return
         files = [self.cc_sys.get(), self.cc_count.get(), self.cc_cost.get(), self.cc_sales.get()]
         for f in files:
             if not f or not os.path.exists(f):
@@ -1479,17 +1499,16 @@ class InventoryToolkitGUI(BaseWindow):
 
         if PANDAS_AVAILABLE:
             try:
-                df_head = pd.read_excel(self.cc_sys.get(), nrows=0)
                 cm = ConfigurationManager(self.active_profile.get())
-                art_col = cm.get_catalog_columns()["article"]
-                if art_col not in df_head.columns:
-                    messagebox.showerror(
-                        "Invalid System Stock",
-                        f"Configured article column '{art_col}' was not found in the system stock file.\n"
-                        "Update the profile or choose the matching workbook before running Cross Check.",
-                        parent=self,
-                    )
-                    return
+                mappings = cm.get_cross_check_config()["price_lists"]
+                defaults = DEFAULTS["cross_check/settings"]["price_lists"]
+                overrides = {
+                    "system": self._select_columns(self.cc_sys.get(),
+                        {"article": cm.get_catalog_columns()["article"]},
+                        {"article": DEFAULTS["general/catalog"]["columns"]["article"]}),
+                    "cost": self._select_columns(self.cc_cost.get(), mappings["cost"], defaults["cost"]),
+                    "sales": self._select_columns(self.cc_sales.get(), mappings["sales"], defaults["sales"]),
+                }
             except Exception as exc:
                 messagebox.showerror(
                     "Cross Check Preflight Error",
@@ -1513,6 +1532,7 @@ class InventoryToolkitGUI(BaseWindow):
             cross_check_consolidate=self.cc_consol.get(),
             cross_check_partial=self.cc_partial.get(),
             non_interactive=True,
+            column_overrides=overrides,
         )
         self._run_async(lambda: run_cross_check(args), "Cross Check completed!")
 
@@ -1552,6 +1572,20 @@ class InventoryToolkitGUI(BaseWindow):
         out = self._resolve_xlsx_output(self.sp_out.get().strip())
         if not out:
             return
+        try:
+            cm = ConfigurationManager(self.active_profile.get())
+            pricing = cm.get_stock_pricing()["columns"]
+            defaults = DEFAULTS["stock_processing/settings"]["pricing"]["columns"]
+            overrides = {
+                "stock": self._select_columns(self.sp_raw.get(),
+                    {"article": cm.get_catalog_columns()["article"]},
+                    {"article": DEFAULTS["general/catalog"]["columns"]["article"]}),
+                "cost": self._select_columns(self.sp_cost.get(), pricing, defaults),
+                "sales": self._select_columns(self.sp_sales.get(), pricing, defaults),
+            }
+        except Exception as exc:
+            messagebox.showerror("Input Column Error", str(exc), parent=self)
+            return
         args = Namespace(
             stock_processing_raw=self.sp_raw.get(),
             shared_cost=self.sp_cost.get(),
@@ -1559,6 +1593,7 @@ class InventoryToolkitGUI(BaseWindow):
             stock_processing_out=out,
             stock_processing_profile=self.active_profile.get(),
             non_interactive=True,
+            column_overrides=overrides,
         )
         self._run_async(lambda: run_stock_processing(args), "Stock Processing completed!")
 
@@ -1648,7 +1683,7 @@ class InventoryToolkitGUI(BaseWindow):
             return
 
         config_manager = ConfigurationManager(self.active_profile.get())
-        yoy_config = config_manager.get_yoy_reports_config()
+        yoy_config = deepcopy(config_manager.get_yoy_reports_config())
         if not yoy_config or "input" not in yoy_config:
             messagebox.showerror("Config Error",
                                  f"YoY config missing for profile '{self.active_profile.get()}'.\n"
@@ -1670,6 +1705,20 @@ class InventoryToolkitGUI(BaseWindow):
         has_families = self.yoy_has_fam.get()
         profile = self.active_profile.get()
         include_sizes = self.yoy_sizes.get()
+        required_fields = ["date_column", "branch_column"]
+        required_fields += ["quantity_column" if m == "units" else "sales_column" for m in yoy_config["output"]["metrics"]]
+        required_fields.append("grouping_column" if self.yoy_group.get() == "Family" and has_families else "item_column")
+        if include_sizes:
+            required_fields.append("size_column")
+        try:
+            resolved = self._select_columns(f_path,
+                {key: yoy_config["input"][key] for key in dict.fromkeys(required_fields)},
+                DEFAULTS["yoy_reports/settings"]["input"])
+            yoy_config["input"].update(resolved)
+            grouping_column = yoy_config["input"]["grouping_column" if self.yoy_group.get() == "Family" else "item_column"]
+        except Exception as exc:
+            messagebox.showerror("Input Column Error", str(exc), parent=self)
+            return
 
         def task():
             return generate_sales_report(
@@ -1743,7 +1792,8 @@ class InventoryToolkitGUI(BaseWindow):
                 self._finish_progress(True)
                 messagebox.showinfo(
                     "Done",
-                    f"{success_msg}\n\nTime: {elapsed:.1f}s\nOutput: {out_path}",
+                    f"{success_msg}\n\nTime: {elapsed:.1f}s\nOutput: {out_path}"
+                    + ("\n\nWarnings:\n" + "\n".join(warnings) if warnings else ""),
                     parent=self,
                 )
             else:

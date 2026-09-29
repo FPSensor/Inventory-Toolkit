@@ -11,7 +11,11 @@ from argparse import Namespace
 from cli.utils import (
     clear_screen, ask_file, validate_files_exist,
     load_last_paths, save_last_paths,
+    confirm_default_column,
 )
+from core.input_columns import choose_input_columns
+from core.configuration_manager import ConfigurationManager
+from core.profile_config import DEFAULTS
 from core.logger import log, log_debug_event, log_exception
 from core.system_utils import InvalidExcelOutputPathError, normalize_xlsx_output_path
 
@@ -31,6 +35,24 @@ def launch_stock_processing(active_profile: str) -> None:
     if not validate_files_exist([stock_file, cost_file, sales_file]):
         print("\n  ⚠️  Operation cancelled — required files are missing.")
         input("  Press Enter to return to the menu...")
+        return
+
+    try:
+        config = ConfigurationManager(active_profile)
+        stock_columns = config.get_stock_pricing()["columns"]
+        default_stock = DEFAULTS["stock_processing/settings"]["pricing"]["columns"]
+        overrides = {
+            "stock": choose_input_columns(
+                stock_file, {"article": config.get_catalog_columns()["article"]},
+                {"article": DEFAULTS["general/catalog"]["columns"]["article"]},
+                confirm_default_column,
+            ),
+            "cost": choose_input_columns(cost_file, stock_columns, default_stock, confirm_default_column),
+            "sales": choose_input_columns(sales_file, stock_columns, default_stock, confirm_default_column),
+        }
+    except Exception as exc:
+        print(f"\n  ❌ Input column validation: {exc}")
+        input("  Press Enter to return...")
         return
 
     out_file = ask_file("\n4. Output file name", sp.get("out", "Stock_Final_Report.xlsx"), is_output=True)
@@ -67,6 +89,7 @@ def launch_stock_processing(active_profile: str) -> None:
         shared_sales=sales_file,
         stock_processing_out=out_file,
         stock_processing_profile=active_profile,
+        column_overrides=overrides,
     )
 
     try:

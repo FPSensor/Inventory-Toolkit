@@ -5,10 +5,13 @@ starting the report engine.
 """
 
 import time
+from copy import deepcopy
 
 import pandas as pd
 
-from cli.utils import ask_file, load_last_paths, save_last_paths
+from cli.utils import ask_file, load_last_paths, save_last_paths, confirm_default_column
+from core.input_columns import choose_input_columns
+from core.profile_config import DEFAULTS
 from core.configuration_manager import ConfigurationManager
 from core.logger import log, log_debug_event, log_exception
 from core.system_utils import InvalidExcelOutputPathError, normalize_xlsx_output_path
@@ -22,6 +25,7 @@ def launch_yoy_reports(active_profile: str) -> None:
     profile = active_profile or "demo"
     config = ConfigurationManager(profile=profile)
     yoy_config = config.get_yoy_reports_config()
+    yoy_config = deepcopy(yoy_config)
 
     if not yoy_config or "input" not in yoy_config:
         log.error("No valid report configuration found for profile '%s'.", profile)
@@ -73,18 +77,6 @@ def launch_yoy_reports(active_profile: str) -> None:
             required_columns.append(item_column)
         required_columns = list(dict.fromkeys(required_columns))
 
-        missing_columns = [
-            column for column in required_columns if column not in header_frame.columns
-        ]
-        if missing_columns:
-            log.error("APB — Missing columns: %s", missing_columns)
-            print(f"\n  ❌ APB Error: required columns are missing: {missing_columns}")
-            print(
-                "  Check that you selected the correct file, or verify YoY input "
-                "columns in Configuration Hub."
-            )
-            input("  Press Enter to return...")
-            return
     except Exception as exc:
         log.error("Could not read file headers: %s", exc)
         print("\n  ❌ APB Error: could not read the file. Is it open in another application?")
@@ -127,6 +119,26 @@ def launch_yoy_reports(active_profile: str) -> None:
     include_sizes = (
         configured_include_sizes if size_option == "" else size_option == "y"
     )
+
+    required_fields = ["date_column", "branch_column"]
+    required_fields += ["quantity_column" if spec.key == "units" else "sales_column" for spec in metric_specs]
+    required_fields.append("grouping_column" if grouping_option == "f" and has_families else "item_column")
+    if include_sizes:
+        required_fields.append("size_column")
+    required_fields = list(dict.fromkeys(required_fields))
+    try:
+        resolved = choose_input_columns(
+            sales_file,
+            {key: input_config[key] for key in required_fields},
+            DEFAULTS["yoy_reports/settings"]["input"],
+            confirm_default_column,
+        )
+        yoy_config["input"].update(resolved)
+        grouping_column = yoy_config["input"]["grouping_column" if grouping_option == "f" else "item_column"]
+    except Exception as exc:
+        print(f"\n  ❌ Input column validation: {exc}")
+        input("  Press Enter to return...")
+        return
 
     default_output = yoy_config.get("output", {}).get(
         "default_path",

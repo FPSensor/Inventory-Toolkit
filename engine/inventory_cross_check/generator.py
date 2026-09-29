@@ -67,14 +67,16 @@ def run_cross_check(args):
     family_column = catalog_columns["family"]
     default_family = config.get_default_family()
     cross_check_config = config.get_cross_check_config()
+    overrides = getattr(args, "column_overrides", {})
+    input_article_column = overrides.get("system", {}).get("article", article_column)
 
     filters = cross_check_config["filters"]
     ignored_articles = filters.get("ignored_articles", [])
     ignored_terms = filters.get("ignored_terms", [])
 
     price_lists = cross_check_config["price_lists"]
-    cost_columns = price_lists.get("cost", {})
-    sales_columns = price_lists.get("sales", {})
+    cost_columns = overrides.get("cost", price_lists.get("cost", {}))
+    sales_columns = overrides.get("sales", price_lists.get("sales", {}))
     cost_article_column = cost_columns.get("article_column", ARTICLE_COLUMN)
     cost_price_column = cost_columns.get("price_column", PRICE_COLUMN)
     sales_article_column = sales_columns.get("article_column", ARTICLE_COLUMN)
@@ -95,21 +97,21 @@ def run_cross_check(args):
 
     with execution_timer("Read and Validate Spreadsheets"):
         system_frame = pd.read_excel(args.cross_check_system)
-        if article_column not in system_frame.columns or QUANTITY_COLUMN not in system_frame.columns:
+        if input_article_column not in system_frame.columns or QUANTITY_COLUMN not in system_frame.columns:
             log.error(
                 "Missing configured article column '%s' or required quantity column '%s' in system stock.",
-                article_column,
+                input_article_column,
                 QUANTITY_COLUMN,
             )
             return None
-        if article_column != ARTICLE_COLUMN and ARTICLE_COLUMN in system_frame.columns:
+        if input_article_column != ARTICLE_COLUMN and ARTICLE_COLUMN in system_frame.columns:
             log.error(
                 "System stock contains both configured article column '%s' and reserved canonical column '%s'.",
-                article_column,
+                input_article_column,
                 ARTICLE_COLUMN,
             )
             return None
-        system_frame = system_frame.rename(columns={article_column: ARTICLE_COLUMN})
+        system_frame = system_frame.rename(columns={input_article_column: ARTICLE_COLUMN})
 
         count_frame = pd.read_excel(
             args.cross_check_count,

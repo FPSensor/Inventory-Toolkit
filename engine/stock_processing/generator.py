@@ -73,12 +73,16 @@ def run_stock_processing(args):
 
     log.info("Loading configurations for profile: %s...", args.stock_processing_profile)
     plan = _load_plan(args.stock_processing_profile)
+    overrides = getattr(args, "column_overrides", {})
     family_rules = build_family_rules(plan.family_rules)
     _log_plan(plan)
 
     with execution_timer("Stock Input & Cleaning"):
         log.info("Processing Stock data...")
         raw_frame = pd.read_excel(args.stock_processing_raw)
+        source_article = overrides.get("stock", {}).get("article", plan.article_column)
+        if source_article != plan.article_column:
+            raw_frame = raw_frame.rename(columns={source_article: plan.article_column})
         log_debug_event(
             "stock_processing_input_loaded",
             shape=raw_frame.shape,
@@ -114,8 +118,8 @@ def run_stock_processing(args):
 
     with execution_timer("Stock Pricing & Valuation"):
         log.info("Processing pricing files...")
-        cost_frame = process_pricing(args.shared_cost, plan.pricing)
-        sales_frame = process_pricing(args.shared_sales, plan.pricing)
+        cost_frame = process_pricing(args.shared_cost, {**plan.pricing, "columns": overrides.get("cost", plan.pricing["columns"])})
+        sales_frame = process_pricing(args.shared_sales, {**plan.pricing, "columns": overrides.get("sales", plan.pricing["columns"])})
         log_debug_event(
             "stock_processing_pricing_ready",
             cost_shape=getattr(cost_frame, "shape", None),

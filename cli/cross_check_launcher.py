@@ -11,7 +11,11 @@ from argparse import Namespace
 from cli.utils import (
     clear_screen, ask_file, validate_files_exist,
     load_last_paths, save_last_paths,
+    confirm_default_column,
 )
+from core.input_columns import choose_input_columns
+from core.configuration_manager import ConfigurationManager
+from core.profile_config import DEFAULTS
 from core.logger import log, log_debug_event, log_exception
 from core.system_utils import InvalidExcelOutputPathError, normalize_xlsx_output_path
 
@@ -32,6 +36,24 @@ def launch_cross_check(active_profile: str) -> None:
     if not validate_files_exist([system_file, count_file, cost_file, sales_file]):
         print("\n  ⚠️  Operation cancelled — required files are missing.")
         input("  Press Enter to return to the menu...")
+        return
+
+    try:
+        config = ConfigurationManager(active_profile)
+        mappings = config.get_cross_check_config()["price_lists"]
+        defaults = DEFAULTS["cross_check/settings"]["price_lists"]
+        overrides = {
+            "system": choose_input_columns(
+                system_file, {"article": config.get_catalog_columns()["article"]},
+                {"article": DEFAULTS["general/catalog"]["columns"]["article"]},
+                confirm_default_column,
+            ),
+            "cost": choose_input_columns(cost_file, mappings["cost"], defaults["cost"], confirm_default_column),
+            "sales": choose_input_columns(sales_file, mappings["sales"], defaults["sales"], confirm_default_column),
+        }
+    except Exception as exc:
+        print(f"\n  ❌ Input column validation: {exc}")
+        input("  Press Enter to return...")
         return
 
     out_file = ask_file("\n5. Output file name", cc.get("out", "Cross_Check_Results.xlsx"), is_output=True)
@@ -82,6 +104,7 @@ def launch_cross_check(active_profile: str) -> None:
         cross_check_profile=active_profile,
         cross_check_consolidate=flag_consolidate,
         cross_check_partial=flag_partial,
+        column_overrides=overrides,
     )
 
     try:
