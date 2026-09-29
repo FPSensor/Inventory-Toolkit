@@ -13,6 +13,7 @@ from cli.utils import (
     load_last_paths, save_last_paths,
     confirm_default_column,
 )
+from cli.progress import show_progress
 from core.input_columns import choose_input_columns
 from core.configuration_manager import ConfigurationManager
 from core.profile_config import DEFAULTS
@@ -90,6 +91,7 @@ def launch_stock_processing(active_profile: str) -> None:
         stock_processing_out=out_file,
         stock_processing_profile=active_profile,
         column_overrides=overrides,
+        progress=show_progress,
     )
 
     try:
