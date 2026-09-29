@@ -1,5 +1,6 @@
 import os
 import sys
+import platform
 from types import SimpleNamespace
 
 from cli import debug_menu
@@ -26,6 +27,9 @@ def test_pytest_developer_action_uses_current_python(monkeypatch):
 
 
 def test_developer_subprocess_inherits_runtime_debug_level(monkeypatch):
+    # platform.platform() may query uname via subprocess on its first call.
+    # Cache that before replacing subprocess.run for the action under test.
+    platform.processor()
     inherited = []
 
     def fake_run(command, cwd, check):
