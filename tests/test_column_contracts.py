@@ -103,6 +103,7 @@ def test_stock_processing_honors_custom_catalog_and_pricing_columns(tmp_path, mo
     ).to_excel(sales_path, index=False)
 
     warnings = []
+    events = []
     result = run_stock_processing(
         Namespace(
             stock_processing_raw=str(stock_path),
@@ -112,10 +113,14 @@ def test_stock_processing_honors_custom_catalog_and_pricing_columns(tmp_path, mo
             stock_processing_profile=profile,
             non_interactive=True,
             warnings=warnings,
+            progress=events.append,
         )
     )
     assert result == str(output_path)
     assert len(warnings) == 1 and "4 (7 units)" in warnings[0]
+    assert [event.completed for event in events] == [0, 1, 2, 3, 4]
+    assert "excluded: 1" in events[1].message
+    assert events[-1].fraction == 1
 
     raw = pd.read_excel(output_path, sheet_name="RAW")
     assert len(raw) == 2
@@ -183,6 +188,7 @@ def test_cross_check_honors_catalog_article_and_family_columns(tmp_path, monkeyp
     pd.DataFrame({"COST_SKU": ["AA1"], "COST_VALUE": [10]}).to_excel(cost_path, index=False)
     pd.DataFrame({"SALES_SKU": ["AA1"], "SALES_VALUE": [20]}).to_excel(sales_path, index=False)
 
+    events = []
     result = run_cross_check(
         Namespace(
             cross_check_system=str(system_path),
@@ -194,9 +200,12 @@ def test_cross_check_honors_catalog_article_and_family_columns(tmp_path, monkeyp
             cross_check_consolidate=True,
             cross_check_partial=False,
             non_interactive=True,
+            progress=events.append,
         )
     )
     assert result == str(output_path)
+    assert [event.completed for event in events] == [0, 1, 2, 3]
+    assert "shortages: 1" in events[2].message
 
     output = pd.read_excel(output_path)
     assert list(output.columns) == [

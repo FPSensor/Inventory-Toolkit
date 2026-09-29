@@ -184,7 +184,7 @@ def test_cli_full_report_comparison_is_opt_in_and_reuses_last_paths(tmp_path, mo
     monkeypatch.setattr("cli.yoy_reports_launcher.ask_file", choose_file)
     comparisons = []
 
-    def generate(_input, output, _start, _end, resolved, *_args):
+    def generate(_input, output, _start, _end, resolved, *_args, **_kwargs):
         comparisons.append(resolved["output"]["annual_comparison"])
         return output
 
@@ -203,6 +203,7 @@ def test_generate_sales_report_uses_profile_include_sizes_default(monkeypatch, t
     current, previous = _frames()
     config = _config(metrics=["units"], include_sizes=True)
     captured = {}
+    events = []
 
     def fake_process(*_args, **_kwargs):
         return current, previous, pd.Timestamp("2025-01-01")
@@ -224,6 +225,9 @@ def test_generate_sales_report_uses_profile_include_sizes_default(monkeypatch, t
         False,
         True,
         "demo",
+        progress=events.append,
     )
 
     assert captured["include_sizes"] is True
+    assert [event.completed for event in events] == [0, 1, 2, 3]
+    assert "current-period rows" in events[1].message
