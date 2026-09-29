@@ -1415,9 +1415,12 @@ class InventoryToolkitGUI(BaseWindow):
         if default_path:
             self.yoy_out.set(default_path)
 
-    def _resolve_xlsx_output(self, value: str):
+    def _resolve_xlsx_output(self, value: str, default: str):
         try:
-            return normalize_xlsx_output_path(value)
+            return normalize_xlsx_output_path(
+                value.strip() or default,
+                notify=lambda message: messagebox.showwarning("Output File", message, parent=self),
+            )
         except InvalidExcelOutputPathError as exc:
             messagebox.showerror("Invalid Output File", str(exc), parent=self)
             return None
@@ -1518,7 +1521,7 @@ class InventoryToolkitGUI(BaseWindow):
                 return
 
 
-        out = self._resolve_xlsx_output(self.cc_out.get().strip())
+        out = self._resolve_xlsx_output(self.cc_out.get(), "Cross_Check_Output.xlsx")
         if not out:
             return
 
@@ -1569,7 +1572,7 @@ class InventoryToolkitGUI(BaseWindow):
                 messagebox.showerror("Missing File",
                                      f"Required file not found:\n'{f}'", parent=self)
                 return
-        out = self._resolve_xlsx_output(self.sp_out.get().strip())
+        out = self._resolve_xlsx_output(self.sp_out.get(), "Stock_Valuation_Report.xlsx")
         if not out:
             return
         try:
@@ -1698,7 +1701,9 @@ class InventoryToolkitGUI(BaseWindow):
             if self.yoy_group.get() == "Family"
             else input_config["item_column"]
         )
-        out = self._resolve_xlsx_output(self.yoy_out.get().strip())
+        out = self._resolve_xlsx_output(
+            self.yoy_out.get(), yoy_config["output"].get("default_path", "yoy_analysis.xlsx")
+        )
         if not out:
             return
 

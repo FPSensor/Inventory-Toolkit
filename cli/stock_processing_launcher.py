@@ -55,9 +55,9 @@ def launch_stock_processing(active_profile: str) -> None:
         input("  Press Enter to return...")
         return
 
-    out_file = ask_file("\n4. Output file name", sp.get("out", "Stock_Final_Report.xlsx"), is_output=True)
+    out_file = ask_file("\n4. Output file name", sp.get("out") or "Stock_Final_Report.xlsx", is_output=True)
     try:
-        out_file = normalize_xlsx_output_path(out_file)
+        out_file = normalize_xlsx_output_path(out_file, notify=lambda message: print(f"  ⚠️  {message}"))
     except InvalidExcelOutputPathError as exc:
         log.error("Invalid output path: %s", exc)
         print(f"\n  ❌ {exc}")

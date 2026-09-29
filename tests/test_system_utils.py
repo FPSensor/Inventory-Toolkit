@@ -59,6 +59,27 @@ def test_xlsx_output_path_contract_appends_missing_extension(tmp_path):
     assert normalize_xlsx_output_path(target) == str(target) + ".xlsx"
 
 
+def test_xlsx_output_path_warns_only_when_appending_extension():
+    notices = []
+    assert normalize_xlsx_output_path("report", notify=notices.append) == "report.xlsx"
+    assert notices == ["No output extension detected; using report.xlsx"]
+    assert normalize_xlsx_output_path("report.xlsx", notify=notices.append) == "report.xlsx"
+    assert len(notices) == 1
+
+
+def test_gui_empty_output_uses_module_default_without_warning(monkeypatch):
+    from gui.app import InventoryToolkitGUI
+
+    messages = []
+    monkeypatch.setattr(
+        "gui.app.messagebox.showwarning",
+        lambda *_args, **_kwargs: messages.append("warning"),
+    )
+    assert InventoryToolkitGUI._resolve_xlsx_output(object(), "  ", "report.xlsx") == "report.xlsx"
+    assert InventoryToolkitGUI._resolve_xlsx_output(object(), "report", "fallback.xlsx") == "report.xlsx"
+    assert messages == ["warning"]
+
+
 @pytest.mark.parametrize("suffix", [".xls", ".xlsm", ".csv", ".ods"])
 def test_xlsx_output_path_contract_rejects_unsupported_extensions(tmp_path, suffix):
     with pytest.raises(InvalidExcelOutputPathError, match="must use the .xlsx format"):

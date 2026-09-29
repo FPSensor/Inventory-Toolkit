@@ -21,7 +21,7 @@ class InvalidExcelOutputPathError(ValueError):
         )
 
 
-def normalize_xlsx_output_path(filepath):
+def normalize_xlsx_output_path(filepath, *, notify=None):
     """Return a validated .xlsx output path, appending the suffix when omitted.
 
     Legacy ``.xls`` files remain valid *inputs*, but every workbook written by
@@ -44,6 +44,8 @@ def normalize_xlsx_output_path(filepath):
     _base, ext = os.path.splitext(path)
     if not ext:
         resolved = f"{path}.xlsx"
+        if notify is not None:
+            notify(f"No output extension detected; using {resolved}")
         log_debug_event(
             "xlsx_output_path_normalized",
             requested_path=path,

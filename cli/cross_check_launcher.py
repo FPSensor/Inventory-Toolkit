@@ -56,9 +56,9 @@ def launch_cross_check(active_profile: str) -> None:
         input("  Press Enter to return...")
         return
 
-    out_file = ask_file("\n5. Output file name", cc.get("out", "Cross_Check_Results.xlsx"), is_output=True)
+    out_file = ask_file("\n5. Output file name", cc.get("out") or "Cross_Check_Results.xlsx", is_output=True)
     try:
-        out_file = normalize_xlsx_output_path(out_file)
+        out_file = normalize_xlsx_output_path(out_file, notify=lambda message: print(f"  ⚠️  {message}"))
     except InvalidExcelOutputPathError as exc:
         log.error("Invalid output path: %s", exc)
         print(f"\n  ❌ {exc}")

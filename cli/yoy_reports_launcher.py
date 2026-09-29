@@ -146,11 +146,11 @@ def launch_yoy_reports(active_profile: str) -> None:
     )
     output_path = ask_file(
         "Output file",
-        previous_paths.get("out", default_output),
+        previous_paths.get("out") or default_output,
         is_output=True,
     )
     try:
-        output_path = normalize_xlsx_output_path(output_path)
+        output_path = normalize_xlsx_output_path(output_path, notify=lambda message: print(f"  ⚠️  {message}"))
     except InvalidExcelOutputPathError as exc:
         log.error("Invalid output path: %s", exc)
         print(f"\n  ❌ {exc}")
