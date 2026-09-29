@@ -4,6 +4,7 @@ import openpyxl
 import pandas as pd
 
 from core.logger import log_debug_event
+from core.progress import report_progress
 from core.system_utils import safe_openpyxl_save
 from engine.yoy_reports.sheet_renderer import render_report_sheet
 
@@ -20,6 +21,7 @@ def render_yoy_sales_excel(
     segmented,
     include_sizes=False,
     interactive=True,
+    progress=None,
 ):
     log_debug_event(
         "yoy_render_start",
@@ -49,6 +51,7 @@ def render_yoy_sales_excel(
             periods=[str(period) for period in periods],
         )
         for period in periods:
+            report_progress(progress, 2, 3, f"Rendering monthly sheet {period.strftime('%m-%y')} ({len(workbook.sheetnames) + 1}/{len(periods)})...")
             current_mask = current_frame[date_column].dt.to_period("M") == period
             period_current = current_frame[current_mask]
 
@@ -91,6 +94,7 @@ def render_yoy_sales_excel(
     if span_days > 366 and not clean_current_frame.empty:
         years = sorted(clean_current_frame[date_column].dt.year.unique())
         for year in years:
+            report_progress(progress, 2, 3, f"Rendering annual sheet {year}...")
             current_year_frame = current_frame[current_frame[date_column].dt.year == year]
             previous_year_frame = previous_frame[
                 previous_frame[date_column].dt.year == (year - 1)
@@ -119,6 +123,7 @@ def render_yoy_sales_excel(
     else:
         sheet_title = "Full Report" if segmented else "Sales"
         worksheet = workbook.create_sheet(title=sheet_title)
+        report_progress(progress, 2, 3, f"Rendering {sheet_title} sheet...")
         render_report_sheet(
             worksheet,
             current_frame,
@@ -150,6 +155,7 @@ def render_yoy_sales_excel(
         sheet_count=len(workbook.sheetnames),
         sheets=list(workbook.sheetnames),
     )
+    report_progress(progress, 2, 3, f"Prepared {len(workbook.sheetnames)} sheets. Saving workbook...")
     final_path = safe_openpyxl_save(workbook, output_path, interactive=interactive)
     log_debug_event("yoy_render_saved", output_path=final_path)
     return final_path

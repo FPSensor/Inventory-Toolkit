@@ -2,6 +2,7 @@
 
 from core.configuration_manager import ConfigurationManager
 from core.logger import log, log_debug_event
+from core.progress import report_progress
 from core.system_utils import normalize_xlsx_output_path
 from engine.shared.families import build_family_rules
 from engine.yoy_reports.data_processor import process_sales_data
@@ -21,7 +22,9 @@ def generate_sales_report(
     profile,
     yoy_include_sizes=None,
     non_interactive=False,
+    progress=None,
 ):
+    report_progress(progress, 0, 3, "Reading sales and selecting comparison periods...")
     yoy_output_path = normalize_xlsx_output_path(yoy_output_path)
     output_config = yoy_config["output"]
     include_sizes = (
@@ -78,7 +81,9 @@ def generate_sales_report(
         previous_shape=previous_frame.shape,
         previous_start=str(previous_start),
     )
+    report_progress(progress, 1, 3, f"Selected {len(current_frame):,} current-period rows and {len(previous_frame):,} prior-year rows. Calculating metrics...")
     log.info("Calculating YoY metrics and rendering Excel file...")
+    report_progress(progress, 2, 3, f"Calculating {len(metric_specs)} metrics and preparing report sheets...")
     result = render_yoy_sales_excel(
         yoy_output_path,
         current_frame,
@@ -91,6 +96,8 @@ def generate_sales_report(
         yoy_segmented,
         include_sizes,
         interactive=not non_interactive,
+        progress=progress,
     )
+    report_progress(progress, 3, 3, "Saved YoY report.")
     log_debug_event("yoy_report_complete", output_file=result)
     return result
