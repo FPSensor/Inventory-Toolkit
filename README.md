@@ -3,7 +3,7 @@
 ![Python](https://img.shields.io/badge/Python-3.10%2B-blue)
 ![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux%20%7C%20macOS-blue)
 ![License](https://img.shields.io/badge/License-MIT-green)
-![Version](https://img.shields.io/badge/Version-1.4.0-orange)
+![Version](https://img.shields.io/badge/Version-1.4.1-orange)
 
 Inventory Toolkit is a profile-driven Python application for retail inventory reconciliation, stock valuation, and Year-over-Year sales reporting from Excel workbooks.
 

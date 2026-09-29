@@ -74,7 +74,7 @@ def _create_new_profile() -> str | None:
     save_json(str(profile_path / "profile.json"), {
         "name":        display_name,
         "description": description,
-        "version":     "1.4.0"
+        "version":     "1.4.1"
     })
 
     print(f"\n  ✅ Profile '{display_name}' created at: {profile_path}\n")
