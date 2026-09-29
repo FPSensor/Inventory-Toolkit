@@ -2,7 +2,7 @@
 
 All notable changes to Inventory Toolkit are documented in this file.
 
-## [1.4.1] - Unreleased
+## [1.4.1] - 2026-09-29
 
 ### Changed
 
