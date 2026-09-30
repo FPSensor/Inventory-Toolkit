@@ -122,6 +122,11 @@ def _fixture_paths() -> list[Path]:
     paths = list(DEMO_INPUTS)
     paths.append(PROFILE_ROOT / "profile.json")
     paths.extend(sorted((PROFILE_ROOT / "configs").rglob("*.json")))
+    # These resources define output labels and fallback configuration for every profile.
+    paths.extend((
+        ROOT / "core" / "resources" / "workbook_labels.json",
+        ROOT / "core" / "resources" / "profile_defaults.json",
+    ))
     return sorted(path.resolve() for path in paths)
 
 
