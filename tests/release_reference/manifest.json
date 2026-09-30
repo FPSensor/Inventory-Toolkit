@@ -1,7 +1,7 @@
 {
     "fixtures": {
         "examples/demo/cross_check_physical_count.xlsx": "794fdb075051a56cc7060ba8ff27dc162ad17ee22d8c879e741dbb7161d7bbc7",
-        "examples/demo/cross_check_system_stock.xls": "79edc968075b95e68037a8701b8fc971074652fe466b5fe684e8a49e3ccd4bfb",
+        "examples/demo/cross_check_system_stock.xls": "2a0fbd3fd38192182aac0b70bed7f9218ddb5965aa8a3d816024037319bb5e62",
         "examples/demo/shared_cost_list.xlsx": "641744486d3223a09c48033f00570a7885a6bfd15dc2b206298923f5dd631d6e",
         "examples/demo/shared_sales_price_list.xlsx": "0a2344f998c09d027000698bc9de3bbe09bc52bb1dc4ff00dee0ae84b9b2f0d4",
         "examples/demo/stock_processing_raw_stock.xlsx": "960c5d5d0e337fbf50a6c1235b1d836c279f8b33c8b127038fc684fbe1efb3d8",
