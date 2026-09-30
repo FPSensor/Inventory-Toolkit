@@ -18,7 +18,16 @@ from core.input_columns import choose_input_columns
 from core.configuration_manager import ConfigurationManager
 from core.profile_config import DEFAULTS
 from core.logger import log, log_debug_event, log_exception
+from core.paths import demo_root
 from core.system_utils import InvalidExcelOutputPathError, normalize_xlsx_output_path
+
+
+def _input_default(profile: str, saved_path: str | None, demo_filename: str) -> str:
+    if saved_path:
+        return saved_path
+    if profile == "demo":
+        return str(demo_root() / demo_filename)
+    return demo_filename
 
 
 def launch_cross_check(active_profile: str) -> None:
@@ -29,10 +38,10 @@ def launch_cross_check(active_profile: str) -> None:
     last = load_last_paths(active_profile)
     cc   = last.get("cross_check", {})
 
-    system_file = ask_file("1. System stock file",          cc.get("system", "cross_check_system_stock.xls"))
-    count_file  = ask_file("2. Physical count file",        cc.get("count",  "cross_check_physical_count.xlsx"))
-    cost_file   = ask_file("3. Cost price list",            cc.get("cost",   "shared_cost_list.xlsx"))
-    sales_file  = ask_file("4. Sales price list",           cc.get("sales",  "shared_sales_price_list.xlsx"))
+    system_file = ask_file("1. System stock file", _input_default(active_profile, cc.get("system"), "cross_check_system_stock.xls"))
+    count_file = ask_file("2. Physical count file", _input_default(active_profile, cc.get("count"), "cross_check_physical_count.xlsx"))
+    cost_file = ask_file("3. Cost price list", _input_default(active_profile, cc.get("cost"), "shared_cost_list.xlsx"))
+    sales_file = ask_file("4. Sales price list", _input_default(active_profile, cc.get("sales"), "shared_sales_price_list.xlsx"))
 
     if not validate_files_exist([system_file, count_file, cost_file, sales_file]):
         print("\n  ⚠️  Operation cancelled — required files are missing.")
