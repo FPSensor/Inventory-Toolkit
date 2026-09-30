@@ -5,18 +5,22 @@
             "56005"
         ],
         "Buzos C Capucha": [
-            "0085",
             "185",
             "085"
         ],
         "Buzo C Capucha Rustico": [
-            "0045"
+            "0045",
+            "0085"
         ],
         "Campera Capucha Rustico": [
+            "00550",
             "0055"
         ],
         "Buzos C Capucha Orangutan": [
             "O085"
+        ],
+        "Buzos C Redondo Rustico": [
+            "008"
         ],
         "Camisetas Manga Larga Orangutan": [
             "O03"
@@ -56,9 +60,6 @@
             "004",
             "08",
             "18"
-        ],
-        "Buzos": [
-            "008"
         ],
         "Camisetas Manga Larga": [
             "03",
