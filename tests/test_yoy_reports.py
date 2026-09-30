@@ -157,6 +157,31 @@ def test_full_report_can_omit_extra_annual_comparison_without_losing_metrics(tmp
     assert not any(str(title).startswith("YoY ") for title in titles)
 
 
+def test_segmented_progress_advances_after_each_rendered_sheet(tmp_path):
+    current, previous = _frames()
+    february = current.iloc[[0]].copy()
+    february["Fecha"] = pd.Timestamp("2026-02-05")
+    current = pd.concat([current, february], ignore_index=True)
+    previous_february = february.copy()
+    previous_february["Fecha"] = pd.Timestamp("2025-02-05")
+    previous = pd.concat([previous, previous_february], ignore_index=True)
+    events = []
+
+    render_yoy_sales_excel(
+        str(tmp_path / "segmented.xlsx"), current, previous,
+        pd.Timestamp("2026-01-01"), pd.Timestamp("2026-02-28"),
+        pd.Timestamp("2025-01-01"), _config(), "Familias", True,
+        interactive=False, progress=events.append,
+    )
+
+    assert len(events) == 4  # Two months, the consolidated sheet, then saving.
+    assert [event.completed for event in events] == [2] * 4
+    assert [event.fraction for event in events] == sorted(set(event.fraction for event in events))
+    assert events[0].fraction == 2 / 3
+    assert events[-1].fraction < 1
+    assert "Prepared 3 sheets" in events[-1].message
+
+
 def test_cli_full_report_comparison_is_opt_in_and_reuses_last_paths(tmp_path, monkeypatch):
     from cli.yoy_reports_launcher import launch_yoy_reports
     from core import paths as app_paths

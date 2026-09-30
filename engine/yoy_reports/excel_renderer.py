@@ -42,16 +42,34 @@ def render_yoy_sales_excel(
         if date_column in current_frame.columns
         else current_frame
     )
+    periods = (
+        sorted(clean_current_frame[date_column].dt.to_period("M").unique())
+        if segmented and not clean_current_frame.empty
+        else []
+    )
+    span_days = (end_date - start_date).days
+    years = (
+        sorted(clean_current_frame[date_column].dt.year.unique())
+        if span_days > 366 and not clean_current_frame.empty
+        else []
+    )
+    planned_sheets = len(periods) + (len(years) if years else 1)
+    rendered_sheets = 0
 
-    if segmented and not clean_current_frame.empty:
-        periods = sorted(clean_current_frame[date_column].dt.to_period("M").unique())
+    def report_sheet_start(message):
+        report_progress(
+            progress, 2, 3, message,
+            stage_fraction=rendered_sheets / (planned_sheets + 1),
+        )
+
+    if periods:
         log_debug_event(
             "yoy_render_period_plan",
             period_count=len(periods),
             periods=[str(period) for period in periods],
         )
         for period in periods:
-            report_progress(progress, 2, 3, f"Rendering monthly sheet {period.strftime('%m-%y')} ({len(workbook.sheetnames) + 1}/{len(periods)})...")
+            report_sheet_start(f"Rendering monthly sheet {period.strftime('%m-%y')} ({rendered_sheets + 1}/{planned_sheets})...")
             current_mask = current_frame[date_column].dt.to_period("M") == period
             period_current = current_frame[current_mask]
 
@@ -89,12 +107,11 @@ def render_yoy_sales_excel(
                 grouping_column,
                 include_sizes,
             )
+            rendered_sheets += 1
 
-    span_days = (end_date - start_date).days
-    if span_days > 366 and not clean_current_frame.empty:
-        years = sorted(clean_current_frame[date_column].dt.year.unique())
+    if years:
         for year in years:
-            report_progress(progress, 2, 3, f"Rendering annual sheet {year}...")
+            report_sheet_start(f"Rendering annual sheet {year} ({rendered_sheets + 1}/{planned_sheets})...")
             current_year_frame = current_frame[current_frame[date_column].dt.year == year]
             previous_year_frame = previous_frame[
                 previous_frame[date_column].dt.year == (year - 1)
@@ -120,10 +137,11 @@ def render_yoy_sales_excel(
                 grouping_column,
                 include_sizes,
             )
+            rendered_sheets += 1
     else:
         sheet_title = "Full Report" if segmented else "Sales"
         worksheet = workbook.create_sheet(title=sheet_title)
-        report_progress(progress, 2, 3, f"Rendering {sheet_title} sheet...")
+        report_sheet_start(f"Rendering {sheet_title} sheet ({rendered_sheets + 1}/{planned_sheets})...")
         render_report_sheet(
             worksheet,
             current_frame,
@@ -135,6 +153,7 @@ def render_yoy_sales_excel(
             grouping_column,
             include_sizes,
         )
+        rendered_sheets += 1
 
     if not workbook.sheetnames:
         worksheet = workbook.create_sheet(title="Sales")
@@ -149,13 +168,17 @@ def render_yoy_sales_excel(
             grouping_column,
             include_sizes,
         )
+        rendered_sheets += 1
 
     log_debug_event(
         "yoy_render_workbook_ready",
         sheet_count=len(workbook.sheetnames),
         sheets=list(workbook.sheetnames),
     )
-    report_progress(progress, 2, 3, f"Prepared {len(workbook.sheetnames)} sheets. Saving workbook...")
+    report_progress(
+        progress, 2, 3, f"Prepared {len(workbook.sheetnames)} sheets. Saving workbook...",
+        stage_fraction=rendered_sheets / (planned_sheets + 1),
+    )
     final_path = safe_openpyxl_save(workbook, output_path, interactive=interactive)
     log_debug_event("yoy_render_saved", output_path=final_path)
     return final_path
