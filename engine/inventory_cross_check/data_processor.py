@@ -3,6 +3,7 @@
 import pandas as pd
 
 from core.business_schema import REVIEW_PREFIX
+from core.profile_config import DEFAULTS
 
 
 def normalize_article(reading, master_articles, master_set):
@@ -43,8 +44,15 @@ def normalize_article(reading, master_articles, master_set):
     return matches[0]
 
 
-def calculate_difference(stock: float, count: float) -> float:
-    """Return the business-defined physical-vs-system inventory difference."""
-    if stock < 0 and count > 0:
+def calculate_difference(
+    stock: float,
+    count: float,
+    *,
+    ignore_negative_system_stock_when_counted: bool = DEFAULTS["cross_check/settings"][
+        "reconciliation"
+    ]["ignore_negative_system_stock_when_counted"],
+) -> float:
+    """Calculate count minus stock with the caller-selected negative-stock policy."""
+    if ignore_negative_system_stock_when_counted and stock < 0 and count > 0:
         return float(count)
     return float(count - stock)

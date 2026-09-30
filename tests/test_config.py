@@ -270,3 +270,10 @@ def test_yoy_setup_uses_bundled_defaults_and_detection_hints(tmp_path, monkeypat
     saved = json.loads((configs / "yoy_reports/settings.json").read_text(encoding="utf-8"))
     assert saved["input"] == DEFAULTS["yoy_reports/settings"]["input"]
     assert len(selections) == len(saved["input"])
+
+
+def test_cross_check_schema_rejects_empty_quantity_column():
+    from core.config_schemas import CrossCheckConfig
+
+    with pytest.raises(ValidationError, match="quantity column cannot be empty"):
+        CrossCheckConfig.model_validate({"version": CONFIG_VERSION, "input": {"quantity_column": " "}})

@@ -121,7 +121,27 @@ class CrossCheckPriceLists(_StrictConfigModel):
     sales: PriceListColumns = Field(default_factory=PriceListColumns)
 
 
+class CrossCheckInput(_StrictConfigModel):
+    quantity_column: str = DEFAULTS["cross_check/settings"]["input"]["quantity_column"]
+
+    @field_validator("quantity_column")
+    @classmethod
+    def validate_quantity_column(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("cross-check quantity column cannot be empty")
+        return value
+
+
+class CrossCheckReconciliation(_StrictConfigModel):
+    ignore_negative_system_stock_when_counted: bool = DEFAULTS[
+        "cross_check/settings"
+    ]["reconciliation"]["ignore_negative_system_stock_when_counted"]
+
+
 class CrossCheckConfig(_Config):
+    input: CrossCheckInput = Field(default_factory=CrossCheckInput)
+    reconciliation: CrossCheckReconciliation = Field(default_factory=CrossCheckReconciliation)
     filters: CrossCheckFilters = Field(default_factory=CrossCheckFilters)
     price_lists: CrossCheckPriceLists = Field(default_factory=CrossCheckPriceLists)
 

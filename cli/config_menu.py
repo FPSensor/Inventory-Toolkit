@@ -167,13 +167,21 @@ def _cross_menu(configs: Path, profile: str):
         print(f"  Ignored articles: {len(filt.get('ignored_articles',[]))}")
         print(f"  Ignored terms: {', '.join(filt.get('ignored_terms',[]))}")
         print(f"  Cost columns: {lists.get('cost',{})}"); print(f"  Sales columns: {lists.get('sales',{})}")
-        print("\n  [1] Filters  [2] Cost list columns  [3] Sales list columns  [0] Back")
+        input_config = d.setdefault("input", dict(DEFAULTS["cross_check/settings"]["input"]))
+        reconciliation = d.setdefault("reconciliation", dict(DEFAULTS["cross_check/settings"]["reconciliation"]))
+        print(f"  Quantity column: {input_config['quantity_column']}")
+        print("\n  [1] Filters  [2] Cost list columns  [3] Sales list columns")
+        print("  [4] Quantity column  [5] Negative stock policy  [0] Back")
         cmd=input("  Option: ").strip()
         if cmd=="0": return
         if cmd=="1": _edit_list(filt,"ignored_articles","Ignored articles"); _edit_list(filt,"ignored_terms","Ignored text terms")
         elif cmd in ("2","3"):
             side="cost" if cmd=="2" else "sales"; m=lists.setdefault(side,{})
             _edit_scalar(m,"article_column","Article column"); _edit_scalar(m,"price_column","Price column")
+        elif cmd == "4":
+            _edit_scalar(input_config, "quantity_column", "System stock quantity column")
+        elif cmd == "5":
+            _edit_scalar(reconciliation, "ignore_negative_system_stock_when_counted", "Ignore negative stock when counted")
         save_json(str(path),d)
 
 

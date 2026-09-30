@@ -158,7 +158,8 @@ def test_stock_processing_honors_custom_catalog_and_pricing_columns(tmp_path, mo
     assert summary.columns[0] == "FAMILY_TEST"
 
 
-def test_cross_check_honors_catalog_article_and_family_columns(tmp_path, monkeypatch):
+@pytest.mark.parametrize("system_units, ignore_negative, difference", [(5, False, -2), (-2, False, 5), (-2, True, 3)])
+def test_cross_check_honors_catalog_article_and_family_columns(tmp_path, monkeypatch, system_units, ignore_negative, difference):
     profile = "custom-cross"
     _write_profile(
         tmp_path,
@@ -175,6 +176,8 @@ def test_cross_check_honors_catalog_article_and_family_columns(tmp_path, monkeyp
             },
             "cross_check/settings": {
                 "version": 3,
+                "input": {"quantity_column": "SYSTEM_UNITS"},
+                "reconciliation": {"ignore_negative_system_stock_when_counted": ignore_negative},
                 "filters": {"ignored_articles": [], "ignored_terms": []},
                 "price_lists": {
                     "cost": {"article_column": "COST_SKU", "price_column": "COST_VALUE"},
@@ -191,7 +194,7 @@ def test_cross_check_honors_catalog_article_and_family_columns(tmp_path, monkeyp
     sales_path = tmp_path / "sales.xlsx"
     output_path = tmp_path / "cross.xlsx"
 
-    pd.DataFrame({"SKU_SYSTEM": ["AA1"], "Cantidad": [5]}).to_excel(system_path, index=False)
+    pd.DataFrame({"SKU_SYSTEM": ["AA1"], "SYSTEM_UNITS": [system_units]}).to_excel(system_path, index=False)
     pd.DataFrame(["AA1", "AA1", "AA1"]).to_excel(count_path, index=False, header=False)
     pd.DataFrame({"COST_SKU": ["AA1"], "COST_VALUE": [10]}).to_excel(cost_path, index=False)
     pd.DataFrame({"SALES_SKU": ["AA1"], "SALES_VALUE": [20]}).to_excel(sales_path, index=False)
@@ -217,7 +220,7 @@ def test_cross_check_honors_catalog_article_and_family_columns(tmp_path, monkeyp
     assert [event.completed for event in events] == [0, 1, 2, 3]
     assert "Reconciliation complete" in events[2].message
     assert "Differences: 1" in stats[0].render()
-    assert "Shortages: 1" in stats[0].render()
+    assert ("Shortages: 1" if difference < 0 else "Surpluses: 1") in stats[0].render()
 
     output = pd.read_excel(output_path)
     assert list(output.columns) == [
@@ -231,9 +234,9 @@ def test_cross_check_honors_catalog_article_and_family_columns(tmp_path, monkeyp
     ]
     assert output.loc[0, "FAMILY_OUT"] == "Family A"
     assert output.loc[0, "SKU_SYSTEM"] == "AA1"
-    assert output.loc[0, "Diferencia"] == -2
-    assert output.loc[0, "CTOTAL"] == -20
-    assert output.loc[0, "VTOTAL"] == -40
+    assert output.loc[0, "Diferencia"] == difference
+    assert output.loc[0, "CTOTAL"] == difference * 10
+    assert output.loc[0, "VTOTAL"] == difference * 20
 
 
 def test_catalog_column_contract_rejects_empty_or_colliding_names():

@@ -67,6 +67,12 @@
                 "article_column": "Artículo",
                 "price_column": "Precio"
             }
+        },
+        "input": {
+            "quantity_column": "Cantidad"
+        },
+        "reconciliation": {
+            "ignore_negative_system_stock_when_counted": true
         }
     },
     "yoy_reports/settings": {

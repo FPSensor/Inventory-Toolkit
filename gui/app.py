@@ -841,7 +841,17 @@ class ConfigHubWindow(BaseToplevel):
         ignored_terms_var = tk.StringVar(
             value=", ".join(filters.get("ignored_terms", []))
         )
+        input_config = data.setdefault("input", {})
+        reconciliation = data.setdefault("reconciliation", {})
+        quantity_var = tk.StringVar(value=input_config.get(
+            "quantity_column", DEFAULTS["cross_check/settings"]["input"]["quantity_column"]
+        ))
+        negative_var = tk.BooleanVar(value=reconciliation.get(
+            "ignore_negative_system_stock_when_counted",
+            DEFAULTS["cross_check/settings"]["reconciliation"]["ignore_negative_system_stock_when_counted"],
+        ))
         fields = [
+            ("System stock — quantity column", quantity_var),
             ("Ignored articles", ignored_articles_var),
             ("Ignored text terms", ignored_terms_var),
         ]
@@ -878,7 +888,14 @@ class ConfigHubWindow(BaseToplevel):
             )
         form.columnconfigure(1, weight=1)
 
+        ttk.Checkbutton(
+            form, text="Ignore negative system stock when an article was counted",
+            variable=negative_var,
+        ).grid(row=len(fields), column=0, columnspan=2, sticky="w", padx=6, pady=5)
+
         def save_cross_check():
+            input_config["quantity_column"] = quantity_var.get().strip()
+            reconciliation["ignore_negative_system_stock_when_counted"] = negative_var.get()
             filters["ignored_articles"] = [
                 value.strip()
                 for value in ignored_articles_var.get().split(",")
@@ -903,7 +920,7 @@ class ConfigHubWindow(BaseToplevel):
             messagebox.showinfo("Saved", "Cross Check settings saved.", parent=self)
 
         _btn(form, "💾 Save Configuration", save_cross_check).grid(
-            row=len(fields), column=1, sticky="e", padx=6, pady=8
+            row=len(fields) + 1, column=1, sticky="e", padx=6, pady=8
         )
 
     # ── F. YoY reports editor ─────────────────────────────────────────────────
@@ -1505,12 +1522,15 @@ class InventoryToolkitGUI(BaseWindow):
         if PANDAS_AVAILABLE:
             try:
                 cm = ConfigurationManager(self.active_profile.get())
-                mappings = cm.get_cross_check_config()["price_lists"]
+                cross_config = cm.get_cross_check_config()
+                mappings = cross_config["price_lists"]
                 defaults = DEFAULTS["cross_check/settings"]["price_lists"]
                 overrides = {
                     "system": self._select_columns(self.cc_sys.get(),
-                        {"article": cm.get_catalog_columns()["article"]},
-                        {"article": DEFAULTS["general/catalog"]["columns"]["article"]}),
+                        { "article": cm.get_catalog_columns()["article"],
+                          "quantity": cross_config["input"]["quantity_column"]},
+                        {"article": DEFAULTS["general/catalog"]["columns"]["article"],
+                         "quantity": DEFAULTS["cross_check/settings"]["input"]["quantity_column"]}),
                     "cost": self._select_columns(self.cc_cost.get(), mappings["cost"], defaults["cost"]),
                     "sales": self._select_columns(self.cc_sales.get(), mappings["sales"], defaults["sales"]),
                 }

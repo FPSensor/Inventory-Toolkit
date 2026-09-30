@@ -41,12 +41,16 @@ def launch_cross_check(active_profile: str) -> None:
 
     try:
         config = ConfigurationManager(active_profile)
-        mappings = config.get_cross_check_config()["price_lists"]
+        cross_config = config.get_cross_check_config()
+        mappings = cross_config["price_lists"]
         defaults = DEFAULTS["cross_check/settings"]["price_lists"]
         overrides = {
             "system": choose_input_columns(
-                system_file, {"article": config.get_catalog_columns()["article"]},
-                {"article": DEFAULTS["general/catalog"]["columns"]["article"]},
+                system_file,
+                {"article": config.get_catalog_columns()["article"],
+                 "quantity": cross_config["input"]["quantity_column"]},
+                {"article": DEFAULTS["general/catalog"]["columns"]["article"],
+                 "quantity": DEFAULTS["cross_check/settings"]["input"]["quantity_column"]},
                 confirm_default_column,
             ),
             "cost": choose_input_columns(cost_file, mappings["cost"], defaults["cost"], confirm_default_column),

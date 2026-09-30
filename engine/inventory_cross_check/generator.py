@@ -73,6 +73,9 @@ def run_cross_check(args):
     cross_check_config = config.get_cross_check_config()
     overrides = getattr(args, "column_overrides", {})
     input_article_column = overrides.get("system", {}).get("article", article_column)
+    input_quantity_column = overrides.get("system", {}).get(
+        "quantity", cross_check_config["input"]["quantity_column"]
+    )
 
     filters = cross_check_config["filters"]
     ignored_articles = filters.get("ignored_articles", [])
@@ -101,21 +104,25 @@ def run_cross_check(args):
 
     with execution_timer("Read and Validate Spreadsheets"):
         system_frame = pd.read_excel(args.cross_check_system)
-        if input_article_column not in system_frame.columns or QUANTITY_COLUMN not in system_frame.columns:
-            log.error(
-                "Missing configured article column '%s' or required quantity column '%s' in system stock.",
-                input_article_column,
-                QUANTITY_COLUMN,
-            )
+        missing_system_columns = [
+            column for column in (input_article_column, input_quantity_column)
+            if column not in system_frame.columns
+        ]
+        if missing_system_columns:
+            log.error("Missing configured system stock columns: %s", missing_system_columns)
             return None
-        if input_article_column != ARTICLE_COLUMN and ARTICLE_COLUMN in system_frame.columns:
-            log.error(
-                "System stock contains both configured article column '%s' and reserved canonical column '%s'.",
-                input_article_column,
-                ARTICLE_COLUMN,
-            )
+        if input_article_column == input_quantity_column:
+            log.error("System stock article and quantity columns must use different names.")
             return None
-        system_frame = system_frame.rename(columns={input_article_column: ARTICLE_COLUMN})
+        system_renames = {
+            input_article_column: ARTICLE_COLUMN,
+            input_quantity_column: QUANTITY_COLUMN,
+        }
+        for source, target in system_renames.items():
+            if source != target and target in system_frame.columns and target not in system_renames:
+                log.error("System stock column '%s' collides with canonical column '%s'.", source, target)
+                return None
+        system_frame = system_frame.rename(columns=system_renames)
 
         count_frame = pd.read_excel(
             args.cross_check_count,
@@ -252,7 +259,12 @@ def run_cross_check(args):
         )
 
         reconciliation[DIFFERENCE_COLUMN] = [
-            calculate_difference(system_stock, physical_count)
+            calculate_difference(
+                system_stock, physical_count,
+                ignore_negative_system_stock_when_counted=cross_check_config["reconciliation"][
+                    "ignore_negative_system_stock_when_counted"
+                ],
+            )
             for system_stock, physical_count in zip(
                 reconciliation[SYSTEM_STOCK_COLUMN],
                 reconciliation[PHYSICAL_COUNT_COLUMN],

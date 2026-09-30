@@ -124,3 +124,10 @@ def test_cross_check_renderer_owns_header_style(tmp_path):
             assert cell.border.bottom.style == "thin"
     finally:
         workbook.close()
+
+
+@pytest.mark.parametrize("ignore_negative, expected", [(True, 5), (False, 7)])
+def test_difference_uses_selected_negative_stock_policy(ignore_negative, expected):
+    assert calculate_difference(
+        -2, 5, ignore_negative_system_stock_when_counted=ignore_negative
+    ) == expected

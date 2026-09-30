@@ -180,3 +180,13 @@ Debug level 2/3 reports compatibility usage so maintainers can identify remainin
 ## Versioning rule
 
 Schema version is intentionally strict. A future schema change should include an explicit migration strategy or explicit failure; it should not silently treat an older version as current.
+
+### Cross Check input and reconciliation policy
+
+`cross_check/settings.json` owns `input.quantity_column` and
+`reconciliation.ignore_negative_system_stock_when_counted`. Existing profiles
+that omit these sections use the bundled defaults. Column preflight in the CLI
+and GUI offers the same explicit default fallback as other configured columns.
+With the policy enabled, counted articles with negative system stock use the
+physical count as their difference. With it disabled, the difference is always
+physical count minus system stock. Both values are editable in Config Hub.
