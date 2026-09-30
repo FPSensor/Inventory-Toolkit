@@ -16,11 +16,11 @@ def test_classify_family():
 
 def test_calculate_margin():
     df = pd.DataFrame({
-        "Venta": [1000, 2000, 0],
-        "Costo": [500, 1500, 500]
+        "Sales": [1000, 2000, 0],
+        "Cost": [500, 1500, 500]
     })
     # (Sales value - Cost) / Sales value
-    margins = calculate_margin(df, "Venta", "Costo")
+    margins = calculate_margin(df, "Sales", "Cost")
     assert margins[0] == 0.50  # 500 / 1000
     assert margins[1] == 0.25  # 500 / 2000
     assert margins[2] == 0.00  # Avoid division by zero

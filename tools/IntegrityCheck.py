@@ -86,23 +86,23 @@ class IntegrityAuditor:
     def audit_sku_sanitization(self):
         print("\n🧹 [1/7] Auditing SKU Sanitization and Corrupted Inputs...")
         raw_series = pd.Series([
-            "00100-151",
-            "12060-142.0",       # Excel float conversion artifact
-            "  0085-99   ",       # Leading/trailing whitespace
+            "SKU-A-151",
+            "SKU-B.0",       # Excel float conversion artifact
+            "  ABCD-99   ",       # Leading/trailing whitespace
             np.nan,               # Real NaN/Nulls
             "None",               # Literal 'None' string
             104050,               # Raw integers
-            "0045-12.0"
+            "SKU-C.0"
         ])
 
         cleaned = clean_sku_series(raw_series)
         
-        self.assert_check("Removal of accidental '.0' suffix", cleaned[1] == "12060-142", f"Got: '{cleaned[1]}'")
-        self.assert_check("Trimming of leading/trailing whitespace", cleaned[2] == "0085-99", f"Got: '{cleaned[2]}'")
+        self.assert_check("Removal of accidental '.0' suffix", cleaned[1] == "SKU-B", f"Got: '{cleaned[1]}'")
+        self.assert_check("Trimming of leading/trailing whitespace", cleaned[2] == "ABCD-99", f"Got: '{cleaned[2]}'")
         self.assert_check("Safe conversion of NaN to empty string", cleaned[3] == "", f"Got: '{cleaned[3]}'")
         self.assert_check("Safe conversion of literal 'None' to empty string", cleaned[4] == "", f"Got: '{cleaned[4]}'")
         self.assert_check("Transparent integer to string casting", cleaned[5] == "104050", f"Got: '{cleaned[5]}'")
-        self.assert_check("Compound code '.0' cleanup", cleaned[6] == "0045-12", f"Got: '{cleaned[6]}'")
+        self.assert_check("Compound code '.0' cleanup", cleaned[6] == "SKU-C", f"Got: '{cleaned[6]}'")
 
     # -------------------------------------------------------------------------
     # 2. LONGEST-PREFIX MATCHING & FAMILY RESOLUTION
@@ -111,10 +111,10 @@ class IntegrityAuditor:
         print("\n🔍 [2/7] Auditing Longest-Prefix Priority & Family Resolution...")
         
         families_dict = {
-            "Buzos": ["008", "08"],
-            "Buzos Con Capucha": ["0085", "185", "085"],  # More specific (4 chars)
-            "Remeras": ["001", "002"],
-            "Accesorios": ["30"]
+            "Broad Category": ["ABC", "08"],
+            "Specific Category": ["ABCD", "XYZ", "BCD"],  # More specific (4 chars)
+            "Category A": ["AXY", "QRS"],
+            "Category B": ["DX"]
         }
         rules = build_family_rules(families_dict)
 
@@ -123,32 +123,32 @@ class IntegrityAuditor:
         is_sorted_desc = all(lengths[i] >= lengths[i+1] for i in range(len(lengths)-1))
         self.assert_check("Rules sorted by descending length O(n)", is_sorted_desc)
 
-        # Invariant 2: '0085-XYZ' must match 'Buzos Con Capucha', NEVER be swallowed by '008' ('Buzos')
-        sku_test = "0085-123"
+        # Invariant 2: 'ABCD-XYZ' must match 'Specific Category', NEVER be swallowed by 'ABC' ('Broad Category')
+        sku_test = "ABCD-123"
         fam_assigned = assign_family(sku_test, rules)
-        self.assert_check("Longest prefix priority resolution (0085 vs 008)", fam_assigned == "Buzos Con Capucha", f"Got: {fam_assigned}")
+        self.assert_check("Longest prefix priority resolution (ABCD vs ABC)", fam_assigned == "Specific Category", f"Got: {fam_assigned}")
 
         # Invariant 3: Vectorized vs Iterative must return EXACT identical results
-        test_skus = pd.Series(["0085-A", "008-B", "001-C", "999-Unknown", "REVISAR | Corrupt"])
+        test_skus = pd.Series(["ABCD-A", "ABC-B", "AXY-C", "999-Unknown", "REVISAR | Corrupt"])
         res_iter = test_skus.apply(lambda x: assign_family(x, rules))
         batch_result = assign_families(test_skus, rules)
         self.assert_check("Exact parity: Vectorized == Iterative", (res_iter == batch_result).all())
 
         custom_iter = test_skus.apply(
-            lambda value: assign_family(value, rules, default_family="Otro")
+            lambda value: assign_family(value, rules, default_family="Unclassified")
         )
-        custom_batch = assign_families(test_skus, rules, default_family="Otro")
+        custom_batch = assign_families(test_skus, rules, default_family="Unclassified")
         self.assert_check(
             "Configured default family is shared by scalar and batch classifiers",
-            (custom_iter == custom_batch).all() and custom_batch.iloc[3] == "Otro",
+            (custom_iter == custom_batch).all() and custom_batch.iloc[3] == "Unclassified",
         )
 
         # Invariant 4: Physical count normalization against Master Base
-        master_base = ["0085-100", "0085-100-M", "00100-XL"]
+        master_base = ["ABCD-100", "ABCD-100-M", "SKU-A-XL"]
         master_set = set(master_base)
         
-        self.assert_check("Exact match in master article list", normalize_article("0085-100", master_base, master_set) == "0085-100")
-        self.assert_check("Longest matching prefix available", normalize_article("0085-100-M-RED", master_base, master_set) == "0085-100-M")
+        self.assert_check("Exact match in master article list", normalize_article("ABCD-100", master_base, master_set) == "ABCD-100")
+        self.assert_check("Longest matching prefix available", normalize_article("ABCD-100-M-RED", master_base, master_set) == "ABCD-100-M")
         self.assert_check("Unmatched item marked as REVISAR", normalize_article("99999-NOPE", master_base, master_set) == "REVISAR | 99999-NOPE")
 
         master_with_blank = ["", *master_base]
@@ -188,11 +188,11 @@ class IntegrityAuditor:
         print("\n📈 [4/7] Auditing Margin Formulas & Zero-Division Protections...")
 
         df_mock = pd.DataFrame({
-            "Venta": [1000.0, 2000.0, 0.0, -500.0, 1500.0],
-            "Costo": [500.0,  1500.0, 300.0, 200.0,  1500.0]
+            "Sales": [1000.0, 2000.0, 0.0, -500.0, 1500.0],
+            "Cost": [500.0,  1500.0, 300.0, 200.0,  1500.0]
         })
 
-        margins = calculate_margin(df_mock, "Venta", "Costo")
+        margins = calculate_margin(df_mock, "Sales", "Cost")
 
         self.assert_check("Standard 50% margin ((sales-cost)/sales)", math.isclose(margins[0], 0.50, abs_tol=1e-4))
         self.assert_check("Standard 25% margin ((sales-cost)/sales)", math.isclose(margins[1], 0.25, abs_tol=1e-4))
@@ -212,7 +212,7 @@ class IntegrityAuditor:
             numeric_columns=(),
             drop_columns=(),
             pricing={},
-            base_columns=("Artículo", "Familias"),
+            base_columns=("SKU_CUSTOM", "FAMILY_CUSTOM"),
             raw_data_sheet="Data",
             summaries=(),
         )
@@ -275,7 +275,7 @@ class IntegrityAuditor:
         self.assert_check(
             "YoY configured metrics resolve to real input columns",
             [(metric.key, metric.column) for metric in metrics]
-            == [("units", "Cantidad"), ("sales", "Monto")],
+            == [(key, yoy_config["input"][{"units": "quantity_column", "sales": "sales_column"}[key]]) for key in dict.fromkeys(yoy_config["output"]["metrics"])],
         )
         self.assert_check(
             "YoY report groups resolve to at least one concrete branch",
@@ -299,17 +299,13 @@ class IntegrityAuditor:
             cleaning = cm.get_stock_cleaning()
             self.assert_check("Cleaning rules loading", "text_columns" in cleaning)
 
-            df_test = pd.DataFrame({
-                "Artículo": [" 00100 ", "00850.0"],
-                "CENTRAL": [10, 20],
-                "Ignore_Col": ["X", "Y"]
-            })
-            
-            for col in cleaning.get("text_columns", []):
-                if col in df_test.columns:
-                    df_test[col] = clean_sku_series(df_test[col])
-
-            self.assert_check("E2E Profile-driven SKU sanitization", df_test["Artículo"].iloc[0] == "00100" and df_test["Artículo"].iloc[1] == "00850")
+            article_column = cm.get_catalog_columns()["article"]
+            df_test = pd.DataFrame({article_column: [" SKU-A ", "SKU-B.0"]})
+            cleaned = sanitize_dataframe(df_test, [article_column])
+            self.assert_check(
+                "E2E profile-owned article column sanitization",
+                cleaned[article_column].tolist() == ["SKU-A", "SKU-B"],
+            )
 
         except Exception as e:
             self.assert_check("ConfigurationManager execution without exceptions", False, str(e))

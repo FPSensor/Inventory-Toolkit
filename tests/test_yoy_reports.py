@@ -15,13 +15,13 @@ def _config(*, metrics=None, annual_comparison=True, include_sizes=False, groups
     return {
         "version": 3,
         "input": {
-            "date_column": "Fecha",
-            "quantity_column": "Cantidad",
-            "sales_column": "Monto",
-            "grouping_column": "Familias",
-            "item_column": "Articulo",
-            "branch_column": "Base",
-            "size_column": "Talle",
+            "date_column": "Date",
+            "quantity_column": "Units",
+            "sales_column": "Amount",
+            "grouping_column": "Category",
+            "item_column": "SKU",
+            "branch_column": "Branch",
+            "size_column": "Size",
         },
         "output": {
             "default_path": "report.xlsx",
@@ -36,19 +36,19 @@ def _config(*, metrics=None, annual_comparison=True, include_sizes=False, groups
 def _frames():
     current = pd.DataFrame(
         {
-            "Familias": ["Remeras", "Remeras", "Jeans"],
-            "Articulo": ["001", "002", "130"],
-            "Base": ["A", "B", "A"],
-            "Cantidad": [2, 1, 3],
-            "Monto": [200.50, 120.00, 450.25],
-            "Talle": ["M", "L", "42"],
-            "Fecha": pd.to_datetime(["2026-01-05", "2026-01-06", "2026-01-07"]),
+            "Category": ["Category A", "Category A", "Category B"],
+            "SKU": ["001", "002", "130"],
+            "Branch": ["A", "B", "A"],
+            "Units": [2, 1, 3],
+            "Amount": [200.50, 120.00, 450.25],
+            "Size": ["M", "L", "42"],
+            "Date": pd.to_datetime(["2026-01-05", "2026-01-06", "2026-01-07"]),
         }
     )
     previous = current.copy()
-    previous["Fecha"] = previous["Fecha"] - pd.DateOffset(years=1)
-    previous["Cantidad"] = [1, 2, 2]
-    previous["Monto"] = [90.00, 210.00, 300.00]
+    previous["Date"] = previous["Date"] - pd.DateOffset(years=1)
+    previous["Units"] = [1, 2, 2]
+    previous["Amount"] = [90.00, 210.00, 300.00]
     return current, previous
 
 
@@ -65,8 +65,8 @@ def test_yoy_metric_config_is_explicit_and_validated():
     config = YoYReportsConfig.model_validate(_config()).model_dump()
     specs = resolve_metric_specs(config)
     assert [(spec.key, spec.column) for spec in specs] == [
-        ("units", "Cantidad"),
-        ("sales", "Monto"),
+        ("units", "Units"),
+        ("sales", "Amount"),
     ]
 
     with pytest.raises(ValidationError):
@@ -96,7 +96,7 @@ def test_yoy_renders_configured_units_and_sales_metrics():
         pd.Timestamp("2026-01-31"),
         pd.Timestamp("2025-01-01"),
         config,
-        "Familias",
+        "Category",
         include_sizes=False,
     )
 
@@ -129,7 +129,7 @@ def test_yoy_annual_comparison_setting_controls_comparison_blocks():
         pd.Timestamp("2026-01-31"),
         pd.Timestamp("2025-01-01"),
         config,
-        "Familias",
+        "Category",
     )
 
     values = [str(value) for value in _sheet_values(worksheet)]
@@ -146,7 +146,7 @@ def test_full_report_can_omit_extra_annual_comparison_without_losing_metrics(tmp
     render_yoy_sales_excel(
         str(path), current, previous,
         pd.Timestamp("2026-01-01"), pd.Timestamp("2026-01-31"),
-        pd.Timestamp("2025-01-01"), config, "Familias", False,
+        pd.Timestamp("2025-01-01"), config, "Category", False,
         interactive=False,
     )
 
@@ -161,17 +161,17 @@ def test_full_report_can_omit_extra_annual_comparison_without_losing_metrics(tmp
 def test_segmented_progress_advances_after_each_rendered_sheet(tmp_path):
     current, previous = _frames()
     february = current.iloc[[0]].copy()
-    february["Fecha"] = pd.Timestamp("2026-02-05")
+    february["Date"] = pd.Timestamp("2026-02-05")
     current = pd.concat([current, february], ignore_index=True)
     previous_february = february.copy()
-    previous_february["Fecha"] = pd.Timestamp("2025-02-05")
+    previous_february["Date"] = pd.Timestamp("2025-02-05")
     previous = pd.concat([previous, previous_february], ignore_index=True)
     events = []
 
     render_yoy_sales_excel(
         str(tmp_path / "segmented.xlsx"), current, previous,
         pd.Timestamp("2026-01-01"), pd.Timestamp("2026-02-28"),
-        pd.Timestamp("2025-01-01"), _config(), "Familias", True,
+        pd.Timestamp("2025-01-01"), _config(), "Category", True,
         interactive=False, progress=events.append,
     )
 
@@ -264,7 +264,7 @@ def test_generate_sales_report_uses_profile_include_sizes_default(monkeypatch, t
         pd.Timestamp("2026-01-01"),
         pd.Timestamp("2026-01-31"),
         config,
-        "Familias",
+        "Category",
         False,
         True,
         "demo",

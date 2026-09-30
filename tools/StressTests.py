@@ -82,14 +82,14 @@ def audit_profiles():
 def run_benchmark(n_items=50000):
     print(f"\n⚡ [2/3] Generating synthetic stress dataset ({n_items:,} rows)...")
     
-    prefixes = ["001", "002", "0085", "185", "045", "123", "23", "30", "40", "99"]
     families_mock = {
-        "Remeras": ["001", "002"],
-        "Buzos": ["0085", "185", "045"],
-        "Pantalones": ["123", "23"],
-        "Accesorios": ["30", "40"]
+        "Category A": ["AX", "AY"],
+        "Category B": ["AXQ", "BZ", "BQ"],
+        "Category C": ["CX", "CY"],
+        "Category D": ["DX", "DY"],
     }
-    
+    prefixes = [prefix for values in families_mock.values() for prefix in values] + ["ZZ"]
+
     rules = build_family_rules(families_mock)
 
     # Generate random test SKUs (simulate dirty Excel float suffixes and spaces)

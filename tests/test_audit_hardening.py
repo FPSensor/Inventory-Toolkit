@@ -11,6 +11,7 @@ from engine.stock_processing.data_processor import remove_unidentified_stock, va
 from engine.stock_processing.contracts import StockProcessingPlan
 from engine.stock_processing.pricing import process_pricing
 from core.configuration_manager import ConfigurationManager
+from core import paths as app_paths
 from tools.BuildDistribution import distribution_files, ROOT
 
 
@@ -29,15 +30,15 @@ def test_editor_keeps_existing_corrupt_or_future_configuration(tmp_path):
 
 def test_missing_column_requires_explicit_default_choice(tmp_path):
     file = tmp_path / "prices.xlsx"
-    pd.DataFrame({"Artículo": ["A"]}).to_excel(file, index=False)
+    pd.DataFrame({"Default SKU": ["A"]}).to_excel(file, index=False)
     with pytest.raises(ValueError, match="configured column"):
-        choose_input_columns(str(file), {"article": "SKU"}, {"article": "Artículo"})
+        choose_input_columns(str(file), {"article": "SKU"}, {"article": "Default SKU"})
     assert choose_input_columns(
-        str(file), {"article": "SKU"}, {"article": "Artículo"},
+        str(file), {"article": "SKU"}, {"article": "Default SKU"},
         lambda field, wanted, default: True,
-    ) == {"article": "Artículo"}
+    ) == {"article": "Default SKU"}
     with pytest.raises(ValueError, match="both absent"):
-        choose_input_columns(str(file), {"article": "SKU"}, {"article": "Otro"}, lambda *_: True)
+        choose_input_columns(str(file), {"article": "SKU"}, {"article": "Absent column"}, lambda *_: True)
 
 
 def test_unreadable_price_list_fails_instead_of_producing_zero_valuation(tmp_path):
@@ -48,17 +49,29 @@ def test_unreadable_price_list_fails_instead_of_producing_zero_valuation(tmp_pat
         process_pricing(str(file), config)
 
 
-def test_unidentified_stock_is_excluded_with_original_row_and_amount():
-    plan = StockProcessingPlan.from_manager(ConfigurationManager("demo"))
-    frame = pd.DataFrame({plan.article_column: ["A", None, ""], "LIBERT.R": [1, 4, 0]})
+@pytest.fixture
+def stock_plan(tmp_path, monkeypatch):
+    monkeypatch.setattr(app_paths, "PROFILES_ROOT", tmp_path / "profiles")
+    config = ConfigurationManager("synthetic")
+    path = config.base_dir / "general" / "network.json"
+    network = json.loads(path.read_text(encoding="utf-8"))
+    network["active"] = ["Store A", "Store B"]
+    path.write_text(json.dumps(network), encoding="utf-8")
+    config.reload()
+    return StockProcessingPlan.from_manager(config)
+
+
+def test_unidentified_stock_is_excluded_with_original_row_and_amount(stock_plan):
+    plan = stock_plan
+    frame = pd.DataFrame({plan.article_column: ["A", None, ""], "Store A": [1, 4, 0]})
     cleaned, warning = remove_unidentified_stock(frame, plan)
     assert cleaned[plan.article_column].tolist() == ["A"]
     assert "row" in warning and "3 (4 units)" in warning
 
 
-def test_missing_network_column_fails_before_valuation():
-    plan = StockProcessingPlan.from_manager(ConfigurationManager("demo"))
-    frame = pd.DataFrame({plan.article_column: ["A"], "LIBERT.R": [4]})
+def test_missing_network_column_fails_before_valuation(stock_plan):
+    plan = stock_plan
+    frame = pd.DataFrame({plan.article_column: ["A"], "Store A": [4]})
     with pytest.raises(ValueError, match="missing stores"):
         validate_stock_network(frame, plan)
 
