@@ -9,7 +9,7 @@ Inventory Toolkit is a profile-driven Python application for retail inventory re
 
 It was built around real operational constraints: legacy `.xls` exports, inconsistent scanner output, variable-length article codes, multiple stores and regional groups, price lists from different sources, Excel files left open by users, and business rules that must change without forking the processing engine.
 
-The project currently exposes a mature CLI, an experimental desktop GUI, a typed configuration system, forensic logging, migration support for older profiles, and a reproducible pre-release gate backed by golden-master workbooks.
+The project currently exposes a mature CLI, an experimental desktop GUI, a typed configuration system, forensic logging, and a reproducible pre-release gate backed by golden-master workbooks.
 
 > **Current release line:** `1.4.x`
 > **Primary interface:** CLI
@@ -77,7 +77,9 @@ The strict pre-release gate executes all three demo workflows and compares their
 - Runtime-selectable debug levels and a hidden level-3 Developer Console.
 - Forensic session logging to `logs/session.log`.
 - Pytest, IntegrityCheck, stress/diagnostic tooling, demo smoke tests, and semantic golden-master certification.
-- Guarded legacy-configuration migration and a one-shot compatibility-retirement tool.
+<!-- BEGIN LEGACY_COMPATIBILITY -->
+- Guarded legacy-configuration migration and a one-shot compatibility-retirement tool, also accessible from the level-3 Developer Console.
+<!-- END LEGACY_COMPATIBILITY -->
 - Experimental Tkinter/CustomTkinter desktop GUI.
 - Windows launcher/setup helpers plus Linux/macOS shell launcher.
 
@@ -163,7 +165,7 @@ in the main menu. It is intentionally not displayed as a normal option.
 Available levels:
 
 - **Level 1 — Operator:** errors only.
-- **Level 2 — Diagnostics:** operational milestones, timings, warnings, and compatibility notices.
+- **Level 2 — Diagnostics:** operational milestones, timings, and warnings.
 - **Level 3 — Forensic:** detailed execution events plus the Developer Console.
 
 The historical startup forms remain available for automation:
@@ -173,7 +175,7 @@ python cli.py -debug_level 3
 python cli.py --debug-level 3
 ```
 
-At level 3, the Developer Console can run pytest, quick verification, demo smoke workflows, full golden-master certification, reference regeneration, session-log inspection, and the guarded compatibility lifecycle while that layer still exists.
+At level 3, the Developer Console can run pytest, quick verification, demo smoke workflows, full golden-master certification, reference regeneration, session-log inspection.
 
 See [docs/cli.md](docs/cli.md).
 
@@ -319,7 +321,9 @@ Inventory-Toolkit/
 │   ├── telemetry.py
 │   ├── data_sanitizer.py
 │   ├── system_utils.py
+<!-- BEGIN LEGACY_COMPATIBILITY -->
 │   └── legacy_*                  # temporary compatibility boundary
+<!-- END LEGACY_COMPATIBILITY -->
 ├── engine/                        # business processing
 │   ├── inventory_cross_check/
 │   ├── stock_processing/
@@ -339,7 +343,9 @@ Inventory-Toolkit/
 │   ├── StressTests.py
 │   ├── ReleaseCheck.py
 │   ├── release_reference.py
+<!-- BEGIN LEGACY_COMPATIBILITY -->
 │   └── RetireLegacyCompatibility.py
+<!-- END LEGACY_COMPATIBILITY -->
 ├── docs/
 ├── requirements.txt
 ├── pytest.ini
@@ -369,7 +375,9 @@ Start at **[docs/index.md](docs/index.md)**.
 | [Profiles](docs/profiles.md) | schema-v3 configuration and Guided Setup |
 | [Testing & Examples](docs/testing_and_examples.md) | pytest, demo fixture, golden masters |
 | [Release Process](docs/release_process.md) | repeatable pre-release procedure |
+<!-- BEGIN LEGACY_COMPATIBILITY -->
 | [Legacy Compatibility](docs/legacy_compatibility.md) | migration warnings and retirement lifecycle |
+<!-- END LEGACY_COMPATIBILITY -->
 | [Troubleshooting](docs/troubleshooting.md) | common installation/runtime/test failures |
 | [Developer Notes](docs/dev_notes.md) | extension rules and engineering conventions |
 
@@ -398,7 +406,7 @@ The roadmap is directional rather than a release-date promise. Business correctn
 Target: make the current 1.4 architecture boringly reliable before adding major surface area.
 
 - Finish the documentation/reference overhaul and keep docs synchronized with CLI/config schema v3.
-- Expand tests around Guided Setup, Configuration Hub persistence, profile validation, and migration boundaries.
+- Expand tests around Guided Setup, Configuration Hub persistence, profile validation, and schema boundaries.
 - Exercise the golden-master release gate on Windows and Linux with the official legacy `.xls` fixture and `xlrd` installed.
 - Harden packaging/release hygiene so distributed archives exclude caches, logs, Git internals, and operational leftovers.
 - Resolve remaining low-risk CLI/GUI rough edges without changing business calculations.
@@ -419,11 +427,13 @@ Target: make the desktop GUI a credible beta instead of an experimental companio
 - Improve progress/status reporting for long-running workbook operations.
 - Define the supported CustomTkinter/Tkinter experience and installation story.
 
-## v1.6.0 — Distribution and legacy retirement
+## v1.6.0 — Distribution readiness
 
-Target: reduce historical/deployment complexity after the migration window has proved clean.
+Target: reduce deployment complexity.
 
+<!-- BEGIN LEGACY_COMPATIBILITY -->
 - Retire the legacy configuration compatibility layer **only if** the retirement audit remains clean for active profiles and external consumers.
+<!-- END LEGACY_COMPATIBILITY -->
 - Move toward standard Python packaging (`pyproject.toml`, stable entry points, reproducible release artifacts).
 - Produce a clean portable release bundle with explicit version metadata.
 - Document supported Python/platform combinations from tested release environments rather than assumptions.

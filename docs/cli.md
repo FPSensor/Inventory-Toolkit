@@ -79,7 +79,9 @@ Additional actions:
 
 - Guided Setup;
 - profile validation;
+<!-- BEGIN LEGACY_COMPATIBILITY -->
 - legacy migration/archive while compatibility support exists.
+<!-- END LEGACY_COMPATIBILITY -->
 
 The intent is that a normal user chooses **what concept to configure**, not **which internal JSON file to edit**.
 
@@ -106,7 +108,7 @@ Errors only. Intended for normal usage.
 
 ### Level 2 — Diagnostics
 
-Adds operational events, timings, warnings, and compatibility notices.
+Adds operational events, timings, and warnings.
 
 ### Level 3 — Forensic
 
@@ -134,7 +136,9 @@ Current tools:
 4. Full release certification against golden masters
 5. Update golden-master references
 6. Show current session log tail
+<!-- BEGIN LEGACY_COMPATIBILITY -->
 7. Legacy compatibility lifecycle, while the retirement tool still exists
+<!-- END LEGACY_COMPATIBILITY -->
 
 Developer tools run in subprocesses anchored to the application root so their failures and return codes remain isolated from the menu loop. Normal runtime profile/config resolution is independently CWD-safe and does not depend on this subprocess working directory.
 
@@ -142,9 +146,12 @@ Developer tools run in subprocesses anchored to the application root so their fa
 
 The CLI asks for an explicit `UPDATE REFERENCES` confirmation before invoking reference regeneration. This should only be used after intentionally changing expected business/demo output and reviewing the result.
 
+<!-- BEGIN LEGACY_COMPATIBILITY -->
 ### Retiring compatibility
 
 Compatibility retirement requires an explicit `RETIRE COMPATIBILITY` confirmation and delegates to `tools/RetireLegacyCompatibility.py`. The tool performs its own readiness checks and validation. If retirement succeeds, it removes its own script and menu blocks.
+
+<!-- END LEGACY_COMPATIBILITY -->
 
 ## Native file picker
 

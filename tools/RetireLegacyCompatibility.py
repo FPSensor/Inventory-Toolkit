@@ -63,6 +63,15 @@ MARKER_FILES = (
     Path("tests/test_config.py"),
     Path("docs/core.md"),
     Path("docs/profiles.md"),
+    Path("README.md"),
+    Path("core/README.md"),
+    Path("docs/index.md"),
+    Path("docs/architecture.md"),
+    Path("docs/cli.md"),
+    Path("docs/testing_and_examples.md"),
+    Path("docs/release_process.md"),
+    Path("docs/troubleshooting.md"),
+    Path("docs/dev_notes.md"),
 )
 COMPATIBILITY_SOURCE_FILES = {
     Path("core/compatibility.py"),
@@ -221,19 +230,6 @@ def rewrite_text(path: Path, transform) -> None:
         path.write_bytes(updated)
 
 
-def update_readme_tree() -> None:
-    path = ROOT / "README.md"
-    retired_names = {item.name for item in (*COMPATIBILITY_MODULES, *RETIRE_WITH_COMPATIBILITY)}
-
-    def remove_retired_entries(text: str) -> str:
-        return "".join(
-            line for line in text.splitlines(keepends=True)
-            if not any(name in line for name in retired_names)
-        )
-
-    rewrite_text(path, remove_retired_entries)
-
-
 def clean_test_imports() -> None:
     path = ROOT / "tests/test_config.py"
 
@@ -257,7 +253,6 @@ def apply_retirement() -> None:
         if path.exists():
             path.unlink()
 
-    update_readme_tree()
     clean_test_imports()
 
 

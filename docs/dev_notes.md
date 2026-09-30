@@ -54,9 +54,12 @@ Forensic mode should log counts, shapes, columns, decisions, timings, paths, and
 
 `--update-reference` is not a test-fix command. It changes the definition of correct expected output. Review candidates before committing.
 
+<!-- BEGIN LEGACY_COMPATIBILITY -->
 ## Compatibility is temporary
 
 Do not add new calls to legacy projections. The compatibility layer includes its own readiness/retirement tooling so the project can eventually delete it cleanly.
+
+<!-- END LEGACY_COMPATIBILITY -->
 
 ## Documentation is part of the codebase contract
 

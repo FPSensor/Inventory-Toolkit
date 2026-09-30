@@ -42,7 +42,7 @@ Current profile configuration is intentionally strict:
 - an existing file with the wrong type, unsupported schema version, unknown key, or invalid nested value is an error;
 - the complete current profile is validated before a processing workflow is allowed to use it.
 
-This distinction is deliberate: defaults are bootstrap behavior for absent configuration, not a recovery path for configuration that exists but cannot be trusted. Supported pre-v3 storage is converted by the compatibility layer before strict current-schema validation.
+This distinction is deliberate: defaults are bootstrap behavior for absent configuration, not a recovery path for configuration that exists but cannot be trusted.
 
 ## Ownership model
 
@@ -163,6 +163,8 @@ A new profile's missing current-schema files are initialized from defaults witho
 
 <!-- BEGIN LEGACY_COMPATIBILITY -->
 ## Legacy profile migration
+
+Supported pre-v3 storage is converted by the compatibility layer before strict current-schema validation.
 
 Inventory Toolkit temporarily recognizes pre-v3 storage and old serialized Spanish keys.
 

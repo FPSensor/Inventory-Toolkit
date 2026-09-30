@@ -54,7 +54,9 @@ Core owns cross-cutting concerns:
 
 - schema-v3 configuration loading and validation;
 - business-label constants;
+<!-- BEGIN LEGACY_COMPATIBILITY -->
 - legacy configuration transition while it exists;
+<!-- END LEGACY_COMPATIBILITY -->
 - data sanitization helpers;
 - runtime logging and structured debug events;
 - timing/telemetry helpers;
@@ -114,7 +116,9 @@ Current internal configuration uses English keys and version `3`. External workb
 
 `core/business_schema.py` defines canonical v1.x business vocabulary, while profile-owned column mappings may replace those labels at workbook boundaries. Engines should resolve configurable external names once, then operate on stable internal contracts rather than repeatedly hard-coding or threading source labels through business logic. Stock Processing applies this rule explicitly with private article/family pipeline keys and restores the configured labels only when projecting the final workbook.
 
+<!-- BEGIN LEGACY_COMPATIBILITY -->
 Legacy v1/v2 storage and old API projections are temporary compatibility concerns, not the current architecture. See [legacy_compatibility.md](legacy_compatibility.md).
+<!-- END LEGACY_COMPATIBILITY -->
 
 ## Excel strategy
 
@@ -132,7 +136,9 @@ Examples:
 - locked output files use retry/copy behavior in the CLI and a typed non-interactive error for GUI callers;
 - unresolved scanner articles are marked `REVISAR |`;
 - stale golden masters are rejected when demo/profile fingerprints change;
+<!-- BEGIN LEGACY_COMPATIBILITY -->
 - destructive compatibility retirement refuses to run until readiness checks pass.
+<!-- END LEGACY_COMPATIBILITY -->
 
 ## Evolution rule
 

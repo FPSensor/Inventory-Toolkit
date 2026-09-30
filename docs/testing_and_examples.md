@@ -10,7 +10,7 @@ Run:
 pytest -q
 ```
 
-Coverage includes configuration, core utilities, logger/debug tooling, business edge cases, compatibility behavior while present, and golden-master comparator behavior.
+Coverage includes configuration, core utilities, logger/debug tooling, business edge cases, and golden-master comparator behavior.
 
 Important examples include:
 
@@ -18,7 +18,7 @@ Important examples include:
 - `REVISAR |` fallback;
 - difference arithmetic including negative stock cases;
 - stock margin/zero handling;
-- config schema/migration behavior;
+- config schema validation;
 - configurable family fallback parity across scalar/batch classification;
 - YoY metric/annual-comparison/group contracts;
 - logger/runtime-debug behavior;
@@ -66,7 +66,7 @@ The demo profile under `profiles/demo/` supplies the corresponding schema-v3 rul
 python tools/ReleaseCheck.py
 ```
 
-Runs the lightweight pre-release repository checks, including compilation/tests/integrity/profile validation and compatibility audit while relevant.
+Runs the lightweight pre-release repository checks, including compilation/tests/integrity/profile validation.
 
 Use during normal development.
 
@@ -145,3 +145,9 @@ During development, `--cross-system PATH` can point release/demo execution at an
 ## Reference directory
 
 See [`../tests/release_reference/README.md`](../tests/release_reference/README.md) for the local golden-master contract.
+
+<!-- BEGIN LEGACY_COMPATIBILITY -->
+## Compatibility verification
+
+While compatibility exists, tests cover profile migration and deprecated API behavior. The quick release gate also runs the read-only retirement audit. See [legacy_compatibility.md](legacy_compatibility.md).
+<!-- END LEGACY_COMPATIBILITY -->

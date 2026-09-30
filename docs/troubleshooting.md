@@ -98,9 +98,12 @@ python -c "import sys; print(sys.executable)"
 
 Prefer the virtual environment's interpreter.
 
+<!-- BEGIN LEGACY_COMPATIBILITY -->
 ## Compatibility warnings appear
 
 The program is using a deprecated profile/storage/API path. See [legacy_compatibility.md](legacy_compatibility.md). The warning is intentionally informational at debug levels 2/3 so remaining migration work is visible before retirement.
+
+<!-- END LEGACY_COMPATIBILITY -->
 
 ## Release test is slow or memory-constrained
 

@@ -88,7 +88,7 @@ def _select_debug_level(current_level: int) -> int:
         print("\n  INVENTORY TOOLKIT — DEBUG VERBOSITY\n")
         print(f"  Current level: {current_level}\n")
         print("    1  ›  Operator mode      — errors only")
-        print("    2  ›  Diagnostics        — operations, warnings, compatibility notices")
+        print("    2  ›  Diagnostics        — operations and warnings")
         print("    3  ›  Forensic mode      — detailed execution trace + Developer Console")
         print("    0  ›  Cancel\n")
         option = input("  Select debug level: ").strip()
@@ -101,7 +101,7 @@ def _select_debug_level(current_level: int) -> int:
 
 
 def _apply_debug_level(level: int, *, reset_session_log: bool = False) -> int:
-    """Apply logger and temporary compatibility diagnostics without restarting."""
+    """Apply the runtime debug level without restarting."""
     active_level = set_debug_level(level, reset_session_log=reset_session_log)
     # BEGIN LEGACY_COMPATIBILITY
     from core.compatibility import configure_compatibility_diagnostics

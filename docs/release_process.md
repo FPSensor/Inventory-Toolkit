@@ -81,6 +81,7 @@ again.
 
 Updating references is equivalent to declaring the new output correct.
 
+<!-- BEGIN LEGACY_COMPATIBILITY -->
 ## 8. Compatibility check
 
 While the legacy layer exists:
@@ -91,7 +92,9 @@ python tools/RetireLegacyCompatibility.py
 
 A release does **not** require compatibility retirement. The audit exists to tell you whether retirement is safe when you deliberately decide the migration window is over.
 
-## 9. Manual surface checks
+<!-- END LEGACY_COMPATIBILITY -->
+
+## Manual surface checks
 
 For changes affecting presentation/setup:
 
@@ -120,4 +123,4 @@ Most developer/release operations can be run without leaving Inventory Toolkit:
 main menu → type debug → level 3 → D
 ```
 
-The Developer Console exposes pytest, quick verification, demo smoke, strict release certification, golden-master update, log tail, and compatibility lifecycle while present.
+The Developer Console exposes pytest, quick verification, demo smoke, strict release certification, golden-master update, log tail.

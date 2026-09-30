@@ -14,7 +14,7 @@ Pydantic models for configuration schema v3.
 
 The current schema requires version `3`, not merely an arbitrary integer. All current models, including nested structures, reject unknown keys. A misspelled setting is therefore a configuration error rather than an ignored field that silently falls back to another value.
 
-This matters after legacy migration is eventually removed: obsolete profiles should fail clearly rather than being interpreted as current. Supported legacy names are converted explicitly before current-schema validation.
+Obsolete profiles must fail clearly rather than being interpreted as current.
 
 ## `paths.py`
 
@@ -41,7 +41,9 @@ Responsibilities:
   - `get_cross_check_config()`;
   - `get_yoy_reports_config()`.
 
+<!-- BEGIN LEGACY_COMPATIBILITY -->
 Old short-name projections are compatibility-only and should not be used by new built-in code.
+<!-- END LEGACY_COMPATIBILITY -->
 
 ## `profile_config.py`
 
@@ -58,7 +60,7 @@ Configuration ownership is described in [profiles.md](profiles.md).
 <!-- BEGIN LEGACY_COMPATIBILITY -->
 ## `compatibility.py`, `legacy_config.py`, `legacy_profile_migration.py`
 
-Temporary transition boundary for older Inventory Toolkit profiles/callers.
+Temporary transition boundary for older Inventory Toolkit profiles/callers. Supported legacy names are converted explicitly before current-schema validation.
 
 - `compatibility.py` emits deduplicated deprecation diagnostics when debug level 2/3 is enabled.
 - `legacy_profile_migration.py` recognizes/migrates pre-v3 storage.
@@ -79,7 +81,7 @@ Errors only.
 
 ### Level 2 — Diagnostics
 
-Operational milestones, stage timings, warnings, and compatibility diagnostics.
+Operational milestones, stage timings, and warnings.
 
 ### Level 3 — Forensic
 

@@ -26,7 +26,9 @@ The documentation is organized by **responsibility**, not by project history. If
 
 1. [Testing and demo fixtures](testing_and_examples.md)
 2. [Release process](release_process.md)
+<!-- BEGIN LEGACY_COMPATIBILITY -->
 3. [Legacy compatibility lifecycle](legacy_compatibility.md), while that layer still exists
+<!-- END LEGACY_COMPATIBILITY -->
 
 ## Document map
 
@@ -41,7 +43,9 @@ The documentation is organized by **responsibility**, not by project history. If
 | [profiles.md](profiles.md) | users / maintainers | schema-v3 tree, ownership, Guided Setup, Configuration Hub |
 | [testing_and_examples.md](testing_and_examples.md) | maintainers | pytest, IntegrityCheck, demo dataset, golden-master mechanics |
 | [release_process.md](release_process.md) | maintainers | repeatable release gate and reference-update discipline |
+<!-- BEGIN LEGACY_COMPATIBILITY -->
 | [legacy_compatibility.md](legacy_compatibility.md) | maintainers | migration diagnostics and guarded retirement |
+<!-- END LEGACY_COMPATIBILITY -->
 | [troubleshooting.md](troubleshooting.md) | users / maintainers | common failures and recovery paths |
 | [dev_notes.md](dev_notes.md) | contributors | engineering conventions and safe extension rules |
 

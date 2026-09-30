@@ -12,7 +12,9 @@ Cross-cutting services used by CLI, GUI, and engines.
 - `logger.py` — runtime debug levels + forensic `logs/session.log`.
 - `telemetry.py` — execution-stage timing helper.
 - `system_utils.py` — safe saving/system helpers and locked-output handling.
+<!-- BEGIN LEGACY_COMPATIBILITY -->
 - `compatibility.py`, `legacy_config.py`, `legacy_profile_migration.py` — temporary compatibility boundary while legacy support remains.
+<!-- END LEGACY_COMPATIBILITY -->
 
 Core should provide infrastructure, not duplicate workflow-specific calculations.
 
