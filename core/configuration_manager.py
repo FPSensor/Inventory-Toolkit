@@ -25,7 +25,7 @@ from core.legacy_config import build_legacy_view
 # END LEGACY_COMPATIBILITY
 from core.logger import log_debug_event
 from core.paths import profile_configs_root
-from core.profile_config import DEFAULTS, ensure_profile_config
+from core.profile_config import DEFAULTS, ensure_profile_config, validate_config_header
 
 
 _CONFIG_MODELS: Dict[str, Type[BaseModel]] = {
@@ -142,6 +142,7 @@ class ConfigurationManager:
             source=source,
         )
         try:
+            validate_config_header(path, raw)
             validated = model.model_validate(raw).model_dump()
             log_debug_event(
                 "config_validate_ok",

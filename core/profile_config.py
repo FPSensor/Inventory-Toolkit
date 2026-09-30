@@ -61,6 +61,29 @@ def initialize_profile_config(configs_dir: Path) -> None:
             _write(path, deepcopy(default))
 
 
+def validate_config_header(path: Path, data: Any) -> None:
+    """Validate the current schema independently of optional legacy migration."""
+    if not isinstance(data, dict):
+        raise ConfigurationFileError(
+            path, f"expected a JSON object, got {type(data).__name__}"
+        )
+    version = data.get("version")
+    if type(version) is not int:
+        raise ConfigurationFileError(
+            path, f"schema version must be an integer; got {version!r}"
+        )
+    if version > CONFIG_VERSION:
+        raise ConfigurationFileError(
+            path,
+            f"schema version {version} is newer than supported version {CONFIG_VERSION}",
+        )
+    if version != CONFIG_VERSION:
+        raise ConfigurationFileError(
+            path,
+            f"schema version {version} requires migration to version {CONFIG_VERSION}",
+        )
+
+
 def ensure_profile_config(configs_dir: Path) -> None:
     """Ensure a profile can be consumed through the current schema."""
     # BEGIN LEGACY_COMPATIBILITY
@@ -69,6 +92,9 @@ def ensure_profile_config(configs_dir: Path) -> None:
     prepare_profile_compatibility(configs_dir)
     # END LEGACY_COMPATIBILITY
     initialize_profile_config(configs_dir)
+    for logical_name in DEFAULTS:
+        path = config_path(configs_dir, logical_name)
+        validate_config_header(path, _read(path))
 
 
 def profile_readiness(configs_dir: Path) -> Dict[str, Tuple[bool, str]]:

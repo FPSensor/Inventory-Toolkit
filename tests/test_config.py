@@ -286,3 +286,22 @@ def test_price_article_tokenization_rejects_unknown_strategy():
         CrossCheckConfig.model_validate({"version": CONFIG_VERSION, "pricing": {"article_tokenization": "guess"}})
     with pytest.raises(ValidationError):
         StockProcessingConfig.model_validate({"version": CONFIG_VERSION, "pricing": {"article_tokenization": "guess"}})
+
+
+@pytest.mark.parametrize("payload, message", [
+    ([], "expected a JSON object"),
+    ({}, "schema version must be an integer"),
+    ({"version": True}, "schema version must be an integer"),
+    ({"version": 3.0}, "schema version must be an integer"),
+    ({"version": CONFIG_VERSION + 1}, "newer than supported"),
+    ({"version": CONFIG_VERSION - 1}, "requires migration"),
+])
+def test_current_schema_header_validation_is_independent_of_migration(tmp_path, payload, message):
+    from core.profile_config import validate_config_header
+
+    path = tmp_path / "settings.json"
+    original = json.dumps(payload)
+    path.write_text(original, encoding="utf-8")
+    with pytest.raises(ConfigurationError, match=message):
+        validate_config_header(path, payload)
+    assert path.read_text(encoding="utf-8") == original
