@@ -10,7 +10,7 @@ from copy import deepcopy
 import pandas as pd
 
 from cli.progress import show_progress
-from cli.utils import ask_file, load_last_paths, save_last_paths, confirm_default_column
+from cli.utils import ask_file, load_last_paths, save_last_paths, confirm_default_column, input_default
 from core.input_columns import choose_input_columns
 from core.profile_config import DEFAULTS
 from core.configuration_manager import ConfigurationManager
@@ -37,7 +37,7 @@ def launch_yoy_reports(active_profile: str) -> None:
     last_paths = load_last_paths(profile)
     previous_paths = last_paths.get("yoy_reports", {})
 
-    sales_file = ask_file("Sales data file", previous_paths.get("file", ""))
+    sales_file = ask_file("Sales data file", input_default(profile, previous_paths.get("file"), "yoy_sales_history.xlsx", other_default=""))
     if not sales_file:
         print("  ⚠️  No file selected — operation cancelled.")
         input("  Press Enter to return...")

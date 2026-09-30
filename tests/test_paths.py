@@ -5,7 +5,7 @@ import subprocess
 import sys
 
 from cli import profiles as cli_profiles
-from cli import cross_check_launcher, stock_processing_launcher
+from cli import cross_check_launcher, stock_processing_launcher, yoy_reports_launcher
 from cli.utils import input_default, load_last_paths, save_last_paths, validate_files_exist
 from core import paths as app_paths
 from core.configuration_manager import ConfigurationManager
@@ -135,6 +135,32 @@ def test_stock_demo_prompts_resolve_bundled_inputs_from_foreign_cwd(tmp_path, mo
     assert all(Path(path).is_file() for path in offered)
     assert all(Path(path).parent == app_paths.demo_root() for path in offered)
     assert input_default("demo", "custom-stock.xlsx", "stock_processing_raw_stock.xlsx") == "custom-stock.xlsx"
+
+
+def test_yoy_demo_prompt_resolves_bundled_input_from_foreign_cwd(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(yoy_reports_launcher, "load_last_paths", lambda _profile: {})
+    monkeypatch.setattr(yoy_reports_launcher, "save_last_paths", lambda *_args: None)
+    offered = []
+
+    def accept_default(_prompt, default):
+        offered.append(default)
+        return default
+
+    monkeypatch.setattr(yoy_reports_launcher, "ask_file", accept_default)
+    def reject_header(*_args, **_kwargs):
+        raise ValueError("stop after selecting input")
+
+    monkeypatch.setattr(yoy_reports_launcher.pd, "read_excel", reject_header)
+    responses = iter(("i", ""))
+    monkeypatch.setattr("builtins.input", lambda _prompt: next(responses))
+
+    yoy_reports_launcher.launch_yoy_reports("demo")
+
+    assert len(offered) == 1
+    assert Path(offered[0]).is_file()
+    assert Path(offered[0]).parent == app_paths.demo_root()
+    assert input_default("demo", "custom-sales.xlsx", "yoy_sales_history.xlsx") == "custom-sales.xlsx"
 
 
 def test_cli_profile_discovery_is_application_owned(tmp_path, monkeypatch):

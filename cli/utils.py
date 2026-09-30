@@ -58,13 +58,13 @@ def confirm_default_column(field: str, configured: str, default: str) -> bool:
     )
 
 
-def input_default(profile: str, saved_path: str | None, demo_filename: str) -> str:
+def input_default(profile: str, saved_path: str | None, demo_filename: str, other_default: str | None = None) -> str:
     """Prefer a saved input; otherwise locate demo fixtures independent of CWD."""
     if saved_path:
         return saved_path
     if profile == "demo":
         return str(demo_root() / demo_filename)
-    return demo_filename
+    return demo_filename if other_default is None else other_default
 
 
 def ask_file(message: str, default_val: str, is_output: bool = False) -> str:
