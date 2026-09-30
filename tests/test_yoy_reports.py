@@ -8,6 +8,7 @@ from engine.yoy_reports.generator import generate_sales_report
 from engine.yoy_reports.metrics import configured_branches, resolve_metric_specs
 from engine.yoy_reports.sheet_renderer import render_report_sheet
 from engine.yoy_reports.excel_renderer import render_yoy_sales_excel
+from engine.yoy_reports.stats import build_yoy_stats
 
 
 def _config(*, metrics=None, annual_comparison=True, include_sizes=False, groups=None):
@@ -182,6 +183,22 @@ def test_segmented_progress_advances_after_each_rendered_sheet(tmp_path):
     assert "Prepared 3 sheets" in events[-1].message
 
 
+def test_yoy_stats_use_unique_branches_and_label_single_branch_groups():
+    current, previous = _frames()
+    config = _config(groups={"north": ["A", "B"], "single": ["A"]})
+    lines = build_yoy_stats(
+        current, previous, pd.Timestamp("2026-01-01"), pd.Timestamp("2026-01-31"), config,
+    )
+
+    assert "  Jan 2026: 770.75 vs 600.00 (+28.5%)" in lines
+    assert "  North (2 branches): 770.75 vs 600.00 (+28.5%)" in lines
+    assert any(line.startswith("  A: ") for line in lines)
+    assert "Overall (2 unique branches): 770.75 vs 600.00 (+28.5%)" in lines
+    assert "N/A (prior year is zero)" in build_yoy_stats(
+        current, previous.iloc[0:0], pd.Timestamp("2026-01-01"), pd.Timestamp("2026-01-31"), config,
+    )[-1]
+
+
 def test_cli_full_report_comparison_is_opt_in_and_reuses_last_paths(tmp_path, monkeypatch):
     from cli.yoy_reports_launcher import launch_yoy_reports
     from core import paths as app_paths
@@ -229,6 +246,7 @@ def test_generate_sales_report_uses_profile_include_sizes_default(monkeypatch, t
     config = _config(metrics=["units"], include_sizes=True)
     captured = {}
     events = []
+    stats = []
 
     def fake_process(*_args, **_kwargs):
         return current, previous, pd.Timestamp("2025-01-01")
@@ -251,8 +269,10 @@ def test_generate_sales_report_uses_profile_include_sizes_default(monkeypatch, t
         True,
         "demo",
         progress=events.append,
+        stats=stats.append,
     )
 
     assert captured["include_sizes"] is True
     assert [event.completed for event in events] == [0, 1, 2, 3]
-    assert "current-period rows" in events[1].message
+    assert "comparison periods selected" in events[1].message
+    assert "Overall (2 unique branches): 6 vs 5 (+20.0%)" in stats[0].render()
