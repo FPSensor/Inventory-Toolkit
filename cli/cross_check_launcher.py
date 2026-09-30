@@ -8,7 +8,7 @@ have to retype them on every execution.
 import time
 from argparse import Namespace
 
-from cli.progress import show_progress
+from cli.progress import show_progress, show_stats
 from cli.utils import (
     clear_screen, ask_file, validate_files_exist,
     load_last_paths, save_last_paths,
@@ -107,6 +107,7 @@ def launch_cross_check(active_profile: str) -> None:
         cross_check_partial=flag_partial,
         column_overrides=overrides,
         progress=show_progress,
+        stats=show_stats,
     )
 
     try:

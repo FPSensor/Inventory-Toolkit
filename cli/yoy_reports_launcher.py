@@ -9,7 +9,7 @@ from copy import deepcopy
 
 import pandas as pd
 
-from cli.progress import show_progress
+from cli.progress import show_progress, show_stats
 from cli.utils import ask_file, load_last_paths, save_last_paths, confirm_default_column, input_default
 from core.input_columns import choose_input_columns
 from core.profile_config import DEFAULTS
@@ -204,6 +204,7 @@ def launch_yoy_reports(active_profile: str) -> None:
             profile,
             include_sizes,
             progress=show_progress,
+            stats=show_stats,
         )
         if final_output:
             elapsed = time.time() - started_at
