@@ -189,6 +189,7 @@ def test_cross_check_honors_catalog_article_and_family_columns(tmp_path, monkeyp
     pd.DataFrame({"SALES_SKU": ["AA1"], "SALES_VALUE": [20]}).to_excel(sales_path, index=False)
 
     events = []
+    stats = []
     result = run_cross_check(
         Namespace(
             cross_check_system=str(system_path),
@@ -201,11 +202,14 @@ def test_cross_check_honors_catalog_article_and_family_columns(tmp_path, monkeyp
             cross_check_partial=False,
             non_interactive=True,
             progress=events.append,
+            stats=stats.append,
         )
     )
     assert result == str(output_path)
     assert [event.completed for event in events] == [0, 1, 2, 3]
-    assert "shortages: 1" in events[2].message
+    assert "Reconciliation complete" in events[2].message
+    assert "Differences: 1" in stats[0].render()
+    assert "Shortages: 1" in stats[0].render()
 
     output = pd.read_excel(output_path)
     assert list(output.columns) == [

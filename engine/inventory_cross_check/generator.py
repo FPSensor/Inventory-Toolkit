@@ -21,7 +21,7 @@ from core.business_schema import (
 from core.configuration_manager import ConfigurationManager
 from core.data_sanitizer import clean_sku_series
 from core.logger import log, log_debug_event
-from core.progress import report_progress
+from core.progress import report_progress, report_stats
 from core.system_utils import normalize_xlsx_output_path, safe_pandas_to_excel
 from core.telemetry import execution_timer
 from engine.inventory_cross_check.data_processor import (
@@ -39,6 +39,7 @@ def run_cross_check(args):
     output_path = normalize_xlsx_output_path(args.cross_check_out)
     interactive = not getattr(args, "non_interactive", False)
     progress = getattr(args, "progress", None)
+    stats = getattr(args, "stats", None)
     report_progress(progress, 0, 3, "Reading system stock, scanner readings and price lists...")
     log_debug_event(
         "cross_check_start",
@@ -133,7 +134,7 @@ def run_cross_check(args):
             cost_columns=list(cost_frame.columns),
             sales_columns=list(sales_frame.columns),
         )
-    report_progress(progress, 1, 3, f"Read {len(system_frame):,} system rows and {len(count_frame):,} scanner rows. Matching and reconciling articles...")
+    report_progress(progress, 1, 3, "Files loaded. Matching and reconciling articles...")
 
     with execution_timer("Data Transformation & Matching"):
         system_frame[ARTICLE_COLUMN] = clean_sku_series(system_frame[ARTICLE_COLUMN])
@@ -303,12 +304,7 @@ def run_cross_check(args):
         )
     surplus_count = int((result[DIFFERENCE_COLUMN] > 0).sum())
     shortage_count = int((result[DIFFERENCE_COLUMN] < 0).sum())
-    report_progress(
-        progress, 2, 3,
-        f"Matched {len(master_articles):,} catalog articles; {review_count:,} scanner readings need review. "
-        f"Articles filtered: {rows_before_filters - len(reconciliation):,}; surpluses: {surplus_count:,}; "
-        f"shortages: {shortage_count:,}. Writing workbook...",
-    )
+    report_progress(progress, 2, 3, "Reconciliation complete. Writing workbook...")
 
     with execution_timer("Excel Rendering & Formatting"):
         final_path = safe_pandas_to_excel(
@@ -318,7 +314,17 @@ def run_cross_check(args):
             interactive=interactive,
         )
         apply_excel_formatting(final_path, interactive=interactive)
-    report_progress(progress, 3, 3, f"Saved cross-check report: {len(result):,} differences.")
+    report_progress(progress, 3, 3, "Cross-check report saved.")
+    report_stats(
+        stats,
+        f"Differences: {len(result):,}",
+        f"Surpluses: {surplus_count:,}",
+        f"Shortages: {shortage_count:,}",
+        f"Scanner readings to review: {review_count:,}",
+        f"Families with differences: {result[family_column].nunique(dropna=False):,}",
+        f"Catalog articles: {len(master_articles):,}",
+        f"Articles filtered: {rows_before_filters - len(reconciliation):,}",
+    )
 
     del system_frame, count_frame, cost_frame, sales_frame, reconciliation, result
     gc.collect()
