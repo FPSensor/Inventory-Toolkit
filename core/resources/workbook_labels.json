@@ -18,5 +18,6 @@
     "REVIEW_PREFIX": "REVISAR | ",
     "UNIT_COST_PREFIX": "PrecioUnit.Costo.",
     "UNIT_SALES_PREFIX": "PrecioUnit.Venta.",
-    "MARGIN_PREFIX": "Margen_"
+    "MARGIN_PREFIX": "Margen_",
+    "UNMATCHED_FAMILY": "Other"
 }

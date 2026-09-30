@@ -19,7 +19,7 @@ def test_assign_family():
     assert assign_family("ABCD-123", rules) == "Category B"
     assert assign_family("AXY00-XYZ", rules) == "Category A"
     assert assign_family("99999-ABC", rules) == "Other"
-    assert assign_family("REVISAR | 123", rules) == "REVISAR"
+    assert assign_family("REVISAR | 123", rules) == "Other"
 
 def test_calculate_difference():
     # System stock 10, physical count 5: shortage of 5.

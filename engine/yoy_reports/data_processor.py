@@ -3,6 +3,7 @@
 import pandas as pd
 
 from core.logger import log_debug_event
+from core.business_schema import UNMATCHED_FAMILY
 from engine.shared.families import assign_families
 from engine.yoy_reports.metrics import resolve_metric_specs
 
@@ -13,7 +14,7 @@ def process_sales_data(
     yoy_end_dt,
     yoy_config,
     family_rules=None,
-    default_family="Other",
+    default_family=UNMATCHED_FAMILY,
     grouping_column=None,
 ):
     input_config = yoy_config["input"]

@@ -68,3 +68,21 @@ def test_longest_family_prefix_is_independent_of_rule_order(specific_first):
 
     assert [assign_family(article, rules) for article in articles] == expected
     assert assign_families(articles, rules).tolist() == expected
+
+
+@pytest.mark.parametrize("rules, expected", [
+    ({}, ["Fallback", "Fallback"]),
+    ({"Custom Category": ["marker"]}, ["Custom Category", "Custom Category"]),
+    ({"Broad": ["marker"], "Specific": ["marker-X"]}, ["Broad", "Specific"]),
+])
+def test_family_classification_has_no_reserved_category(rules, expected):
+    from core.business_schema import REVIEW_FAMILY
+
+    mapping = {
+        family: [prefix.replace("marker", REVIEW_FAMILY) for prefix in prefixes]
+        for family, prefixes in rules.items()
+    }
+    compiled = build_family_rules(mapping)
+    articles = pd.Series([REVIEW_FAMILY + " | item", REVIEW_FAMILY + "-X-item"])
+    assert [assign_family(value, compiled, "Fallback") for value in articles] == expected
+    assert assign_families(articles, compiled, "Fallback").tolist() == expected

@@ -7,7 +7,7 @@ from collections.abc import Mapping
 import numpy as np
 import pandas as pd
 
-from core.business_schema import COST_COLUMN, REVIEW_FAMILY, SALES_VALUE_LABEL
+from core.business_schema import COST_COLUMN, SALES_VALUE_LABEL
 from core.logger import log_debug_event
 from engine.shared.families import assign_families
 from engine.stock_processing.contracts import (
@@ -154,7 +154,7 @@ def classify_stock_families(
         "stock_processing_family_assignment",
         row_count=len(result),
         family_count=int(result[INTERNAL_FAMILY_COLUMN].nunique(dropna=False)),
-        review_rows=int(family_counts.get(REVIEW_FAMILY, 0)),
+        unmatched_rows=int(family_counts.get(default_family, 0)),
         top_families=family_counts.head(10).to_dict(),
     )
     return result

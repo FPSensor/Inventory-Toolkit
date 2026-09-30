@@ -4,11 +4,11 @@ from typing import Dict, List, Tuple
 
 import pandas as pd
 
-from core.business_schema import REVIEW_FAMILY
+from core.business_schema import UNMATCHED_FAMILY
 from core.data_sanitizer import clean_sku_series
 
 _TRIE_FAMILY_KEY = "__family__"
-_DEFAULT_UNMATCHED_FAMILY = "Other"
+_DEFAULT_UNMATCHED_FAMILY = UNMATCHED_FAMILY
 
 
 def build_family_rules(family_map: Dict[str, List[str]]) -> List[Tuple[str, str]]:
@@ -39,9 +39,6 @@ def assign_family(
     default_family: str = _DEFAULT_UNMATCHED_FAMILY,
 ) -> str:
     normalized_code = _normalize_family_code(code)
-    if normalized_code.startswith(REVIEW_FAMILY):
-        return REVIEW_FAMILY
-
     for prefix, family in rules:
         if normalized_code.startswith(prefix):
             return family
@@ -61,9 +58,6 @@ def _build_prefix_trie(rules: List[Tuple[str, str]]) -> dict:
 
 
 def _assign_family_from_trie(code: str, trie: dict, default_family: str) -> str:
-    if code.startswith(REVIEW_FAMILY):
-        return REVIEW_FAMILY
-
     node = trie
     best_family = None
     for character in code:
