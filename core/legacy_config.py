@@ -9,56 +9,62 @@ from __future__ import annotations
 
 from typing import Any
 
+from core.resource_config import load_resource
+
+_LEGACY_CONTRACT = load_resource("legacy_contract.json")
+LEGACY_KEYS = _LEGACY_CONTRACT["keys"]
+
+
 
 def build_legacy_view(config: Any, name: str) -> dict | None:
     """Project current configuration back into a pre-v2 compatibility shape."""
-    if name == "familias":
+    if name == LEGACY_KEYS["families_api"]:
         return config.get_family_rules()
     if name == "stores":
         network = config.get_network_config()
         return {
-            "locales_activos": network["active"],
-            "grupos_regionales": network["regional_groups"],
+            LEGACY_KEYS["active_stores"]: network["active"],
+            LEGACY_KEYS["regional_groups"]: network["regional_groups"],
         }
     if name == "databases":
         return config.get_stock_database_columns()
     if name == "settings":
         catalog = config.get_catalog()
         return {
-            "columna_articulo": catalog["columns"]["article"],
-            "columna_familia": catalog["columns"]["family"],
-            "familia_por_defecto": catalog["default_family"],
+            LEGACY_KEYS["article_column"]: catalog["columns"]["article"],
+            LEGACY_KEYS["family_column"]: catalog["columns"]["family"],
+            LEGACY_KEYS["default_family"]: catalog["default_family"],
         }
     if name == "cleaning":
         cleaning = config.get_stock_cleaning()
         return {
-            "columnas_texto_a_limpiar": cleaning["text_columns"],
-            "columnas_a_eliminar": cleaning["drop_columns"],
-            "columnas_a_formatear": cleaning["numeric_columns"],
+            LEGACY_KEYS["text_columns"]: cleaning["text_columns"],
+            LEGACY_KEYS["drop_columns"]: cleaning["drop_columns"],
+            LEGACY_KEYS["numeric_columns"]: cleaning["numeric_columns"],
         }
     if name == "pricing":
         pricing = config.get_stock_pricing()
         columns = pricing["columns"]
         return {
-            "columnas_esperadas": [
+            LEGACY_KEYS["pricing_columns"]: [
                 columns["article"],
                 columns["database"],
                 columns["price"],
             ],
-            "mapeo_nombres": pricing["aliases"],
+            LEGACY_KEYS["aliases"]: pricing["aliases"],
         }
     if name == "cross_check_settings":
         cross_check = config.get_cross_check_config()
         return {
-            "articulos_ignorados": cross_check["filters"]["ignored_articles"],
-            "palabras_ignoradas": cross_check["filters"]["ignored_terms"],
-            "columnas_costo": {
-                "articulo": cross_check["price_lists"]["cost"]["article_column"],
-                "precio": cross_check["price_lists"]["cost"]["price_column"],
+            LEGACY_KEYS["ignored_articles"]: cross_check["filters"]["ignored_articles"],
+            LEGACY_KEYS["ignored_terms"]: cross_check["filters"]["ignored_terms"],
+            LEGACY_KEYS["cost_columns"]: {
+                LEGACY_KEYS["price_article"]: cross_check["price_lists"]["cost"]["article_column"],
+                LEGACY_KEYS["price_value"]: cross_check["price_lists"]["cost"]["price_column"],
             },
-            "columnas_venta": {
-                "articulo": cross_check["price_lists"]["sales"]["article_column"],
-                "precio": cross_check["price_lists"]["sales"]["price_column"],
+            LEGACY_KEYS["sales_columns"]: {
+                LEGACY_KEYS["price_article"]: cross_check["price_lists"]["sales"]["article_column"],
+                LEGACY_KEYS["price_value"]: cross_check["price_lists"]["sales"]["price_column"],
             },
         }
     if name == "reports":
@@ -67,21 +73,21 @@ def build_legacy_view(config: Any, name: str) -> dict | None:
         source = yoy["input"]
         output = yoy["output"]
         return {
-            "orden_columnas_base": stock_output["base_columns"],
-            "hoja_datos_crudos": stock_output["raw_data_sheet"],
-            "resumenes": [
+            LEGACY_KEYS["base_columns"]: stock_output["base_columns"],
+            LEGACY_KEYS["raw_data_sheet"]: stock_output["raw_data_sheet"],
+            LEGACY_KEYS["summaries"]: [
                 {
-                    "nombre_hoja": summary["sheet_name"],
-                    "locales_a_incluir": summary["entities"],
-                    "titulos": summary["titles"],
+                    LEGACY_KEYS["summary_sheet"]: summary["sheet_name"],
+                    LEGACY_KEYS["summary_entities"]: summary["entities"],
+                    LEGACY_KEYS["summary_titles"]: summary["titles"],
                 }
                 for summary in stock_output["summaries"]
             ],
             "output_path": output["default_path"],
-            "metricas_salida": output["metrics"],
-            "comparacion_anual": output["annual_comparison"],
-            "incluir_talles": output["include_sizes"],
-            "columna_talle": source["size_column"],
+            LEGACY_KEYS["metrics"]: output["metrics"],
+            LEGACY_KEYS["annual_comparison"]: output["annual_comparison"],
+            LEGACY_KEYS["include_sizes"]: output["include_sizes"],
+            LEGACY_KEYS["size_column"]: source["size_column"],
             "data_source": {
                 "date_column": source["date_column"],
                 "quantity_column": source["quantity_column"],

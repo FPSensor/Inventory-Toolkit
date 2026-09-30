@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 
 import pytest
 from pydantic import ValidationError
@@ -190,50 +191,13 @@ def test_yoy_default_output_path_rejects_legacy_xls():
         YoYOutputConfig.model_validate({"default_path": "report.xls"})
 
 # BEGIN LEGACY_COMPATIBILITY
+def _fixture(name):
+    return json.loads((Path(__file__).parent / "fixtures" / name).read_text(encoding="utf-8"))
+
+
 def test_legacy_profile_migrates_without_changing_business_contract(tmp_path, monkeypatch):
     base = tmp_path / "profiles" / "legacy" / "configs"
-    legacy_files = {
-        "general/settings.json": {
-            "columna_articulo": "SKU",
-            "columna_familia": "Family",
-            "familia_por_defecto": "Other",
-        },
-        "general/familias.json": {"Shirts": ["01", "001"]},
-        "general/stores.json": {
-            "locales_activos": ["A"],
-            "grupos_regionales": {"ALL": ["A"]},
-        },
-        "general/databases.json": {"A": "DB_A"},
-        "stock_processing/cleaning.json": {
-            "columnas_texto_a_limpiar": ["SKU"],
-            "columnas_a_eliminar": ["Noise"],
-            "columnas_a_formatear": ["A"],
-        },
-        "stock_processing/pricing.json": {
-            "columnas_esperadas": ["SKU", "Origin", "Price"],
-            "mapeo_nombres": {"Origin": "Base"},
-        },
-        "cross_check/cross_check_settings.json": {
-            "articulos_ignorados": ["X"],
-            "palabras_ignoradas": ["TOTAL"],
-            "columnas_costo": {"articulo": "SKU", "precio": "Cost"},
-            "columnas_venta": {"articulo": "SKU", "precio": "Retail"},
-        },
-        "yoy_reports/reports.json": {
-            "orden_columnas_base": ["SKU", "Family"],
-            "hoja_datos_crudos": "Raw",
-            "resumenes": [],
-            "output_path": "yoy.xlsx",
-            "data_source": {
-                "date_column": "Date",
-                "quantity_column": "Qty",
-                "grouping_column": "Family",
-                "item_column": "SKU",
-                "branch_column": "Store",
-            },
-            "report_structures": {"G": ["A"]},
-        },
-    }
+    legacy_files = _fixture("legacy_configuration.json")
     for relative_path, payload in legacy_files.items():
         path = base / relative_path
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -266,20 +230,9 @@ def test_v2_modular_profile_upgrades_internal_keys_to_english(tmp_path):
     stock_path.parent.mkdir(parents=True)
     yoy_path.parent.mkdir(parents=True)
 
-    stock_path.write_text(json.dumps({
-        "version": 2,
-        "output": {
-            "summaries": [{
-                "nombre_hoja": "Summary",
-                "locales_a_incluir": ["A"],
-                "titulos": ["Familias"],
-            }]
-        },
-    }), encoding="utf-8")
-    yoy_path.write_text(json.dumps({
-        "version": 2,
-        "output": {"metrics": ["unidades", "ventas"]},
-    }), encoding="utf-8")
+    source = _fixture("modular_v2_configuration.json")
+    stock_path.write_text(json.dumps(source["stock"]), encoding="utf-8")
+    yoy_path.write_text(json.dumps(source["yoy"]), encoding="utf-8")
 
     ensure_profile_config(configs)
     stock = json.loads(stock_path.read_text(encoding="utf-8"))

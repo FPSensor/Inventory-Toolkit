@@ -119,3 +119,9 @@ The retirement script is intentionally conservative:
 - does not delete archived `_legacy_v1_backup` data.
 
 Do not manually delete compatibility files first and then try to use the audit tool. Let the audit tell you whether removal is safe.
+
+Historical serialized keys and filenames are data in
+`core/resources/legacy_contract.json`. The Python codec uses English identifiers
+and preserves those spellings only at the storage boundary. Legacy test payloads
+are external JSON fixtures in `tests/fixtures/`. The retirement tool removes
+these resources along with the compatibility hooks after its preflight audit.

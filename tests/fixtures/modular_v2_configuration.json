@@ -1,0 +1,27 @@
+{
+    "stock": {
+        "version": 2,
+        "output": {
+            "summaries": [
+                {
+                    "nombre_hoja": "Summary",
+                    "locales_a_incluir": [
+                        "A"
+                    ],
+                    "titulos": [
+                        "Familias"
+                    ]
+                }
+            ]
+        }
+    },
+    "yoy": {
+        "version": 2,
+        "output": {
+            "metrics": [
+                "unidades",
+                "ventas"
+            ]
+        }
+    }
+}

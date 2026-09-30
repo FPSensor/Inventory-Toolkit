@@ -8,6 +8,9 @@ from core.compatibility import (
 from core.configuration_manager import ConfigurationManager
 from core import paths as app_paths
 from core.paths import APPLICATION_ROOT
+from core.resource_config import load_resource
+
+_LEGACY_CONTRACT = load_resource("legacy_contract.json")
 
 
 def _write_json(path, payload):
@@ -21,12 +24,12 @@ def test_legacy_api_warning_is_debug_only_and_emitted_once(tmp_path, monkeypatch
 
     reset_compatibility_diagnostics()
     with caplog.at_level(logging.WARNING, logger="InventoryToolkit"):
-        config.get_config("familias")
+        config.get_config(_LEGACY_CONTRACT["api_names"]["families"])
         assert "Deprecated configuration compatibility API" not in caplog.text
 
         configure_compatibility_diagnostics(True)
-        config.get_config("familias")
-        config.get_config("familias")
+        config.get_config(_LEGACY_CONTRACT["api_names"]["families"])
+        config.get_config(_LEGACY_CONTRACT["api_names"]["families"])
 
     assert caplog.text.count("Deprecated configuration compatibility API") == 1
     assert "module-oriented English API" in caplog.text
@@ -35,7 +38,7 @@ def test_legacy_api_warning_is_debug_only_and_emitted_once(tmp_path, monkeypatch
 
 def test_legacy_storage_warning_points_to_migration_action(tmp_path, monkeypatch, caplog):
     base = tmp_path / "profiles" / "old" / "configs"
-    _write_json(base / "general" / "settings.json", {"columna_articulo": "SKU"})
+    _write_json(base / "general" / "settings.json", {_LEGACY_CONTRACT["keys"]["article_column"]: "SKU"})
 
     monkeypatch.setattr(app_paths, "PROFILES_ROOT", tmp_path / "profiles")
     reset_compatibility_diagnostics()

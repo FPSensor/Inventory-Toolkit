@@ -1,0 +1,84 @@
+{
+    "general/settings.json": {
+        "columna_articulo": "SKU",
+        "columna_familia": "Family",
+        "familia_por_defecto": "Other"
+    },
+    "general/familias.json": {
+        "Shirts": [
+            "01",
+            "001"
+        ]
+    },
+    "general/stores.json": {
+        "locales_activos": [
+            "A"
+        ],
+        "grupos_regionales": {
+            "ALL": [
+                "A"
+            ]
+        }
+    },
+    "general/databases.json": {
+        "A": "DB_A"
+    },
+    "stock_processing/cleaning.json": {
+        "columnas_texto_a_limpiar": [
+            "SKU"
+        ],
+        "columnas_a_eliminar": [
+            "Noise"
+        ],
+        "columnas_a_formatear": [
+            "A"
+        ]
+    },
+    "stock_processing/pricing.json": {
+        "columnas_esperadas": [
+            "SKU",
+            "Origin",
+            "Price"
+        ],
+        "mapeo_nombres": {
+            "Origin": "Base"
+        }
+    },
+    "cross_check/cross_check_settings.json": {
+        "articulos_ignorados": [
+            "X"
+        ],
+        "palabras_ignoradas": [
+            "TOTAL"
+        ],
+        "columnas_costo": {
+            "articulo": "SKU",
+            "precio": "Cost"
+        },
+        "columnas_venta": {
+            "articulo": "SKU",
+            "precio": "Retail"
+        }
+    },
+    "yoy_reports/reports.json": {
+        "orden_columnas_base": [
+            "SKU",
+            "Family"
+        ],
+        "hoja_datos_crudos": "Raw",
+        "resumenes": [],
+        "output_path": "yoy.xlsx",
+        "data_source": {
+            "date_column": "Date",
+            "quantity_column": "Qty",
+            "grouping_column": "Family",
+            "item_column": "SKU",
+            "branch_column": "Store"
+        },
+        "report_structures": {
+            "G": [
+                "A"
+            ]
+        }
+    }
+}

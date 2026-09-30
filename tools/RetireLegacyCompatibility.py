@@ -20,23 +20,15 @@ if str(BOOTSTRAP_ROOT) not in sys.path:
     sys.path.insert(0, str(BOOTSTRAP_ROOT))
 
 from core.paths import APPLICATION_ROOT, PROFILES_ROOT
+from core.resource_config import load_resource
 
 ROOT = APPLICATION_ROOT
 CURRENT_CONFIG_VERSION = 3
 AUTHOR = "FPSensor <gkartyt@gmail.com>"
 COMMIT_MESSAGE = "refactor: retire legacy configuration compatibility"
 
-LEGACY_FILES = (
-    "general/settings.json",
-    "general/databases.json",
-    "general/stores.json",
-    "general/familias.json",
-    "general/schema.json",
-    "stock_processing/cleaning.json",
-    "stock_processing/pricing.json",
-    "cross_check/cross_check_settings.json",
-    "yoy_reports/reports.json",
-)
+_LEGACY_CONTRACT = load_resource("legacy_contract.json")
+LEGACY_FILES = tuple(_LEGACY_CONTRACT["files"])
 CURRENT_CONFIGS = (
     "general/catalog.json",
     "general/families.json",
@@ -45,16 +37,7 @@ CURRENT_CONFIGS = (
     "cross_check/settings.json",
     "yoy_reports/settings.json",
 )
-LEGACY_API_NAMES = (
-    "familias",
-    "stores",
-    "databases",
-    "settings",
-    "cleaning",
-    "pricing",
-    "cross_check_settings",
-    "reports",
-)
+LEGACY_API_NAMES = tuple(_LEGACY_CONTRACT["api_names"].values())
 
 COMPATIBILITY_MODULES = (
     Path("core/compatibility.py"),
@@ -62,6 +45,9 @@ COMPATIBILITY_MODULES = (
     Path("core/legacy_profile_migration.py"),
 )
 RETIRE_WITH_COMPATIBILITY = (
+    Path("core/resources/legacy_contract.json"),
+    Path("tests/fixtures/legacy_configuration.json"),
+    Path("tests/fixtures/modular_v2_configuration.json"),
     Path("tests/test_compatibility.py"),
     Path("docs/legacy_compatibility.md"),
     Path("tools/RetireLegacyCompatibility.py"),
