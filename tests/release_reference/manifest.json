@@ -8,7 +8,7 @@
         "examples/demo/yoy_sales_history.xlsx": "1cc7927a00b79c39ceaf0a090282c4e9c8f3d88b6e7ba89fd765dbca95b49d20",
         "profiles/demo/configs/cross_check/settings.json": "737754b1ca7f1c4b6a3f2625c0cba5525b715cdee1ddb6d9429a2f443f0bac2d",
         "profiles/demo/configs/general/catalog.json": "ed9a3465a3133e65e200fabac6204536e737d6e455538fb6fc4ae09db5aa72cb",
-        "profiles/demo/configs/general/families.json": "99cfff591a92ce566ad0a32569d95e5db5aea93dc718f07802f820b102015eb7",
+        "profiles/demo/configs/general/families.json": "9019f8e66bad18c9ea1bd9d6c52c4e2250fffff07c00515976152b6be2ad97ee",
         "profiles/demo/configs/general/network.json": "d4de0f5f2148d4cb283b5d8731fcd4f7b4438acb0cde30c738ca71ac2eec0987",
         "profiles/demo/configs/stock_processing/settings.json": "d2b6911f7a5b5ed01784aaa03b6440adb9051efcbb3dd703418e8ed43c9b7e95",
         "profiles/demo/configs/yoy_reports/settings.json": "46308f95c3fac31cad79ef1522f2f5f44509becf74bb5561cc829e7076d44a7f",
@@ -18,20 +18,20 @@
     "references": {
         "cross": {
             "file": "workbooks/cross_check.xlsx",
-            "semantic_sha256": "6488d2691ea98ed9576ec672d875299ac639d20bddbbf40ff0b385833c482ae2",
-            "sha256": "fb0ef4aff065a9e2b1f4966ee8b8b7097ca7215be39e80c248b51dd0cf653040"
+            "semantic_sha256": "554efbe48e34382fd017f83c29623b42610c057cec3e6210f8b03891261451d2",
+            "sha256": "dcd182f45b8a88ec883c67ad0a991b2e539d419c3b0ae1e1dd057e0d37d76a8e"
         },
         "stock": {
             "file": "workbooks/stock_processing.xlsx",
-            "semantic_sha256": "326f1fa4a940fa7a03bc930b5980f15dd8bdf6afc1445cc6642c9f8c250b8a9c",
-            "sha256": "1c3bb9cab5147c54876527c28b925c086d49452570ac3c674200751a669cce10"
+            "semantic_sha256": "d391c5dfe5fa4599880fe1861b74e3fd0a5d4d7e75949974024787e77a0adc8e",
+            "sha256": "a90f4126127485d262f2a8377ba5ac8c374952803bdc1efe8c1f6b597e566558"
         },
         "yoy": {
             "file": "workbooks/yoy_reports.xlsx",
-            "semantic_sha256": "ea69948e6f9122ebc17c6128db17330f8dedaa3fb01664327703b45a0f1e5593",
-            "sha256": "f232bd07742fd447453ad953a4adec44be3dce4e1f38014c0b06a4b0d064b8a2"
+            "semantic_sha256": "b3642ec949b2d3edb1cb60be0638cc71d14a727b960fda191c65bbfa2c52f625",
+            "sha256": "e7093d7f1a5f5f1d3e2d0bab952d1e8b202ce0c5b0df984c0425190c1a9f7094"
         }
     },
     "schema_version": 1,
-    "source_revision": "a73906c6c6541cbd6a0817260857c9e3cda719d3"
+    "source_revision": "0d8470529b434f7f0ef1b680f24dfaef2663a2c4"
 }
