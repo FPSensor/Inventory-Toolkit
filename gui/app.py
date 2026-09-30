@@ -1539,7 +1539,7 @@ class InventoryToolkitGUI(BaseWindow):
             non_interactive=True,
             column_overrides=overrides,
         )
-        self._run_async(lambda progress: run_cross_check(args), "Cross Check completed!", progress_target=args)
+        self._run_async(lambda progress, stats: run_cross_check(args), "Cross Check completed!", progress_target=args)
 
     # ── Tab 2: Stock Processing ───────────────────────────────────────────────
 
@@ -1602,7 +1602,7 @@ class InventoryToolkitGUI(BaseWindow):
             column_overrides=overrides,
             warnings=warnings,
         )
-        self._run_async(lambda progress: run_stock_processing(args), "Stock Processing completed!", warnings=warnings, progress_target=args)
+        self._run_async(lambda progress, stats: run_stock_processing(args), "Stock Processing completed!", warnings=warnings, progress_target=args)
 
     # ── Tab 3: YoY Reports ────────────────────────────────────────────────────
 
@@ -1756,12 +1756,13 @@ class InventoryToolkitGUI(BaseWindow):
             messagebox.showerror("Path Persistence Error", str(exc), parent=self)
             return
 
-        def task(progress):
+        def task(progress, stats):
             return generate_sales_report(
                 f_path, out, s_dt, e_dt, yoy_config, grouping_column,
                 segmented, has_families, profile, include_sizes,
                 non_interactive=True,
                 progress=progress,
+                stats=stats,
             )
         self._run_async(task, "YoY Sales Report generated!")
 
@@ -1802,6 +1803,15 @@ class InventoryToolkitGUI(BaseWindow):
         self._activity.see("end")
         self._activity.configure(state="disabled")
 
+    def _show_stats(self, event):
+        """Keep final results visible after the task status changes."""
+        rendered = event.render()
+        self._activity.configure(state="normal")
+        self._activity.insert("end", f"\n{rendered}\n")
+        self._activity.see("end")
+        self._activity.configure(state="disabled")
+        return rendered
+
     def _set_status(self, text: str):
         """Update the status bar from the Tk main thread."""
         self._status.configure(text=text)
@@ -1818,6 +1828,8 @@ class InventoryToolkitGUI(BaseWindow):
         t_start = time.time()
         result_queue = queue.Queue(maxsize=1)
         progress_queue = queue.Queue()
+        stats_queue = queue.Queue()
+        summaries = []
 
         self._activity.configure(state="normal")
         self._activity.delete("1.0", "end")
@@ -1833,7 +1845,8 @@ class InventoryToolkitGUI(BaseWindow):
             try:
                 if progress_target is not None:
                     progress_target.progress = progress_queue.put
-                out_path = func(progress_queue.put)
+                    progress_target.stats = stats_queue.put
+                out_path = func(progress_queue.put, stats_queue.put)
                 if not out_path:
                     raise RuntimeError(
                         "The operation finished without producing an output file. "
@@ -1850,6 +1863,11 @@ class InventoryToolkitGUI(BaseWindow):
                     self._show_progress(progress_queue.get_nowait())
                 except queue.Empty:
                     break
+            while True:
+                try:
+                    summaries.append(self._show_stats(stats_queue.get_nowait()))
+                except queue.Empty:
+                    break
             try:
                 kind, payload, elapsed = result_queue.get_nowait()
             except queue.Empty:
@@ -1863,6 +1881,7 @@ class InventoryToolkitGUI(BaseWindow):
                 messagebox.showinfo(
                     "Done",
                     f"{success_msg}\n\nTime: {elapsed:.1f}s\nOutput: {out_path}"
+                    + ("\n\n" + summaries[-1] if summaries else "")
                     + ("\n\nWarnings:\n" + "\n".join(warnings) if warnings else ""),
                     parent=self,
                 )
