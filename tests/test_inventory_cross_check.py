@@ -4,29 +4,29 @@ from engine.inventory_cross_check.data_processor import calculate_difference, no
 
 def test_build_family_rules():
     families = {
-        "Remeras": ["001", "002"],
-        "Buzos": ["0085", "185"]
+        "Category A": ["AXY", "QRS"],
+        "Category B": ["ABCD", "XYZ"]
     }
     rules = build_family_rules(families)
-    # Longitud máxima primero
+    # Longest prefixes first
     assert len(rules[0][0]) == 4
-    assert rules[0][0] == "0085"
-    # Longitud mínima al final (3 caracteres)
+    assert rules[0][0] == "ABCD"
+    # Shortest prefixes last (three characters)
     assert len(rules[-1][0]) == 3
 
 def test_assign_family():
-    rules = [("0085", "Buzos"), ("001", "Remeras")]
-    assert assign_family("0085-123", rules) == "Buzos"
-    assert assign_family("00100-XYZ", rules) == "Remeras"
+    rules = [("ABCD", "Category B"), ("AXY", "Category A")]
+    assert assign_family("ABCD-123", rules) == "Category B"
+    assert assign_family("AXY00-XYZ", rules) == "Category A"
     assert assign_family("99999-ABC", rules) == "Other"
     assert assign_family("REVISAR | 123", rules) == "REVISAR"
 
 def test_calculate_difference():
-    # Stock 10, Conteo 5 -> Faltan 5
+    # System stock 10, physical count 5: shortage of 5.
     assert calculate_difference(10, 5) == -5
     # System stock -2, physical count 5 -> difference is 5; negative system stock is ignored.
     assert calculate_difference(-2, 5) == 5
-    # Stock 0, Conteo 10 -> Sobran 10
+    # System stock 0, physical count 10: surplus of 10.
     assert calculate_difference(0, 10) == 10
 
 

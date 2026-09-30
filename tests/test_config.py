@@ -10,44 +10,42 @@ from core import paths as app_paths
 from core.profile_config import CONFIG_VERSION, ensure_profile_config, profile_readiness
 
 
-def test_configuration_manager_loading():
-    config = ConfigurationManager(profile="demo")
-
-    families = config.get_family_rules()
-    assert families["Buzos C Capucha"] == ["0085", "185", "085"]
-    assert config.get_default_family() == "Otro"
-
-    network = config.get_network_config()
-    assert "VIRREYES" in network["active"]
-    assert network["regional_groups"]["NRW"] == ["LIBERT.R", "PASO.R", "P.OESTE"]
-
-    cleaning = config.get_stock_cleaning()
-    assert "Artículo" in cleaning["text_columns"]
-    assert "CENTRAL" in cleaning["drop_columns"]
-
-    pricing = config.get_stock_pricing()
-    assert pricing["columns"]["database"] == "Origen - Base de datos"
-    assert pricing["aliases"]["Origen - Base de datos"] == "Base"
-
-    cross_check = config.get_cross_check_config()
-    assert "12060-142" in cross_check["filters"]["ignored_articles"]
-    assert cross_check["price_lists"]["cost"] == {
-        "article_column": "Artículo",
-        "price_column": "Precio",
+def test_configuration_manager_loading(tmp_path, monkeypatch):
+    monkeypatch.setattr(app_paths, "PROFILES_ROOT", tmp_path / "profiles")
+    expected_rules = {
+        "profile_a": {"Category A": ["AX"]},
+        "profile_b": {"Category B": ["BZ"]},
     }
+    managers = {}
+    for profile, rules in expected_rules.items():
+        configs = _initialize_test_profile(tmp_path, profile)
+        family_path = configs / "general" / "families.json"
+        family_path.write_text(json.dumps({
+            "version": CONFIG_VERSION,
+            "rules": rules,
+        }), encoding="utf-8")
+        managers[profile] = ConfigurationManager(profile=profile)
 
-    stock_output = config.get_stock_output()
-    assert stock_output["raw_data_sheet"] == "Datos"
-    assert stock_output["summaries"][0]["sheet_name"] == "Nrw.I"
+        accessors = {
+            "general/network": "get_network_config",
+            "stock_processing/settings": "get_stock_processing_config",
+            "cross_check/settings": "get_cross_check_config",
+            "yoy_reports/settings": "get_yoy_reports_config",
+        }
+        for logical_name, accessor in accessors.items():
+            source = json.loads((configs / f"{logical_name}.json").read_text(
+                encoding="utf-8"
+            ))
+            assert getattr(managers[profile], accessor)() == source
 
-    yoy = config.get_yoy_reports_config()
-    assert yoy["input"]["date_column"] == "Fecha"
-    assert yoy["input"]["sales_column"] == "Monto"
-    assert yoy["output"]["metrics"] == ["units", "sales"]
+        missing = managers[profile].get_config(
+            "missing/config", default={"default_key": True}
+        )
+        assert missing == {"default_key": True}
 
-    missing = config.get_config("missing/config", default={"default_key": True})
-    assert missing == {"default_key": True}
-
+    # Loading a second profile must not replace the first profile's rules.
+    for profile, rules in expected_rules.items():
+        assert managers[profile].get_family_rules() == rules
 
 
 def test_current_schema_rejects_outdated_version():
@@ -136,7 +134,7 @@ def test_wrong_config_type_aborts_complete_profile_validation(tmp_path, monkeypa
     configs = _initialize_test_profile(tmp_path)
     network_path = configs / "general" / "network.json"
     payload = json.loads(network_path.read_text(encoding="utf-8"))
-    payload["active"] = "VIRREYES"
+    payload["active"] = "Store A"
     network_path.write_text(json.dumps(payload), encoding="utf-8")
 
     monkeypatch.setattr(app_paths, "PROFILES_ROOT", tmp_path / "profiles")
