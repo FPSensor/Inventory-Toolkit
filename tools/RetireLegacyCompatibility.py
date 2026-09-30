@@ -49,6 +49,7 @@ RETIRE_WITH_COMPATIBILITY = (
     Path("tests/fixtures/legacy_configuration.json"),
     Path("tests/fixtures/modular_v2_configuration.json"),
     Path("tests/test_compatibility.py"),
+    Path("tests/test_retirement_tool.py"),
     Path("docs/legacy_compatibility.md"),
     Path("tools/RetireLegacyCompatibility.py"),
 )
@@ -212,28 +213,43 @@ def strip_compatibility_blocks(text: str, path: Path) -> str:
     return "".join(output)
 
 
+def rewrite_text(path: Path, transform) -> None:
+    """Transform UTF-8 text without platform newline conversion."""
+    original = path.read_bytes()
+    updated = transform(original.decode("utf-8")).encode("utf-8")
+    if updated != original:
+        path.write_bytes(updated)
+
+
 def update_readme_tree() -> None:
     path = ROOT / "README.md"
-    lines = path.read_text(encoding="utf-8").splitlines(keepends=True)
     retired_names = {item.name for item in (*COMPATIBILITY_MODULES, *RETIRE_WITH_COMPATIBILITY)}
-    filtered = [line for line in lines if not any(name in line for name in retired_names)]
-    path.write_text("".join(filtered), encoding="utf-8")
+
+    def remove_retired_entries(text: str) -> str:
+        return "".join(
+            line for line in text.splitlines(keepends=True)
+            if not any(name in line for name in retired_names)
+        )
+
+    rewrite_text(path, remove_retired_entries)
 
 
 def clean_test_imports() -> None:
     path = ROOT / "tests/test_config.py"
-    text = path.read_text(encoding="utf-8")
-    if "json." not in text and "json.dumps" not in text and "json.loads" not in text:
-        text = text.replace("import json\n\n", "")
-    path.write_text(text, encoding="utf-8")
+
+    def remove_unused_import(text: str) -> str:
+        if "json." not in text:
+            return re.sub(r"^import json\r?\n", "", text, flags=re.MULTILINE)
+        return text
+
+    rewrite_text(path, remove_unused_import)
 
 
 def apply_retirement() -> None:
     for relative in MARKER_FILES:
-        path = ROOT / relative
-        path.write_text(
-            strip_compatibility_blocks(path.read_text(encoding="utf-8"), relative),
-            encoding="utf-8",
+        rewrite_text(
+            ROOT / relative,
+            lambda text: strip_compatibility_blocks(text, relative),
         )
 
     for relative in (*COMPATIBILITY_MODULES, *RETIRE_WITH_COMPATIBILITY):
