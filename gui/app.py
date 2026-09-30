@@ -936,20 +936,20 @@ class ConfigHubWindow(BaseToplevel):
         groups = data.setdefault("groups", {})
 
         input_fields = [
-            ("date_column", "Date column", "Fecha"),
-            ("quantity_column", "Quantity column", "Cantidad"),
-            ("sales_column", "Sales amount column", "Monto"),
-            ("item_column", "Item / SKU column", "Articulo"),
-            ("grouping_column", "Grouping / Family column", "Familias"),
-            ("branch_column", "Branch / Store column", "Base"),
-            ("size_column", "Size column", "Talle"),
+            ("date_column", "Date column"),
+            ("quantity_column", "Quantity column"),
+            ("sales_column", "Sales amount column"),
+            ("item_column", "Item / SKU column"),
+            ("grouping_column", "Grouping / Family column"),
+            ("branch_column", "Branch / Store column"),
+            ("size_column", "Size column"),
         ]
         input_vars = {}
-        for row_index, (key, label, default) in enumerate(input_fields):
+        for row_index, (key, label) in enumerate(input_fields):
             _lbl(input_tab, text=label).grid(
                 row=row_index, column=0, sticky="w", padx=8, pady=5
             )
-            variable = tk.StringVar(value=input_config.get(key, default))
+            variable = tk.StringVar(value=input_config.get(key, DEFAULTS["yoy_reports/settings"]["input"][key]))
             _entry(input_tab, textvariable=variable).grid(
                 row=row_index, column=1, sticky="ew", padx=8, pady=5
             )

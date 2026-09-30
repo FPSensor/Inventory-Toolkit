@@ -4,7 +4,7 @@ from typing import Dict, List, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from core.profile_config import CONFIG_VERSION
+from core.profile_config import CONFIG_VERSION, DEFAULTS
 from core.system_utils import normalize_xlsx_output_path
 
 from core.business_schema import (
@@ -127,12 +127,12 @@ class CrossCheckConfig(_Config):
 
 
 class YoYInputConfig(_StrictConfigModel):
-    date_column: str = "Fecha"
+    date_column: str = DEFAULTS["yoy_reports/settings"]["input"]["date_column"]
     quantity_column: str = QUANTITY_COLUMN
-    sales_column: str = "Monto"
+    sales_column: str = DEFAULTS["yoy_reports/settings"]["input"]["sales_column"]
     grouping_column: str = FAMILY_COLUMN
-    item_column: str = "Articulo"
-    branch_column: str = "Base"
+    item_column: str = DEFAULTS["yoy_reports/settings"]["input"]["item_column"]
+    branch_column: str = DEFAULTS["yoy_reports/settings"]["input"]["branch_column"]
     size_column: str = SIZE_COLUMN
 
 

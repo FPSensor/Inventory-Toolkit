@@ -12,7 +12,8 @@ from pathlib import Path
 from typing import Iterable, Optional
 
 from cli.utils import ask_file, clear_screen, load_json, save_json
-from core.profile_config import config_path, ensure_profile_config, profile_readiness
+from core.profile_config import DEFAULTS, config_path, ensure_profile_config, profile_readiness
+from core.resource_config import load_resource
 from core.configuration_errors import ConfigurationError
 from core.system_utils import InvalidExcelOutputPathError, normalize_xlsx_output_path
 # BEGIN LEGACY_COMPATIBILITY
@@ -25,16 +26,17 @@ try:
 except ImportError:
     PANDAS_AVAILABLE = False
 
-_ARTICLE_HINTS = ("artículo", "articulo", "sku", "item", "codigo", "código")
-_FAMILY_HINTS = ("familia", "familias", "rubro", "linea", "categoría", "categoria")
-_DATE_HINTS = ("fecha", "date", "fec")
-_QTY_HINTS = ("cantidad", "qty", "quantity", "cant")
-_BRANCH_HINTS = ("base", "sucursal", "local", "branch", "tienda", "store")
-_PRICE_HINTS = ("precio", "price", "costo", "cost")
-_SALES_HINTS = ("monto", "importe", "sales", "amount", "venta")
-_DB_HINTS = ("origen", "base de datos", "database", "db", "base")
-_SIZE_HINTS = ("talle", "size", "medida")
-_NON_STORE = ("ean", "id", "cod", "barcode", "precio", "costo", "stock", "total", "fecha", "cantidad")
+_COLUMN_HINTS = load_resource("column_hints.json")
+_ARTICLE_HINTS = tuple(_COLUMN_HINTS["article_hints"])
+_FAMILY_HINTS = tuple(_COLUMN_HINTS["family_hints"])
+_DATE_HINTS = tuple(_COLUMN_HINTS["date_hints"])
+_QTY_HINTS = tuple(_COLUMN_HINTS["qty_hints"])
+_BRANCH_HINTS = tuple(_COLUMN_HINTS["branch_hints"])
+_PRICE_HINTS = tuple(_COLUMN_HINTS["price_hints"])
+_SALES_HINTS = tuple(_COLUMN_HINTS["sales_hints"])
+_DB_HINTS = tuple(_COLUMN_HINTS["db_hints"])
+_SIZE_HINTS = tuple(_COLUMN_HINTS["size_hints"])
+_NON_STORE = tuple(_COLUMN_HINTS["non_store"])
 
 
 def initialize_profile_files(configs_path: str) -> None:
@@ -118,9 +120,9 @@ def _setup_catalog(configs: Path) -> None:
     catalog = load_json(str(config_path(configs, "general/catalog"))) or {}
     columns_cfg = catalog.setdefault("columns", {})
     _, columns, _ = _sample_file("Optional: select a Stock/Inventory file to detect core columns.")
-    columns_cfg["article"] = _pick("Article / SKU column", columns, columns_cfg.get("article", "Artículo"), _ARTICLE_HINTS)
-    columns_cfg["family"] = _pick("Family column", columns, columns_cfg.get("family", "Familias"), _FAMILY_HINTS)
-    raw = input(f"  Default family when no rule matches [Enter={catalog.get('default_family','Otro')}]: ").strip()
+    columns_cfg["article"] = _pick("Article / SKU column", columns, columns_cfg.get("article", DEFAULTS["general/catalog"]["columns"]["article"]), _ARTICLE_HINTS)
+    columns_cfg["family"] = _pick("Family column", columns, columns_cfg.get("family", DEFAULTS["general/catalog"]["columns"]["family"]), _FAMILY_HINTS)
+    raw = input(f"  Default family when no rule matches [Enter={catalog.get('default_family', DEFAULTS['general/catalog']['default_family'])}]: ").strip()
     if raw:
         catalog["default_family"] = raw
     _save(configs, "general/catalog", catalog)
@@ -187,13 +189,13 @@ def _setup_stock(configs: Path) -> None:
 
     _, price_cols, _ = _sample_file("Select a Cost/Sales price-list sample (separate from Stock).")
     if price_cols:
-        pricing["article"] = _pick("Price-list article column", price_cols, pricing.get("article", "Artículo"), _ARTICLE_HINTS)
-        pricing["database"] = _pick("Database/origin column", price_cols, pricing.get("database", "Origen - Base de datos"), _DB_HINTS)
-        pricing["price"] = _pick("Price column", price_cols, pricing.get("price", "Precio"), _PRICE_HINTS)
+        pricing["article"] = _pick("Price-list article column", price_cols, pricing.get("article", DEFAULTS["general/catalog"]["columns"]["article"]), _ARTICLE_HINTS)
+        pricing["database"] = _pick("Database/origin column", price_cols, pricing.get("database", DEFAULTS["stock_processing/settings"]["pricing"]["columns"]["database"]), _DB_HINTS)
+        pricing["price"] = _pick("Price column", price_cols, pricing.get("price", DEFAULTS["stock_processing/settings"]["pricing"]["columns"]["price"]), _PRICE_HINTS)
 
-    raw = input(f"  Raw-data sheet name [Enter={output.get('raw_data_sheet','Datos')}]: ").strip()
+    raw = input(f"  Raw-data sheet name [Enter={output.get('raw_data_sheet', DEFAULTS['stock_processing/settings']['output']['raw_data_sheet'])}]: ").strip()
     if raw: output["raw_data_sheet"] = raw
-    base = output.get("base_columns", ["Artículo", "Familias"])
+    base = output.get("base_columns", [DEFAULTS["general/catalog"]["columns"]["article"], DEFAULTS["general/catalog"]["columns"]["family"]])
     raw = input(f"  Base output columns comma-separated [Enter={', '.join(base)}]: ").strip()
     if raw: output["base_columns"] = [x.strip() for x in raw.split(",") if x.strip()]
     _save(configs, "stock_processing/settings", cfg)
@@ -209,10 +211,10 @@ def _setup_cross(configs: Path) -> None:
         side_cfg = lists.setdefault(side, {})
         _, columns, _ = _sample_file(f"Select a {title} sample.")
         if columns:
-            side_cfg["article_column"] = _pick(f"{title} article column", columns, side_cfg.get("article_column", "Artículo"), _ARTICLE_HINTS)
-            side_cfg["price_column"] = _pick(f"{title} price column", columns, side_cfg.get("price_column", "Precio"), _PRICE_HINTS)
+            side_cfg["article_column"] = _pick(f"{title} article column", columns, side_cfg.get("article_column", DEFAULTS["general/catalog"]["columns"]["article"]), _ARTICLE_HINTS)
+            side_cfg["price_column"] = _pick(f"{title} price column", columns, side_cfg.get("price_column", DEFAULTS["stock_processing/settings"]["pricing"]["columns"]["price"]), _PRICE_HINTS)
     filters = cfg.setdefault("filters", {})
-    terms = filters.get("ignored_terms", ["Total general"])
+    terms = filters.get("ignored_terms", DEFAULTS["cross_check/settings"]["filters"]["ignored_terms"])
     raw = input(f"  Ignored text terms comma-separated [Enter={', '.join(terms)}]: ").strip()
     if raw: filters["ignored_terms"] = [x.strip() for x in raw.split(",") if x.strip()]
     _save(configs, "cross_check/settings", cfg)
@@ -227,13 +229,13 @@ def _setup_yoy(configs: Path) -> None:
     _, columns, _ = _sample_file("Select the historical Sales file used by YoY.")
     if columns:
         fields = [
-            ("date_column", "Date column", _DATE_HINTS, "Fecha"),
-            ("quantity_column", "Quantity column", _QTY_HINTS, "Cantidad"),
-            ("sales_column", "Sales amount column", _SALES_HINTS, "Monto"),
-            ("item_column", "Item/SKU column", _ARTICLE_HINTS, "Articulo"),
-            ("grouping_column", "Grouping/family column", _FAMILY_HINTS, "Familias"),
-            ("branch_column", "Branch/store column", _BRANCH_HINTS, "Base"),
-            ("size_column", "Size column (optional)", _SIZE_HINTS, "Talle"),
+            ("date_column", "Date column", _DATE_HINTS, DEFAULTS["yoy_reports/settings"]["input"]["date_column"]),
+            ("quantity_column", "Quantity column", _QTY_HINTS, DEFAULTS["yoy_reports/settings"]["input"]["quantity_column"]),
+            ("sales_column", "Sales amount column", _SALES_HINTS, DEFAULTS["yoy_reports/settings"]["input"]["sales_column"]),
+            ("item_column", "Item/SKU column", _ARTICLE_HINTS, DEFAULTS["yoy_reports/settings"]["input"]["item_column"]),
+            ("grouping_column", "Grouping/family column", _FAMILY_HINTS, DEFAULTS["yoy_reports/settings"]["input"]["grouping_column"]),
+            ("branch_column", "Branch/store column", _BRANCH_HINTS, DEFAULTS["yoy_reports/settings"]["input"]["branch_column"]),
+            ("size_column", "Size column (optional)", _SIZE_HINTS, DEFAULTS["yoy_reports/settings"]["input"]["size_column"]),
         ]
         for key, label, hints, default in fields:
             inp[key] = _pick(label, columns, inp.get(key, default), hints)

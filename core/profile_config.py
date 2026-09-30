@@ -9,88 +9,16 @@ from typing import Any, Dict, Tuple
 
 from core.configuration_errors import ConfigurationFileError
 
-from core.business_schema import (
-    ARTICLE_COLUMN,
-    DATABASE_ORIGIN_COLUMN,
-    DEFAULT_FAMILY,
-    FAMILY_COLUMN,
-    PRICE_COLUMN,
-    QUANTITY_COLUMN,
-    RAW_DATA_SHEET,
-    REVIEW_FAMILY,
-    SIZE_COLUMN,
-)
+from core.resource_config import load_resource
 
 CONFIG_VERSION = 3
 
-DEFAULTS: Dict[str, dict] = {
-    "general/catalog": {
-        "version": CONFIG_VERSION,
-        "columns": {"article": ARTICLE_COLUMN, "family": FAMILY_COLUMN},
-        "default_family": DEFAULT_FAMILY,
-    },
-    "general/families": {
-        "version": CONFIG_VERSION,
-        "rules": {REVIEW_FAMILY: [REVIEW_FAMILY, REVIEW_FAMILY.lower()]},
-    },
-    "general/network": {
-        "version": CONFIG_VERSION,
-        "active": [],
-        "regional_groups": {},
-        "stock_database_columns": {},
-    },
-    "stock_processing/settings": {
-        "version": CONFIG_VERSION,
-        "cleaning": {
-            "text_columns": [ARTICLE_COLUMN],
-            "drop_columns": [],
-            "numeric_columns": [],
-        },
-        "pricing": {
-            "columns": {
-                "article": ARTICLE_COLUMN,
-                "database": DATABASE_ORIGIN_COLUMN,
-                "price": PRICE_COLUMN,
-            },
-            "aliases": {DATABASE_ORIGIN_COLUMN: "Base"},
-        },
-        "output": {
-            "raw_data_sheet": RAW_DATA_SHEET,
-            "base_columns": [ARTICLE_COLUMN, FAMILY_COLUMN],
-            "summaries": [],
-        },
-    },
-    "cross_check/settings": {
-        "version": CONFIG_VERSION,
-        "filters": {
-            "ignored_articles": [],
-            "ignored_terms": ["Total general"],
-        },
-        "price_lists": {
-            "cost": {"article_column": ARTICLE_COLUMN, "price_column": PRICE_COLUMN},
-            "sales": {"article_column": ARTICLE_COLUMN, "price_column": PRICE_COLUMN},
-        },
-    },
-    "yoy_reports/settings": {
-        "version": CONFIG_VERSION,
-        "input": {
-            "date_column": "Fecha",
-            "quantity_column": QUANTITY_COLUMN,
-            "sales_column": "Monto",
-            "grouping_column": FAMILY_COLUMN,
-            "item_column": "Articulo",
-            "branch_column": "Base",
-            "size_column": SIZE_COLUMN,
-        },
-        "output": {
-            "default_path": "analysis_report.xlsx",
-            "metrics": ["units", "sales"],
-            "annual_comparison": True,
-            "include_sizes": False,
-        },
-        "groups": {},
-    },
-}
+DEFAULTS: Dict[str, dict] = load_resource("profile_defaults.json")
+if any(config.get("version") != CONFIG_VERSION for config in DEFAULTS.values()):
+    raise ConfigurationFileError(
+        Path(__file__).resolve().parent / "resources" / "profile_defaults.json",
+        "bundled profile defaults do not match the current schema version",
+    )
 
 
 def config_path(configs_dir: Path, logical_name: str) -> Path:

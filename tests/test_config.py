@@ -295,3 +295,25 @@ def test_v2_modular_profile_upgrades_internal_keys_to_english(tmp_path):
     assert yoy["input"]["sales_column"] == "Monto"
     assert yoy["output"]["metrics"] == ["units", "sales"]
 # END LEGACY_COMPATIBILITY
+
+
+def test_yoy_setup_uses_bundled_defaults_and_detection_hints(tmp_path, monkeypatch):
+    from cli import wizard
+    from core.profile_config import DEFAULTS
+
+    configs = _initialize_test_profile(tmp_path, "wizard")
+    monkeypatch.setattr(wizard, "clear_screen", lambda: None)
+    monkeypatch.setattr(wizard, "_sample_file", lambda *_: ("sample.xlsx", ["Sample"], None))
+    monkeypatch.setattr("builtins.input", lambda *_: "")
+    selections = []
+
+    def pick(label, columns, current, hints):
+        assert isinstance(hints, tuple) and hints
+        selections.append(current)
+        return current
+
+    monkeypatch.setattr(wizard, "_pick", pick)
+    wizard._setup_yoy(configs)
+    saved = json.loads((configs / "yoy_reports/settings.json").read_text(encoding="utf-8"))
+    assert saved["input"] == DEFAULTS["yoy_reports/settings"]["input"]
+    assert len(selections) == len(saved["input"])

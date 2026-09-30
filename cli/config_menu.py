@@ -15,7 +15,7 @@ from cli.wizard import run_setup_wizard
 from core.configuration_errors import ConfigurationError
 from core.configuration_manager import ConfigurationManager
 from core.paths import profile_configs_root
-from core.profile_config import config_path, ensure_profile_config, profile_readiness
+from core.profile_config import DEFAULTS, config_path, ensure_profile_config, profile_readiness
 # BEGIN LEGACY_COMPATIBILITY
 from core.legacy_profile_migration import migrate_legacy_config
 # END LEGACY_COMPATIBILITY
@@ -82,9 +82,9 @@ def _catalog_menu(configs: Path, profile: str):
         catalog = load_json(str(catalog_path)) or {}
         cols = catalog.setdefault("columns", {})
         clear_screen(); _header("Catalog & Families", profile)
-        print(f"  Article column : {cols.get('article','Artículo')}")
-        print(f"  Family column  : {cols.get('family','Familias')}")
-        print(f"  Default family : {catalog.get('default_family','Otro')}")
+        print(f"  Article column : {cols.get('article', DEFAULTS['general/catalog']['columns']['article'])}")
+        print(f"  Family column  : {cols.get('family', DEFAULTS['general/catalog']['columns']['family'])}")
+        print(f"  Default family : {catalog.get('default_family', DEFAULTS['general/catalog']['default_family'])}")
         fam = load_json(str(config_path(configs, 'general/families'))) or {}
         print(f"  Family rules   : {len(fam.get('rules',{}))}")
         print("\n  [1] Core columns/default  [2] Family rules  [0] Back")

@@ -81,4 +81,7 @@ def test_distribution_allowlist_keeps_release_inputs_without_personal_workbooks(
     assert "examples/demo/cross_check_system_stock.xls" in names
     assert "tests/release_reference/workbooks/stock_processing.xlsx" in names
     assert "core/input_columns.py" in names
+    assert "core/resources/profile_defaults.json" in names
+    assert "core/resources/workbook_labels.json" in names
+    assert "core/resources/column_hints.json" in names
     assert all(name.startswith(("examples/demo/", "tests/")) for name in names if name.endswith((".xls", ".xlsx")))

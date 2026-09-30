@@ -1,0 +1,94 @@
+{
+    "general/catalog": {
+        "version": 3,
+        "columns": {
+            "article": "Artículo",
+            "family": "Familias"
+        },
+        "default_family": "Otro"
+    },
+    "general/families": {
+        "version": 3,
+        "rules": {
+            "REVISAR": [
+                "REVISAR",
+                "revisar"
+            ]
+        }
+    },
+    "general/network": {
+        "version": 3,
+        "active": [],
+        "regional_groups": {},
+        "stock_database_columns": {}
+    },
+    "stock_processing/settings": {
+        "version": 3,
+        "cleaning": {
+            "text_columns": [
+                "Artículo"
+            ],
+            "drop_columns": [],
+            "numeric_columns": []
+        },
+        "pricing": {
+            "columns": {
+                "article": "Artículo",
+                "database": "Origen - Base de datos",
+                "price": "Precio"
+            },
+            "aliases": {
+                "Origen - Base de datos": "Base"
+            }
+        },
+        "output": {
+            "raw_data_sheet": "Datos",
+            "base_columns": [
+                "Artículo",
+                "Familias"
+            ],
+            "summaries": []
+        }
+    },
+    "cross_check/settings": {
+        "version": 3,
+        "filters": {
+            "ignored_articles": [],
+            "ignored_terms": [
+                "Total general"
+            ]
+        },
+        "price_lists": {
+            "cost": {
+                "article_column": "Artículo",
+                "price_column": "Precio"
+            },
+            "sales": {
+                "article_column": "Artículo",
+                "price_column": "Precio"
+            }
+        }
+    },
+    "yoy_reports/settings": {
+        "version": 3,
+        "input": {
+            "date_column": "Fecha",
+            "quantity_column": "Cantidad",
+            "sales_column": "Monto",
+            "grouping_column": "Familias",
+            "item_column": "Articulo",
+            "branch_column": "Base",
+            "size_column": "Talle"
+        },
+        "output": {
+            "default_path": "analysis_report.xlsx",
+            "metrics": [
+                "units",
+                "sales"
+            ],
+            "annual_comparison": true,
+            "include_sizes": false
+        },
+        "groups": {}
+    }
+}

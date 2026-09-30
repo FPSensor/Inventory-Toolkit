@@ -1,0 +1,74 @@
+{
+    "article_hints": [
+        "artículo",
+        "articulo",
+        "sku",
+        "item",
+        "codigo",
+        "código"
+    ],
+    "family_hints": [
+        "familia",
+        "familias",
+        "rubro",
+        "linea",
+        "categoría",
+        "categoria"
+    ],
+    "date_hints": [
+        "fecha",
+        "date",
+        "fec"
+    ],
+    "qty_hints": [
+        "cantidad",
+        "qty",
+        "quantity",
+        "cant"
+    ],
+    "branch_hints": [
+        "base",
+        "sucursal",
+        "local",
+        "branch",
+        "tienda",
+        "store"
+    ],
+    "price_hints": [
+        "precio",
+        "price",
+        "costo",
+        "cost"
+    ],
+    "sales_hints": [
+        "monto",
+        "importe",
+        "sales",
+        "amount",
+        "venta"
+    ],
+    "db_hints": [
+        "origen",
+        "base de datos",
+        "database",
+        "db",
+        "base"
+    ],
+    "size_hints": [
+        "talle",
+        "size",
+        "medida"
+    ],
+    "non_store": [
+        "ean",
+        "id",
+        "cod",
+        "barcode",
+        "precio",
+        "costo",
+        "stock",
+        "total",
+        "fecha",
+        "cantidad"
+    ]
+}

@@ -1,32 +1,26 @@
-"""Business-facing workbook labels used by Inventory Toolkit.
+"""Workbook vocabulary loaded from data, never used as catalog classification rules."""
 
-These strings are intentionally not translated as part of the internal English
-codebase cleanup. They are part of the current retail workflow, input files, or
-exported workbook contract. Keeping them centralized makes that boundary
-explicit: Python identifiers and configuration structure are English, while
-business data remains faithful to the source systems.
-"""
+from core.resource_config import load_resource
 
-ARTICLE_COLUMN = "Artículo"
-FAMILY_COLUMN = "Familias"
-QUANTITY_COLUMN = "Cantidad"
-SIZE_COLUMN = "Talle"
-PRICE_COLUMN = "Precio"
-COST_COLUMN = "Costo"
-SALES_VALUE_LABEL = "Venta"
-DATABASE_ORIGIN_COLUMN = "Origen - Base de datos"
-RAW_DATA_SHEET = "Datos"
-DEFAULT_FAMILY = "Otro"
+_LABELS = load_resource("workbook_labels.json")
 
-SYSTEM_STOCK_COLUMN = "Stock Sistema"
-PHYSICAL_COUNT_COLUMN = "Conteo Físico"
-DIFFERENCE_COLUMN = "Diferencia"
-COST_TOTAL_COLUMN = "CTOTAL"
-SALES_TOTAL_COLUMN = "VTOTAL"
-
-REVIEW_FAMILY = "REVISAR"
-REVIEW_PREFIX = "REVISAR | "
-
-UNIT_COST_PREFIX = "PrecioUnit.Costo."
-UNIT_SALES_PREFIX = "PrecioUnit.Venta."
-MARGIN_PREFIX = "Margen_"
+ARTICLE_COLUMN = _LABELS["ARTICLE_COLUMN"]
+FAMILY_COLUMN = _LABELS["FAMILY_COLUMN"]
+QUANTITY_COLUMN = _LABELS["QUANTITY_COLUMN"]
+SIZE_COLUMN = _LABELS["SIZE_COLUMN"]
+PRICE_COLUMN = _LABELS["PRICE_COLUMN"]
+COST_COLUMN = _LABELS["COST_COLUMN"]
+SALES_VALUE_LABEL = _LABELS["SALES_VALUE_LABEL"]
+DATABASE_ORIGIN_COLUMN = _LABELS["DATABASE_ORIGIN_COLUMN"]
+RAW_DATA_SHEET = _LABELS["RAW_DATA_SHEET"]
+DEFAULT_FAMILY = _LABELS["DEFAULT_FAMILY"]
+SYSTEM_STOCK_COLUMN = _LABELS["SYSTEM_STOCK_COLUMN"]
+PHYSICAL_COUNT_COLUMN = _LABELS["PHYSICAL_COUNT_COLUMN"]
+DIFFERENCE_COLUMN = _LABELS["DIFFERENCE_COLUMN"]
+COST_TOTAL_COLUMN = _LABELS["COST_TOTAL_COLUMN"]
+SALES_TOTAL_COLUMN = _LABELS["SALES_TOTAL_COLUMN"]
+REVIEW_FAMILY = _LABELS["REVIEW_FAMILY"]
+REVIEW_PREFIX = _LABELS["REVIEW_PREFIX"]
+UNIT_COST_PREFIX = _LABELS["UNIT_COST_PREFIX"]
+UNIT_SALES_PREFIX = _LABELS["UNIT_SALES_PREFIX"]
+MARGIN_PREFIX = _LABELS["MARGIN_PREFIX"]
