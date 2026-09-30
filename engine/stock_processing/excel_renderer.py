@@ -12,7 +12,8 @@ from engine.stock_processing.data_processor import calculate_margin
 MAX_COLUMN_WIDTH = 50
 
 
-def apply_excel_formatting(worksheet, is_summary=False):
+def apply_excel_formatting(worksheet, is_summary=False, column_formats=None):
+    column_formats = column_formats or {}
     header_fill = PatternFill(
         start_color="D9D9D9",
         end_color="D9D9D9",
@@ -29,7 +30,6 @@ def apply_excel_formatting(worksheet, is_summary=False):
     for column_cells in worksheet.columns:
         max_length = 0
         column_letter = column_cells[0].column_letter
-        column_name = str(worksheet[f"{column_letter}1"].value).upper()
 
         for cell in column_cells:
             value_length = len(str(cell.value)) if cell.value is not None else 0
@@ -37,10 +37,8 @@ def apply_excel_formatting(worksheet, is_summary=False):
             if cell.row <= 1 or cell.value is None:
                 continue
 
-            if "MARGEN" in column_name:
-                cell.number_format = "0.00%"
-            elif "COSTO" in column_name or "VENTA" in column_name or "TOTAL" in column_name:
-                cell.number_format = "#,##0.00"
+            if cell.column in column_formats:
+                cell.number_format = column_formats[cell.column]
             elif isinstance(cell.value, (int, float)) and not is_summary:
                 cell.number_format = "#,##0"
 
@@ -106,6 +104,7 @@ def render_stock_excel(
         summary_frame = stock_frame.groupby(family_column).agg(aggregations).reset_index()
 
         export_columns = [family_column]
+        column_formats = {}
         for entity in valid_entities:
             cost_column = f"{entity}.{COST_COLUMN}"
             sales_column = f"{entity}.{SALES_VALUE_LABEL}"
@@ -117,6 +116,10 @@ def render_stock_excel(
                     sales_column,
                     cost_column,
                 )
+                first_value_column = len(export_columns) + 2
+                column_formats[first_value_column] = "#,##0.00"
+                column_formats[first_value_column + 1] = "#,##0.00"
+                column_formats[first_value_column + 2] = "0.00%"
                 export_columns.extend(
                     [entity, cost_column, sales_column, margin_column]
                 )
@@ -134,7 +137,7 @@ def render_stock_excel(
 
         for row in dataframe_to_rows(summary_frame, index=False, header=True):
             worksheet.append(row)
-        apply_excel_formatting(worksheet, is_summary=True)
+        apply_excel_formatting(worksheet, is_summary=True, column_formats=column_formats)
         log_debug_event(
             "stock_summary_ready",
             sheet_name=sheet_name,
@@ -145,7 +148,12 @@ def render_stock_excel(
     data_worksheet = workbook.create_sheet(raw_data_sheet)
     for row in dataframe_to_rows(stock_frame, index=False, header=True):
         data_worksheet.append(row)
-    apply_excel_formatting(data_worksheet, is_summary=False)
+    raw_formats = {
+        index: "#,##0.00"
+        for index, column in enumerate(stock_frame.columns, 1)
+        if str(column).endswith((f".{COST_COLUMN}", f".{SALES_VALUE_LABEL}"))
+    }
+    apply_excel_formatting(data_worksheet, is_summary=False, column_formats=raw_formats)
     log_debug_event(
         "stock_raw_sheet_ready",
         sheet_name=raw_data_sheet,

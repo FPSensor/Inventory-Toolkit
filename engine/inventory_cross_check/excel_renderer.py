@@ -1,3 +1,4 @@
+from core.business_schema import DIFFERENCE_COLUMN, COST_TOTAL_COLUMN, SALES_TOTAL_COLUMN
 from core.logger import log, log_debug_event
 from core.system_utils import safe_openpyxl_save
 
@@ -48,10 +49,10 @@ def apply_excel_formatting(output_file, interactive=True):
                 cell.number_format = 'General'
             if cell.row > 1 and isinstance(cell.value, (int, float)):
                 col_name = ws.cell(row=1, column=cell.column).value
-                if col_name in ['Diferencia', 'CTOTAL', 'VTOTAL']:
+                if col_name in [DIFFERENCE_COLUMN, COST_TOTAL_COLUMN, SALES_TOTAL_COLUMN]:
                     if cell.value < 0: cell.fill = red_fill
                     elif cell.value > 0: cell.fill = green_fill
-                if col_name in ['CTOTAL', 'VTOTAL']:
+                if col_name in [COST_TOTAL_COLUMN, SALES_TOTAL_COLUMN]:
                     cell.number_format = '#,##0.00'
     final_path = safe_openpyxl_save(wb, output_file, interactive=interactive)
     log_debug_event(

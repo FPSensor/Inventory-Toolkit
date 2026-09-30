@@ -276,3 +276,21 @@ def test_generate_sales_report_uses_profile_include_sizes_default(monkeypatch, t
     assert [event.completed for event in events] == [0, 1, 2, 3]
     assert "comparison periods selected" in events[1].message
     assert "Overall (2 unique branches): 6 vs 5 (+20.0%)" in stats[0].render()
+
+
+def test_size_labels_and_total_formula_use_configured_column():
+    current, previous = _frames()
+    config = _config(include_sizes=True)
+    size_column = 'Dimension*?"'
+    current = current.rename(columns={"Size": size_column})
+    previous = previous.rename(columns={"Size": size_column})
+    config["input"]["size_column"] = size_column
+    workbook = Workbook()
+    render_report_sheet(
+        workbook.active, current, previous,
+        pd.Timestamp("2026-01-01"), pd.Timestamp("2026-01-31"),
+        pd.Timestamp("2025-01-01"), config, "Category", include_sizes=True,
+    )
+    values = _sheet_values(workbook.active)
+    assert any(str(value).startswith(f"  {size_column}: ") for value in values)
+    assert any('Dimension~*~?""*' in str(value) for value in values if str(value).startswith('=SUMIF'))

@@ -86,3 +86,27 @@ def test_family_classification_has_no_reserved_category(rules, expected):
     articles = pd.Series([REVIEW_FAMILY + " | item", REVIEW_FAMILY + "-X-item"])
     assert [assign_family(value, compiled, "Fallback") for value in articles] == expected
     assert assign_families(articles, compiled, "Fallback").tolist() == expected
+
+
+def test_stock_formats_follow_column_roles_after_title_aliases(tmp_path):
+    from openpyxl import load_workbook
+    from core.business_schema import COST_COLUMN, SALES_VALUE_LABEL
+    from engine.stock_processing.excel_renderer import render_stock_excel
+
+    frame = pd.DataFrame({
+        "Category": ["Example"], "TOTAL STORE": [2],
+        f"TOTAL STORE.{COST_COLUMN}": [10], f"TOTAL STORE.{SALES_VALUE_LABEL}": [20],
+    })
+    path = tmp_path / "roles.xlsx"
+    render_stock_excel(
+        str(path), frame,
+        [{"sheet_name": "Summary", "entities": ["TOTAL STORE"],
+          "titles": ["Category", "Units", "Amount A", "Amount B", "Rate"]}],
+        list(frame.columns), "Raw", family_column="Category", interactive=False,
+    )
+    workbook = load_workbook(path)
+    summary = workbook["Summary"]
+    assert summary["C2"].number_format == "#,##0.00"
+    assert summary["D2"].number_format == "#,##0.00"
+    assert summary["E2"].number_format == "0.00%"
+    assert workbook["Raw"]["B2"].number_format == "#,##0"

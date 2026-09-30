@@ -43,6 +43,8 @@ def render_current_sales_block(
     apply_style(title_cell, is_header=True)
 
     header_row = start_row + 1
+    size_filter = (str(size_column).replace("~", "~~").replace("*", "~*")
+                   .replace("?", "~?").replace('"', '""'))
     main_headers = [grouping_column] + all_branches + ["Totals"]
     for column_index, header in enumerate(main_headers, 1):
         apply_style(
@@ -85,13 +87,11 @@ def render_current_sales_block(
             current_row += 1
 
             for size_value, row in family_data.iterrows():
-                # "Talle" is part of the workbook contract, not an internal
-                # identifier; formulas below intentionally match it.
                 apply_style(
                     worksheet.cell(
                         row=current_row,
                         column=1,
-                        value=f"  Talle: {size_value}",
+                        value=f"  {size_column}: {size_value}",
                     ),
                     indent=1,
                 )
@@ -200,7 +200,7 @@ def render_current_sales_block(
         column_letter = get_column_letter(2 + index)
         if include_sizes and size_column in current_frame.columns:
             formula = (
-                f'=SUMIF($A${main_start_row}:$A${main_end_row}, "<>  Talle*", '
+                f'=SUMIF($A${main_start_row}:$A${main_end_row}, "<>  {size_filter}*", '
                 f'${column_letter}${main_start_row}:${column_letter}${main_end_row})'
             )
         else:
