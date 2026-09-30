@@ -25,7 +25,15 @@ from core.resource_config import load_resource
 ROOT = APPLICATION_ROOT
 CURRENT_CONFIG_VERSION = 3
 AUTHOR = "FPSensor <gkartyt@gmail.com>"
-COMMIT_MESSAGE = "refactor: retire legacy configuration compatibility"
+COMMIT_MESSAGE = "core: compatibility: retire legacy configuration support"
+COMMIT_DESCRIPTION = (
+    "Older profiles and callers previously relied on pre-v3 migration and "
+    "deprecated configuration projections.\n\n"
+    "Remove the compatibility modules, serialized resources, tests, menu "
+    "hooks and documentation after a clean readiness audit and validation.\n\n"
+    "Current schema-v3 validation remains active. Archived "
+    "_legacy_v1_backup data is preserved."
+)
 
 _LEGACY_CONTRACT = load_resource("legacy_contract.json")
 LEGACY_FILES = tuple(_LEGACY_CONTRACT["files"])
@@ -286,6 +294,8 @@ def commit_retirement() -> None:
             AUTHOR,
             "-m",
             COMMIT_MESSAGE,
+            "-m",
+            COMMIT_DESCRIPTION,
         ],
         check=True,
     )

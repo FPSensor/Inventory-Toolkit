@@ -76,3 +76,21 @@ def test_retirement_removes_documentation_links_and_preserves_current_resources(
     for name in sentinels:
         assert (tmp_path / name).read_bytes() == b"retained\n"
     assert not (tmp_path / "tools/RetireLegacyCompatibility.py").exists()
+
+
+def test_retirement_commit_has_author_title_and_description(monkeypatch):
+    tool = _load_tool()
+    staged = []
+    calls = []
+    monkeypatch.setattr(tool, "run_git", lambda *args: staged.append(args))
+    monkeypatch.setattr(tool.subprocess, "run", lambda command, **kwargs: calls.append((command, kwargs)))
+    tool.commit_retirement()
+    assert staged == [("add", "-A")]
+    command, kwargs = calls[0]
+    assert command[command.index("--author") + 1] == "FPSensor <gkartyt@gmail.com>"
+    paragraphs = [command[index + 1] for index, value in enumerate(command) if value == "-m"]
+    assert paragraphs[0] == "core: compatibility: retire legacy configuration support"
+    assert "previously" in paragraphs[1]
+    assert "Current schema-v3 validation remains active" in paragraphs[1]
+    assert "_legacy_v1_backup data is preserved" in paragraphs[1]
+    assert kwargs["check"] is True
