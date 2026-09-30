@@ -104,6 +104,7 @@ def test_stock_processing_honors_custom_catalog_and_pricing_columns(tmp_path, mo
 
     warnings = []
     events = []
+    stats = []
     result = run_stock_processing(
         Namespace(
             stock_processing_raw=str(stock_path),
@@ -114,13 +115,20 @@ def test_stock_processing_honors_custom_catalog_and_pricing_columns(tmp_path, mo
             non_interactive=True,
             warnings=warnings,
             progress=events.append,
+            stats=stats.append,
         )
     )
     assert result == str(output_path)
     assert len(warnings) == 1 and "4 (7 units)" in warnings[0]
     assert [event.completed for event in events] == [0, 1, 2, 3, 4]
-    assert "excluded: 1" in events[1].message
+    assert "Stock loaded and cleaned" in events[1].message
     assert events[-1].fraction == 1
+    summary = stats[0].render()
+    assert "Excluded rows without an article: 1" in summary
+    assert "Families: 2" in summary
+    assert "Articles in default family (UNMAPPED): 1" in summary
+    assert "STORE_A: 6 units | cost 70.00 | sale 190.00" in summary
+    assert "Total active stores: 6 units | cost 70.00 | sale 190.00" in summary
 
     raw = pd.read_excel(output_path, sheet_name="RAW")
     assert len(raw) == 2

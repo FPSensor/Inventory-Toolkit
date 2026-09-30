@@ -6,13 +6,14 @@ import os
 
 import pandas as pd
 
+from core.business_schema import COST_COLUMN, SALES_VALUE_LABEL
 from core.configuration_manager import ConfigurationManager
 from core.logger import log, log_debug_event
-from core.progress import report_progress
+from core.progress import report_progress, report_stats
 from core.system_utils import normalize_xlsx_output_path
 from core.telemetry import execution_timer
 from engine.shared.families import build_family_rules
-from engine.stock_processing.contracts import StockProcessingPlan
+from engine.stock_processing.contracts import INTERNAL_ARTICLE_COLUMN, INTERNAL_FAMILY_COLUMN, StockProcessingPlan
 from engine.stock_processing.data_processor import (
     add_regional_groups,
     classify_stock_families,
@@ -54,11 +55,38 @@ def _log_plan(plan: StockProcessingPlan) -> None:
     )
 
 
+def _stock_stats(result_frame, stock_frame, plan, input_rows, input_columns, excluded_rows):
+    default_articles = stock_frame.loc[
+        stock_frame[INTERNAL_FAMILY_COLUMN] == plan.default_family,
+        INTERNAL_ARTICLE_COLUMN,
+    ].nunique()
+    lines = [
+        f"Input: {input_rows:,} rows, {input_columns} columns",
+        f"Excluded rows without an article: {excluded_rows:,}",
+        f"Output rows: {len(result_frame):,}",
+        f"Families: {stock_frame[INTERNAL_FAMILY_COLUMN].nunique(dropna=False):,}",
+        f"Articles in default family ({plan.default_family}): {default_articles:,}",
+        "Stock by active store (valuations):",
+    ]
+    total_units = total_cost = total_sales = 0
+    for store in plan.active_stores:
+        units = result_frame[store].sum()
+        cost = result_frame[f"{store}.{COST_COLUMN}"].sum()
+        sales = result_frame[f"{store}.{SALES_VALUE_LABEL}"].sum()
+        total_units += units
+        total_cost += cost
+        total_sales += sales
+        lines.append(f"  {store}: {units:,.0f} units | cost {cost:,.2f} | sale {sales:,.2f}")
+    lines.append(f"Total active stores: {total_units:,.0f} units | cost {total_cost:,.2f} | sale {total_sales:,.2f}")
+    return lines
+
+
 def run_stock_processing(args):
     """Execute the profile-driven stock cleanup, pricing, valuation and export pipeline."""
     output_path = normalize_xlsx_output_path(args.stock_processing_out)
     interactive = not getattr(args, "non_interactive", False)
     progress = getattr(args, "progress", None)
+    stats = getattr(args, "stats", None)
     report_progress(progress, 0, 4, "Reading stock and checking input columns...")
     log_debug_event(
         "stock_processing_start",
@@ -113,7 +141,7 @@ def run_stock_processing(args):
                 f"is NOT a valid Stock file. {exc}"
             )
             return None
-    report_progress(progress, 1, 4, f"Read {input_rows:,} stock rows and {input_columns} columns; rows without an article excluded: {excluded_rows:,}. Classifying stock...")
+    report_progress(progress, 1, 4, "Stock loaded and cleaned. Classifying stores and families...")
 
     with execution_timer("Stock Network & Classification"):
         stock_frame, merged_deposits = merge_stock_database_columns(
@@ -132,7 +160,7 @@ def run_stock_processing(args):
             family_rules,
             default_family=plan.default_family,
         )
-    report_progress(progress, 2, 4, f"Classified {len(stock_frame):,} rows; {len(plan.active_stores)} stores configured. Reading price lists and valuing stock...")
+    report_progress(progress, 2, 4, "Stores and families ready. Reading prices and valuing stock...")
 
     with execution_timer("Stock Pricing & Valuation"):
         log.info("Processing pricing files...")
@@ -171,7 +199,7 @@ def run_stock_processing(args):
             shape=result_frame.shape,
             columns=list(result_frame.columns),
         )
-    report_progress(progress, 3, 4, f"Prepared {len(result_frame):,} output rows and {len(result_frame.columns)} columns. Writing workbook...")
+    report_progress(progress, 3, 4, "Valuation complete. Writing workbook...")
 
     with execution_timer("Stock Excel Rendering"):
         final_path = render_stock_excel(
@@ -185,7 +213,9 @@ def run_stock_processing(args):
         )
 
     log.info("Process completed. File saved at: %s", final_path)
-    report_progress(progress, 4, 4, f"Saved stock report: {len(result_frame):,} rows.")
+    report_progress(progress, 4, 4, "Stock report saved.")
+    if stats is not None:
+        report_stats(stats, *_stock_stats(result_frame, stock_frame, plan, input_rows, input_columns, excluded_rows))
     log_debug_event(
         "stock_processing_complete",
         output_file=final_path,
