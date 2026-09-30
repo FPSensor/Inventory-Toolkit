@@ -11,7 +11,7 @@ from argparse import Namespace
 from cli.utils import (
     clear_screen, ask_file, validate_files_exist,
     load_last_paths, save_last_paths,
-    confirm_default_column,
+    confirm_default_column, input_default,
 )
 from cli.progress import show_progress
 from core.input_columns import choose_input_columns
@@ -29,9 +29,9 @@ def launch_stock_processing(active_profile: str) -> None:
     last = load_last_paths(active_profile)
     sp   = last.get("stock_processing", {})
 
-    stock_file = ask_file("1. Raw stock spreadsheet",       sp.get("stock",  "stock_processing_raw_stock.xlsx"))
-    cost_file  = ask_file("2. Cost price list",             sp.get("cost",   "shared_cost_list.xlsx"))
-    sales_file = ask_file("3. Sales price list",            sp.get("sales",  "shared_sales_price_list.xlsx"))
+    stock_file = ask_file("1. Raw stock spreadsheet", input_default(active_profile, sp.get("stock"), "stock_processing_raw_stock.xlsx"))
+    cost_file = ask_file("2. Cost price list", input_default(active_profile, sp.get("cost"), "shared_cost_list.xlsx"))
+    sales_file = ask_file("3. Sales price list", input_default(active_profile, sp.get("sales"), "shared_sales_price_list.xlsx"))
 
     if not validate_files_exist([stock_file, cost_file, sales_file]):
         print("\n  ⚠️  Operation cancelled — required files are missing.")

@@ -28,7 +28,7 @@ except ImportError:
     TKINTER_AVAILABLE = False
 
 from core.logger import log, log_debug_event, log_exception
-from core.paths import profile_root
+from core.paths import demo_root, profile_root
 _LAST_PATHS_FILE = "last_paths.json"
 
 
@@ -56,6 +56,15 @@ def confirm_default_column(field: str, configured: str, default: str) -> bool:
         f"Configured {field} column '{configured}' is absent. "
         f"Try default '{default}' for this run?"
     )
+
+
+def input_default(profile: str, saved_path: str | None, demo_filename: str) -> str:
+    """Prefer a saved input; otherwise locate demo fixtures independent of CWD."""
+    if saved_path:
+        return saved_path
+    if profile == "demo":
+        return str(demo_root() / demo_filename)
+    return demo_filename
 
 
 def ask_file(message: str, default_val: str, is_output: bool = False) -> str:
