@@ -19,6 +19,24 @@ class ProgressEvent:
 ProgressCallback = Callable[[ProgressEvent], None]
 
 
+@dataclass(frozen=True)
+class StatsEvent:
+    """Final user-facing results, separate from completion percentage."""
+
+    lines: tuple[str, ...]
+
+    def render(self) -> str:
+        return "Stats:\n" + "\n".join(f"  {line}" for line in self.lines)
+
+
+StatsCallback = Callable[[StatsEvent], None]
+
+
+def report_stats(callback: Optional[StatsCallback], *lines: str) -> None:
+    if callback is not None:
+        callback(StatsEvent(lines))
+
+
 def report_progress(
     callback: Optional[ProgressCallback],
     completed: int,
