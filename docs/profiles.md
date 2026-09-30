@@ -190,3 +190,12 @@ and GUI offers the same explicit default fallback as other configured columns.
 With the policy enabled, counted articles with negative system stock use the
 physical count as their difference. With it disabled, the difference is always
 physical count minus system stock. Both values are editable in Config Hub.
+
+### Price list article codes
+
+`stock_processing/settings.json` stores `pricing.article_tokenization`.
+`cross_check/settings.json` stores the same option under `pricing`. `first_token`
+keeps the historical behavior, where text after the first whitespace is not part
+of a price-list article code. `whole` keeps the entire cleaned code. Set this
+option in each module's JSON if your SKUs can contain spaces; the two workflows
+are configured independently. Existing profiles use `first_token` by default.

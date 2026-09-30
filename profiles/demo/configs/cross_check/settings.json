@@ -24,5 +24,8 @@
     },
     "reconciliation": {
         "ignore_negative_system_stock_when_counted": true
+    },
+    "pricing": {
+        "article_tokenization": "first_token"
     }
 }

@@ -39,7 +39,8 @@
         },
         "aliases": {
             "Origen - Base de datos": "Base"
-        }
+        },
+        "article_tokenization": "first_token"
     },
     "output": {
         "raw_data_sheet": "Datos",

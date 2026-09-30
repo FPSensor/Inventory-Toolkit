@@ -181,12 +181,11 @@ def run_cross_check(args):
             columns={sales_article_column: ARTICLE_COLUMN, sales_price_column: PRICE_COLUMN},
             inplace=True,
         )
-        cost_frame[ARTICLE_COLUMN] = clean_sku_series(cost_frame[ARTICLE_COLUMN]).apply(
-            lambda article: article.split()[0] if article else article
-        )
-        sales_frame[ARTICLE_COLUMN] = clean_sku_series(sales_frame[ARTICLE_COLUMN]).apply(
-            lambda article: article.split()[0] if article else article
-        )
+        for price_frame in (cost_frame, sales_frame):
+            articles = clean_sku_series(price_frame[ARTICLE_COLUMN])
+            if cross_check_config["pricing"]["article_tokenization"] == "first_token":
+                articles = articles.apply(lambda article: article.split()[0] if article else article)
+            price_frame[ARTICLE_COLUMN] = articles
 
         count_frame = count_frame.dropna(subset=[_SCAN_READING_COLUMN]).copy()
         count_frame[_SCAN_READING_COLUMN] = clean_sku_series(count_frame[_SCAN_READING_COLUMN])

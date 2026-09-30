@@ -277,3 +277,12 @@ def test_cross_check_schema_rejects_empty_quantity_column():
 
     with pytest.raises(ValidationError, match="quantity column cannot be empty"):
         CrossCheckConfig.model_validate({"version": CONFIG_VERSION, "input": {"quantity_column": " "}})
+
+
+def test_price_article_tokenization_rejects_unknown_strategy():
+    from core.config_schemas import CrossCheckConfig, StockProcessingConfig
+
+    with pytest.raises(ValidationError):
+        CrossCheckConfig.model_validate({"version": CONFIG_VERSION, "pricing": {"article_tokenization": "guess"}})
+    with pytest.raises(ValidationError):
+        StockProcessingConfig.model_validate({"version": CONFIG_VERSION, "pricing": {"article_tokenization": "guess"}})

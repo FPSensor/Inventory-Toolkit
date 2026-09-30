@@ -85,3 +85,17 @@ def test_distribution_allowlist_keeps_release_inputs_without_personal_workbooks(
     assert "core/resources/workbook_labels.json" in names
     assert "core/resources/column_hints.json" in names
     assert all(name.startswith(("examples/demo/", "tests/")) for name in names if name.endswith((".xls", ".xlsx")))
+
+
+def test_price_article_tokenization_respects_profile_option(tmp_path):
+    file = tmp_path / "price-list.xlsx"
+    pd.DataFrame({"SKU": ["AB C"], "DB": ["STORE"], "Amount": [10]}).to_excel(file, index=False)
+    columns = {"article": "SKU", "database": "DB", "price": "Amount"}
+    first = process_pricing(str(file), {"columns": columns, "article_tokenization": "first_token"})
+    whole = process_pricing(str(file), {"columns": columns, "article_tokenization": "whole"})
+    assert first["__itk_article"].tolist() == ["AB"]
+    assert whole["__itk_article"].tolist() == ["AB C"]
+
+    pd.DataFrame({"SKU": ["  XY Z  "], "DB": ["STORE"], "Amount": [10]}).to_excel(file, index=False)
+    padded = process_pricing(str(file), {"columns": columns, "article_tokenization": "whole"})
+    assert padded["__itk_article"].tolist() == ["XY Z"]

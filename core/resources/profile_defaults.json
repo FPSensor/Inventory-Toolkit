@@ -39,7 +39,8 @@
             },
             "aliases": {
                 "Origen - Base de datos": "Base"
-            }
+            },
+            "article_tokenization": "first_token"
         },
         "output": {
             "raw_data_sheet": "Datos",
@@ -73,6 +74,9 @@
         },
         "reconciliation": {
             "ignore_negative_system_stock_when_counted": true
+        },
+        "pricing": {
+            "article_tokenization": "first_token"
         }
     },
     "yoy_reports/settings": {

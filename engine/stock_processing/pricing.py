@@ -37,9 +37,12 @@ def process_pricing(file_path, pricing_config=None):
             pricing_config,
         )
 
-        dataframe[INTERNAL_ARTICLE_COLUMN] = (
-            dataframe[article_column].astype(str).str.split(" ").str[0]
-        )
+        article_values = dataframe[article_column].astype(str)
+        if pricing_config.get("article_tokenization", "first_token") == "first_token":
+            article_values = article_values.str.split(" ").str[0]
+        else:
+            article_values = article_values.str.strip()
+        dataframe[INTERNAL_ARTICLE_COLUMN] = article_values
         log_debug_event(
             "pricing_columns_resolved",
             file_path=file_path,

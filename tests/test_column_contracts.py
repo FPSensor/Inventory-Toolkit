@@ -239,6 +239,48 @@ def test_cross_check_honors_catalog_article_and_family_columns(tmp_path, monkeyp
     assert output.loc[0, "VTOTAL"] == difference * 20
 
 
+@pytest.mark.parametrize("tokenization, expected", [("first_token", 0), ("whole", 20)])
+def test_cross_check_price_article_tokenization_controls_valuation(
+    tmp_path, monkeypatch, tokenization, expected,
+):
+    profile = "price-tokenization"
+    _write_profile(tmp_path, profile, {
+        "general/catalog": {
+            "version": 3, "columns": {"article": "SKU", "family": "Category"},
+            "default_family": "Unmapped",
+        },
+        "cross_check/settings": {
+            "version": 3,
+            "pricing": {"article_tokenization": tokenization},
+            "filters": {"ignored_articles": [], "ignored_terms": []},
+            "price_lists": {
+                "cost": {"article_column": "SKU", "price_column": "Cost"},
+                "sales": {"article_column": "SKU", "price_column": "Price"},
+            },
+        },
+    })
+    monkeypatch.setattr(app_paths, "PROFILES_ROOT", tmp_path / "profiles")
+    system = tmp_path / "system.xlsx"
+    scanner = tmp_path / "scanner.xlsx"
+    cost = tmp_path / "cost.xlsx"
+    sales = tmp_path / "sales.xlsx"
+    output = tmp_path / "output.xlsx"
+    pd.DataFrame({"SKU": ["AB CD"], "Cantidad": [0]}).to_excel(system, index=False)
+    pd.DataFrame(["AB CD"]).to_excel(scanner, index=False, header=False)
+    pd.DataFrame({"SKU": ["AB CD"], "Cost": [10]}).to_excel(cost, index=False)
+    pd.DataFrame({"SKU": ["AB CD"], "Price": [20]}).to_excel(sales, index=False)
+    args = Namespace(
+        cross_check_system=str(system), cross_check_count=str(scanner),
+        shared_cost=str(cost), shared_sales=str(sales),
+        cross_check_out=str(output), cross_check_profile=profile,
+        cross_check_consolidate=True, cross_check_partial=False,
+        non_interactive=True,
+    )
+    assert run_cross_check(args) == str(output)
+    result = pd.read_excel(output)
+    assert result.loc[0, "VTOTAL"] == expected
+
+
 def test_catalog_column_contract_rejects_empty_or_colliding_names():
     from pydantic import ValidationError
 

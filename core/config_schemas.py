@@ -84,6 +84,7 @@ class PricingColumns(_StrictConfigModel):
 
 
 class PricingConfig(_StrictConfigModel):
+    article_tokenization: Literal["first_token", "whole"] = "first_token"
     columns: PricingColumns = Field(default_factory=PricingColumns)
     aliases: Dict[str, str] = Field(default_factory=dict)
 
@@ -139,7 +140,12 @@ class CrossCheckReconciliation(_StrictConfigModel):
     ]["reconciliation"]["ignore_negative_system_stock_when_counted"]
 
 
+class PriceArticleRules(_StrictConfigModel):
+    article_tokenization: Literal["first_token", "whole"] = "first_token"
+
+
 class CrossCheckConfig(_Config):
+    pricing: PriceArticleRules = Field(default_factory=PriceArticleRules)
     input: CrossCheckInput = Field(default_factory=CrossCheckInput)
     reconciliation: CrossCheckReconciliation = Field(default_factory=CrossCheckReconciliation)
     filters: CrossCheckFilters = Field(default_factory=CrossCheckFilters)
