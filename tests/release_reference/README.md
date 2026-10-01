@@ -21,11 +21,13 @@ python tools/ReleaseCheck.py --release
 
 The runner:
 
-1. verifies the fixture/profile fingerprint from `manifest.json`;
+1. verifies demo input/profile and bundled default/report-label fingerprints from `manifest.json`;
 2. generates new workflow outputs in temporary storage;
 3. compares them semantically with these references;
 4. runs repository verification;
 5. removes generated temporary outputs.
+
+The manifest covers the six demo inputs, demo profile metadata/configuration, `core/resources/workbook_labels.json` and `core/resources/profile_defaults.json`. JSON formatting and line endings are canonicalized before hashing. Changes to those resources require a reviewed reference update even when workbook output remains equivalent.
 
 ## Semantic comparison
 
@@ -37,7 +39,7 @@ When a fast digest differs, diagnostic comparison reports human-readable workboo
 
 ## Updating references
 
-Only after intentionally changing expected business/output behavior or the fixture/profile:
+Only after intentionally changing expected business/output behavior, the demo fixture/profile, or bundled report/default resources:
 
 ```bash
 python tools/ReleaseCheck.py --update-reference

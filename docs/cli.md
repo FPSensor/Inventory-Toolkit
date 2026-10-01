@@ -63,6 +63,18 @@ Store mappings, family rules, cleaning rules, pricing mappings, and summary layo
 
 `cli/yoy_reports_launcher.py` collects the historical sales workbook, date range, segmentation/options, and output path, then calls `engine/yoy_reports/`. Enabled unit/sales metrics, annual-comparison behavior, and the default size-breakdown choice come from the active profile; the CLI may override size breakdown for a single run.
 
+## Progress and final statistics
+
+All three workflows print compact stage/percentage updates during normal operation. Debug mode is not required. Cross Check has three stages, Stock four, and YoY three; YoY also advances within its rendering stage as sheets finish. The percentage indicates work stages, not elapsed time or a remaining-time estimate, and reaches 100% after the workbook has been saved.
+
+Final results appear in a separate `Stats:` block after completion and before returning to the menu. See [engine.md](engine.md#final-statistics-contract) for the counts and valuation/comparison rules. Debug levels still control logging detail independently.
+
+## File suggestions and output names
+
+Remembered inputs take priority. For the `demo` profile without a remembered input, each launcher suggests the matching workbook under the application-owned `examples/demo/` directory. Press Enter to accept the suggestion. A stale remembered path is not silently replaced; select a new file if it no longer exists.
+
+YoY remembers its input and output alongside Stock and Cross Check. Accepting a demo/default path can also save it as the last-used path: this state records the selected file, not whether the operator typed it. User-supplied relative paths remain relative to the caller's working directory. Extensionless output names are normalized to `.xlsx`; legacy `.xls` remains input-only.
+
 ## Configuration Hub
 
 Open `K` from the main menu.
@@ -104,7 +116,7 @@ Type `debug` in the main menu.
 
 ### Level 1 — Operator
 
-Errors only. Intended for normal usage.
+Logger errors only. Intended for normal usage; workflow progress, final statistics and interactive warnings remain visible.
 
 ### Level 2 — Diagnostics
 

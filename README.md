@@ -15,6 +15,7 @@ The project currently exposes a mature CLI, an experimental desktop GUI, a typed
 > **Primary interface:** CLI
 > **GUI status:** experimental / active testing
 > **Configuration schema:** v3
+> **Development state:** post-1.4.1 changes are recorded under `Unreleased` in [CHANGELOG.md](CHANGELOG.md); the release badge identifies the published version.
 
 ---
 
@@ -55,7 +56,7 @@ If no known article matches, the scanner value is not discarded or silently trun
 
 ## Business vocabulary is separated from implementation vocabulary
 
-Implementation identifiers are English. External workbook labels such as `Artículo`, `Familias`, `Costo`, `Venta`, `Talle`, and the `REVISAR |` marker remain part of the business contract and are centralized in `core/business_schema.py`.
+Implementation identifiers are English. External workbook labels such as `Artículo`, `Familias`, `Costo`, `Venta`, `Talle`, and the `REVISAR |` marker remain part of the business contract and are stored in `core/resources/workbook_labels.json`, exposed through `core/business_schema.py`. Bundled profile defaults and Guided Setup column hints also live in JSON resources; profile files own deployment-specific rules.
 
 ## Releases are certified against approved output
 
@@ -71,14 +72,16 @@ The strict pre-release gate executes all three demo workflows and compares their
 - Interactive Configuration Hub for catalog/families, network, Stock Processing, Cross Check, and YoY settings.
 - Shared longest-prefix family classifier backed by a trie implementation.
 - Variable-length article normalization against the system master.
-- Per-profile last-path persistence for frequently used files.
+- Per-profile last-path persistence for frequently used files, with application-rooted demo suggestions.
+- Concise stage/percentage progress and separate final statistics in CLI and GUI, available without debug mode.
+- Profile-controlled Cross Check quantity/reconciliation settings and price-list article tokenization.
 - Native file picker support from the CLI.
 - Safe Excel saving with retry/copy behavior in interactive CLI mode and non-blocking errors for GUI callers.
 - Runtime-selectable debug levels and a hidden level-3 Developer Console.
 - Forensic session logging to `logs/session.log`.
 - Pytest, IntegrityCheck, stress/diagnostic tooling, demo smoke tests, and semantic golden-master certification.
 <!-- BEGIN LEGACY_COMPATIBILITY -->
-- Guarded legacy-configuration migration and a one-shot compatibility-retirement tool, also accessible from the level-3 Developer Console.
+- Guarded legacy-configuration migration and a one-shot compatibility-retirement tool, also accessible from the level-3 Developer Console. Compatibility remains active until deliberately retired.
 <!-- END LEGACY_COMPATIBILITY -->
 - Experimental Tkinter/CustomTkinter desktop GUI.
 - Windows launcher/setup helpers plus Linux/macOS shell launcher.
@@ -282,6 +285,8 @@ See [docs/testing_and_examples.md](docs/testing_and_examples.md) and [docs/relea
 
 Every CLI session writes `logs/session.log`.
 
+Normal workflows report concise progress and final `Stats:` summaries independently of logger verbosity. Percentages describe completed stages and, for YoY rendering, sheets; they are not elapsed-time estimates.
+
 At forensic level, Inventory Toolkit records structured context such as:
 
 - active profile and configuration files;
@@ -316,6 +321,9 @@ Inventory-Toolkit/
 │   ├── config_schemas.py
 │   ├── configuration_manager.py
 │   ├── profile_config.py
+│   ├── resource_config.py
+│   ├── progress.py
+│   ├── resources/                 # defaults, labels, hints and legacy contracts
 │   ├── paths.py
 │   ├── logger.py
 │   ├── telemetry.py
@@ -392,6 +400,7 @@ Before changing business logic:
 3. Run the quick repository gate.
 4. Run strict golden-master certification.
 5. If expected output intentionally changed, inspect it manually before updating references.
+6. Update `CHANGELOG.md` and affected README/docs in the same change.
 
 Do not simplify variable-length article normalization into a fixed-length slice, silently discard unresolved scanner input, or update golden masters only because a release test failed.
 
@@ -401,15 +410,11 @@ Do not simplify variable-length article normalization into a fixed-length slice,
 
 The roadmap is directional rather than a release-date promise. Business correctness takes priority over shipping a version number.
 
-## v1.4.1 — Stabilization and documentation
+## Released baseline and current development
 
-Target: make the current 1.4 architecture boringly reliable before adding major surface area.
+`v1.4.1` is the released stabilization baseline. Subsequent changes are listed under `Unreleased` in [CHANGELOG.md](CHANGELOG.md), including progress/statistics, demo-path suggestions, external JSON resources and retirement-tool improvements.
 
-- Finish the documentation/reference overhaul and keep docs synchronized with CLI/config schema v3.
-- Expand tests around Guided Setup, Configuration Hub persistence, profile validation, and schema boundaries.
-- Exercise the golden-master release gate on Windows and Linux with the official legacy `.xls` fixture and `xlrd` installed.
-- Harden packaging/release hygiene so distributed archives exclude caches, logs, Git internals, and operational leftovers.
-- Resolve remaining low-risk CLI/GUI rough edges without changing business calculations.
+Next work should build on those features: validate the summaries with operational data, improve GUI usability and configuration parity, and expand targeted coverage when behavior changes.
 
 For a source archive containing only application files, demo inputs, and
 release references, run `python tools/BuildDistribution.py dist/Inventory-Toolkit.zip`.
@@ -424,7 +429,7 @@ Target: make the desktop GUI a credible beta instead of an experimental companio
 - Bring profile setup and configuration workflows closer to CLI parity.
 - Finish GUI-safe error/retry handling so no engine path assumes terminal input.
 - Add automated smoke coverage for the GUI's critical paths.
-- Improve progress/status reporting for long-running workbook operations.
+- Refine the existing progress/activity/statistics presentation through real workflow testing.
 - Define the supported CustomTkinter/Tkinter experience and installation story.
 
 ## v1.6.0 — Distribution readiness
@@ -442,7 +447,7 @@ Target: reduce deployment complexity.
 
 Target: make profiles easier to move, inspect, validate, and maintain across installations.
 
-- Add explicit profile export/import or portable-profile tooling.
+- Document migration by copying profile folders and reviewing machine-specific remembered paths; an import/export tool is not required for the current folder layout.
 - Improve configuration diff/diagnostic output for schema and mapping changes.
 - Consider profile-specific validation fixtures where one global demo no longer covers important deployments.
 - Keep migration/version behavior explicit and testable as schema evolution continues.

@@ -7,7 +7,9 @@ Cross-cutting services used by CLI, GUI, and engines.
 - `business_schema.py` — centralized external workbook/business labels.
 - `config_schemas.py` — strict Pydantic schema-v3 models.
 - `configuration_manager.py` — profile loading/caching/typed accessors.
-- `profile_config.py` — schema-v3 defaults, paths, initialization, readiness.
+- `profile_config.py` — JSON-backed defaults, strict schema headers, paths, initialization, readiness.
+- `resource_config.py` / `resources/` — bundled UTF-8 JSON defaults, report labels and column hints.
+- `progress.py` — optional engine progress events and separate final statistics.
 - `data_sanitizer.py` — shared value normalization.
 - `logger.py` — runtime debug levels + forensic `logs/session.log`.
 - `telemetry.py` — execution-stage timing helper.

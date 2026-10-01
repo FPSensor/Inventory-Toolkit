@@ -95,14 +95,16 @@ Apply, validate, and create the retirement commit:
 python tools/RetireLegacyCompatibility.py --apply --commit
 ```
 
-The generated commit author is `FPSensor <gkartyt@gmail.com>`.
+The generated commit author is `FPSensor <gkartyt@gmail.com>`. Its title is `core: compatibility: retire legacy configuration support`, followed by a description of prior behavior, removal scope and the surviving current-schema contract.
+
+The tool preserves surviving UTF-8 bytes and existing LF, CRLF or mixed line endings on Windows and Linux. There is no need to switch operating systems for this operation. Git hooks still run according to the repository/user configuration; hook failures are distinct from configuration or retirement validation failures.
 
 ## Self-removal behavior
 
 After successful retirement, the tool is designed to remove:
 
 - compatibility implementation files;
-- compatibility-specific tests/docs blocks;
+- compatibility-specific tests, serialized resources and explicitly marked documentation blocks, including obsolete links and menu descriptions;
 - its own `RetireLegacyCompatibility.py` launcher;
 - its own Developer Console submenu/entry.
 
@@ -114,9 +116,12 @@ The retirement script is intentionally conservative:
 
 - requires a clean Git worktree;
 - audits before changing files;
-- validates the resulting repository;
+- validates compilation, pytest and IntegrityCheck on the resulting repository;
+- leaves permanent current-schema object/version validation active;
 - restores its own changes if validation fails;
 - does not delete archived `_legacy_v1_backup` data.
+
+Run `python tools/ReleaseCheck.py --release` on the retired tree before publishing it; the retirement command does not itself run golden-master certification. A successful test in a separate tree does not retire compatibility on the main branch.
 
 Do not manually delete compatibility files first and then try to use the audit tool. Let the audit tell you whether removal is safe.
 

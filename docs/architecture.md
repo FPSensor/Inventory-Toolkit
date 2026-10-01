@@ -59,6 +59,8 @@ Core owns cross-cutting concerns:
 <!-- END LEGACY_COMPATIBILITY -->
 - data sanitization helpers;
 - runtime logging and structured debug events;
+- optional progress and final-statistics event contracts;
+- application-owned JSON defaults, labels and setup hints;
 - timing/telemetry helpers;
 - safe Excel saving and locked-output behavior.
 

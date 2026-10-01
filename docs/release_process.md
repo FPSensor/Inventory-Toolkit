@@ -2,7 +2,7 @@
 
 This is the recommended release procedure for the current Inventory Toolkit 1.4 line.
 
-It focuses on reproducibility and business-output verification. Version/changelog policy may evolve separately; do not skip certification because documentation/versioning work is still in progress.
+It focuses on reproducibility and business-output verification. Development changes belong under `Unreleased` and affected documentation must be maintained alongside the code. Release preparation dates the approved entry and aligns release-facing versions; do not skip certification because documentation/versioning work is still in progress.
 
 ## 1. Start from a clean worktree
 

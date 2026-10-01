@@ -90,7 +90,7 @@ This is the preferred final pre-release test.
 
 It:
 
-1. fingerprints demo/profile inputs;
+1. fingerprints demo/profile inputs and bundled report/default resources;
 2. rejects stale reference data before certifying output;
 3. executes all three workflows in isolated subprocesses;
 4. compares generated workbooks with approved references under `tests/release_reference/`;
@@ -111,11 +111,14 @@ On a digest mismatch it can open the workbooks and report human-readable differe
 
 `tests/release_reference/manifest.json` fingerprints:
 
-- all files under the demo input fixture;
+- the six configured demo input workbooks;
 - demo profile metadata;
-- demo configuration JSON.
+- demo configuration JSON;
+- `core/resources/workbook_labels.json` and `core/resources/profile_defaults.json`.
 
-If a store/database/config/demo input changes, `--release` reports the reference as stale instead of silently accepting old expected output.
+JSON fingerprints are canonicalized so formatting and LF/CRLF changes alone do not invalidate references. Workbooks retain input-file fingerprints; equivalent cell content alone does not authorize replacing a changed source workbook.
+
+If a store/database/config/demo input or bundled report/default resource changes, `--release` reports the reference as stale instead of silently accepting old expected output.
 
 ## 9. Updating golden masters
 

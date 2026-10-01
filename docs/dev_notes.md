@@ -71,7 +71,11 @@ When changing:
 - workflow inputs/outputs;
 - debug/release tooling;
 
-update the corresponding document in the same change whenever practical.
+update `CHANGELOG.md` and the affected README/module docs in the same change. Record post-release work under `Unreleased`; do not advance the application version or redate a released entry merely to describe ongoing development. Check the roadmap against implemented features before release preparation.
+
+Keep implementation identifiers, comments and operator messages in English. External business labels belong in profile/bundled JSON resources. Use synthetic family/store configurations for generic regression tests; approved demo data remains in profile/fixture/reference files.
+
+Patch commits use `sector: component: change`, the author `FPSensor <gkartyt@gmail.com>`, and a brief body explaining previous behavior, the change and the result. Split independent features into separate patches. Verify application in order and run release certification on the cumulative patched tree before sharing.
 
 ## About the easter eggs
 

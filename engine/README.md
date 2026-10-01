@@ -13,6 +13,6 @@ Inventory Toolkit's analytical/workbook-generation layer.
 
 Modules are split when a responsibility is independently complex/testable. YoY therefore has more renderer files than Cross Check or Stock Processing; the project does not enforce an arbitrary identical template.
 
-Engines must remain callable without CLI prompts so both CLI and GUI can use the same business logic.
+Engines must remain callable without CLI prompts so both CLI and GUI can use the same business logic. Optional progress/statistics callbacks report stage completion and final results without importing presentation code.
 
 See [`../docs/engine.md`](../docs/engine.md).

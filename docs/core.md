@@ -4,7 +4,7 @@
 
 ## `business_schema.py`
 
-Centralizes external workbook vocabulary used across modules, including labels such as `Artículo`, `Familias`, `Cantidad`, `Costo`, `Venta`, `Talle`, the raw-data sheet name, default family, and `REVISAR` marker.
+Exposes external workbook vocabulary loaded from `core/resources/workbook_labels.json`, including labels such as `Artículo`, `Familias`, `Cantidad`, `Costo`, `Venta`, `Talle`, the raw-data sheet name, default family, and `REVISAR` marker.
 
 The purpose is to keep implementation identifiers English while acknowledging that external workbooks and approved outputs may use Spanish business labels.
 
@@ -50,7 +50,8 @@ Old short-name projections are compatibility-only and should not be used by new 
 Defines:
 
 - `CONFIG_VERSION = 3`;
-- default configuration structure;
+- bundled default configuration structure loaded from `core/resources/profile_defaults.json`;
+- explicit object/integer/current-version checks that remain after compatibility retirement;
 - logical config paths;
 - missing-file initialization;
 - profile readiness summaries used by Setup/Configuration Hub.
@@ -70,6 +71,22 @@ Built-in current modules should not depend on these contracts.
 
 See [legacy_compatibility.md](legacy_compatibility.md) before modifying or removing them.
 <!-- END LEGACY_COMPATIBILITY -->
+
+## `resource_config.py` and `resources/`
+
+`load_resource()` resolves UTF-8 JSON objects relative to the core package and raises a configuration error for unreadable or non-object resources. It does not depend on the caller's working directory.
+
+- `profile_defaults.json`: bootstrap settings and defaults used by models, engines and editors.
+- `workbook_labels.json`: shared external report vocabulary.
+- `column_hints.json`: Guided Setup discovery hints; hints do not override explicit profile mappings.
+
+These bundled files are application resources, not replacements for per-profile family/store rules. Runtime configuration remains in `profiles/<name>/configs/`.
+
+## `progress.py`
+
+`ProgressEvent` carries `completed`, `total`, `message` and optional `stage_fraction`. Its fraction is `(completed + stage_fraction) / total`. Engines emit useful stage boundaries and YoY sheet-level rendering updates; consumers should not interpret the fraction as a wall-clock estimate.
+
+`StatsEvent` carries final human-readable lines and renders a separate `Stats:` block. Engines send statistics after a successful save. Optional callbacks keep headless engine calls independent of CLI/Tk widgets; CLI consumers print events and GUI consumers deliver them through queues to the main thread.
 
 ## `logger.py`
 

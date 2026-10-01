@@ -39,6 +39,14 @@ non-segmented report, the extra annual-comparison block beneath the full report
 is off by default and can be enabled for that run. Segmented reports continue
 to use the profile's annual-comparison setting.
 
+## Progress and completion summaries
+
+The status bar uses a determinate progress bar driven by engine stage events. An activity area retains concise stage messages and final statistics after the status changes to completion. The success dialog includes the final summary and any collected warnings.
+
+Worker threads send progress, statistics and completion through queues; the Tk event loop updates widgets and dialogs. Percentages describe stage/sheet completion, not measured execution time. A failed task does not force the progress bar to 100%.
+
+The statistics have the same engine-owned meaning as the CLI summaries; see [engine.md](engine.md#final-statistics-contract).
+
 ## Configuration Hub
 
 The graphical hub edits the current schema-v3 files for:

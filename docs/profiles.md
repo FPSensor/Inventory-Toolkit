@@ -201,3 +201,18 @@ keeps the historical behavior, where text after the first whitespace is not part
 of a price-list article code. `whole` keeps the entire cleaned code. Set this
 option in each module's JSON if your SKUs can contain spaces; the two workflows
 are configured independently. Existing profiles use `first_token` by default.
+
+## Bundled defaults and profile ownership
+
+`core/resources/profile_defaults.json` supplies missing-file bootstrap settings and default model values. Shared report vocabulary and discovery hints live in `workbook_labels.json` and `column_hints.json`. Profile JSON owns actual family prefixes, store/database mappings, exclusions, grouping and output settings. Changing a demo family must not require embedding that family in Python tests.
+
+A configured input column that is absent requires explicit per-run consent in CLI/GUI before trying its bundled default. If the default is also absent, the run fails; unattended engine calls do not silently substitute columns. This fallback does not rewrite the stored profile.
+
+## Copying profiles to another installation
+
+1. Copy the complete `profiles/<name>/` folder into the destination installation's `profiles/` folder. Keep `profile.json` and the `configs/` layout intact; avoid overwriting an existing profile with the same name unintentionally.
+2. Select the copied profile and validate it in Configuration Hub.
+3. Copy or locate operational spreadsheets separately. The profile contains configuration, not those input workbooks.
+4. Review or remove `last_paths.json` if paths belong to the old computer. Absolute remembered paths do not relocate automatically, including remembered demo selections. Removing this convenience file does not remove business configuration; demo suggestions then resolve under the new installation.
+
+No import/export tool is needed for this folder layout. The destination must support the profile schema; current configuration headers remain strictly validated even after compatibility is retired.

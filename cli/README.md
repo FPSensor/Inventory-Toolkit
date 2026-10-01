@@ -8,13 +8,14 @@ The CLI gathers user intent and files, manages profiles/configuration, then dele
 
 - `menu.py` — main menu, active-profile routing, hidden `debug` selector and `42` easter egg.
 - `profiles.py` — profile discovery/selection.
-- `config_menu.py` — domain-oriented Configuration Hub and validation/migration entry points.
+- `config_menu.py` — domain-oriented Configuration Hub and current-profile validation.
 - `wizard.py` — module-oriented Guided Setup and Excel-column autodetection.
 - `debug_menu.py` — level-3 Developer Console.
 - `cross_check_launcher.py` — Cross Check prompts/pre-flight + engine invocation.
 - `stock_processing_launcher.py` — Stock Processing prompts/pre-flight + engine invocation.
 - `yoy_reports_launcher.py` — YoY prompts/pre-flight + engine invocation.
-- `utils.py` — presentation/file-dialog helpers.
+- `utils.py` — presentation/file-dialog helpers, remembered paths and application-owned demo suggestions.
+- `progress.py` — compact stage/percentage output and separate final statistics.
 
 ## Debug workflow
 

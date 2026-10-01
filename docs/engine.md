@@ -12,7 +12,9 @@ The current implementation builds a trie so a batch does not repeatedly scan the
 
 - sanitize the article consistently;
 - match configured prefixes;
-- if multiple prefixes match, the longest/specific match wins;
+- if multiple prefixes match, the longest/specific match wins regardless of family insertion order;
+- equal-length duplicate prefixes retain the first configured family, so avoid assigning the same prefix to conflicting families;
+- every article follows configured rules, including text resembling a review marker;
 - unresolved/default behavior follows profile configuration.
 
 Performance changes must demonstrate parity against the reference implementation/tests.
@@ -53,7 +55,7 @@ This behavior must not be replaced by heuristic truncation.
 
 ### Reconciliation behavior
 
-The engine supports consolidation and partial-count modes. Difference arithmetic includes business handling for negative system stock and is covered by integrity/tests.
+The engine supports consolidation and partial-count modes. Difference arithmetic follows `reconciliation.ignore_negative_system_stock_when_counted`: the default preserves counted quantity for counted articles with negative system stock; disabling it always computes physical minus system stock. System quantity comes from `input.quantity_column`. Both settings belong to the Cross Check profile.
 
 Unknown/review data stays visible in output rather than being silently discarded.
 
@@ -122,6 +124,7 @@ YoY has more renderer modules because worksheet formulas/layout became substanti
 - `comparison_renderer.py` — YoY comparison blocks/formulas.
 - `styles.py` — shared worksheet style primitives.
 - `metrics.py` — configured metric resolution and report-group/branch validation.
+- `stats.py` — monthly, group and overall completion comparisons.
 
 ### Pipeline
 
@@ -133,12 +136,28 @@ YoY has more renderer modules because worksheet formulas/layout became substanti
 6. render each enabled metric (`units` and/or `sales`) using its configured input column;
 7. render YoY comparison blocks when `annual_comparison` is enabled; for a non-segmented CLI/GUI run, the operator explicitly opts into these extra blocks (default: off), without changing the stored profile setting;
 8. optionally include size breakdowns using the profile default or an explicit runtime override;
-9. create Full Report and/or period sheets;
+9. create monthly sheets when segmented, followed by a consolidated Full Report or yearly full reports for multi-year spans;
 10. save safely.
 
 Formula/layout changes are especially sensitive to regression and should be checked with strict golden-master certification.
 
 ---
+
+## Final statistics contract
+
+Statistics are separate from progress events and are emitted after a successful save. They summarize processed data; they do not alter workbook calculations.
+
+| Workflow | Final summary | Interpretation |
+| --- | --- | --- |
+| Cross Check | Difference rows, surplus/shortage rows, scanner rows to review, families with differences, catalog articles and filtered articles | Surpluses/shortages count rows with positive/negative differences, not unit totals. Review readings count scanner rows marked for review before reconciliation filtering. |
+| Stock | Input dimensions, excluded blank-article rows, output rows, families, unique articles assigned to the default family, units/cost/sale by active store and total | Store totals sum valued output columns; regional groups are not added again. Default-family counts reflect the assigned label, including any explicit rule using that label. |
+| YoY | Period row counts, monthly current/prior-year comparison, configured group totals and overall total | Uses the sales metric when enabled, otherwise units. Totals are limited to configured branches; overall deduplicates branches across overlapping groups. |
+
+YoY compares the selected date range with the aligned previous-year range, including partial months. Monthly statistics are produced even for non-segmented workbooks. Group totals use each group's unique branches; a single-branch group is labelled by its branch rather than claiming a multi-branch Global block. Overall is calculated independently over unique configured branches, not by summing potentially overlapping group totals. A zero prior-year total is shown as `N/A (prior year is zero)` rather than a fabricated percentage. The initial period row counts precede the configured-branch restriction.
+
+## Price-list identifiers and workbook formatting
+
+Stock and Cross Check independently resolve `pricing.article_tokenization`: `first_token` keeps the first whitespace-delimited token, while `whole` retains internal spaces after cleanup. Existing profiles use the historical `first_token` default. Stock formatting follows column roles and configured labels; Cross Check formatting uses bundled labels, and YoY size formulas use the configured size column with escaped criteria.
 
 ## Calling engines outside the CLI
 

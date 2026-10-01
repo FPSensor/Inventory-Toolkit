@@ -2,6 +2,40 @@
 
 All notable changes to Inventory Toolkit are documented in this file.
 
+## [Unreleased]
+
+Development changes after `v1.4.1`. The released application version remains `1.4.1`; legacy configuration compatibility remains enabled until deliberately retired.
+
+### Added
+
+- Added optional shared progress and final-statistics callbacks for all three engines, with concise CLI stage/percentage updates and a determinate GUI progress bar plus retained activity history, without enabling debug logging.
+- Added separate completion summaries: Cross Check discrepancy/review counts; Stock input/output, family/default-family and per-store unit/cost/sales totals; YoY monthly, group and overall current/prior-year comparisons.
+- Added profile-owned Cross Check system quantity mapping and negative-system-stock reconciliation policy, including Configuration Hub editors and explicit default-column confirmation in CLI/GUI.
+- Added independent Stock and Cross Check price-list article tokenization settings: `first_token` preserves historical behavior, while `whole` preserves cleaned identifiers containing spaces.
+
+### Changed
+
+- Moved bundled profile defaults, workbook labels and Guided Setup column hints into UTF-8 JSON resources; schemas, engines and interfaces consume those resources instead of embedding deployment-specific vocabulary in Python.
+- Moved historical serialized keys and legacy test payloads into dedicated JSON resources/fixtures while retaining compatibility behavior.
+- Removed demo catalog/store assumptions from regression, integrity and stress fixtures; tests use synthetic configurations instead of assuming another profile has demo families or stores.
+- Updated demo family prefixes and regenerated approved output references for the intended demo classification changes. Aligned the system-stock fixture fingerprint with the repository fixture.
+- Extended release-reference fingerprints to cover bundled workbook labels and profile defaults; updated manifest fingerprints for the new resource contract without changing approved report values/formulas for that update.
+- Made workbook formatting follow column roles and configured labels, including YoY size formulas with escaped criteria.
+- Translated Windows setup messages and comments into English.
+- Made compatibility retirement preserve existing LF/CRLF/mixed line endings, remove obsolete documentation and its regression tests, and generate an attributed `core: compatibility:` commit with a descriptive body.
+
+### Fixed
+
+- Resolved demo input suggestions from the application-owned `examples/demo/` directory for Cross Check, Stock and YoY while giving remembered paths priority.
+- Advanced YoY rendering percentage across individual sheets instead of keeping it fixed for the entire rendering stage; completion is reported after saving.
+- Removed the special family-label shortcut so every article follows profile rules and longest-prefix priority, including articles whose text resembles a review marker.
+- Kept explicit current-schema object/version validation outside removable compatibility code, preserving clear errors and rejected file contents after retirement.
+
+### Documentation
+
+- Updated README, module guides, configuration ownership, progress/statistics semantics, profile copying, release certification and retirement documentation to match the cumulative development state.
+- Required changelog and affected-document updates alongside future behavior changes rather than deferring them until release preparation.
+
 ## [1.4.1] - 2026-09-29
 
 ### Changed
@@ -19,6 +53,7 @@ All notable changes to Inventory Toolkit are documented in this file.
 
 ### Fixed
 
+- Restored remembered YoY input/output paths in CLI/GUI and made the additional annual-comparison blocks optional for non-segmented reports, avoiding an unwanted second block beneath the complete report.
 - Kept existing corrupt/future profile documents intact in CLI and GUI editors; validated and atomically saved edited JSON instead of treating a failed read as missing configuration.
 - Required explicit per-run operator consent before using a documented default input column when a configured column is absent; unattended engine calls fail with the missing-column error.
 - Prevented Stock from silently treating unreadable price lists as absent and valuing their inventory at zero, and rejected missing configured network columns before valuation.
