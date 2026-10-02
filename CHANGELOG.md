@@ -8,6 +8,8 @@ Development changes after `v1.4.1`. The released application version remains `1.
 
 ### Added
 
+- Guarded GUI workflow execution against concurrent runs, profile/configuration changes and closing the window during an active task; restore previous control states after success, failure or worker-start errors.
+
 - Added optional shared progress and final-statistics callbacks for all three engines, with concise CLI stage/percentage updates and a determinate GUI progress bar plus retained activity history, without enabling debug logging.
 - Added separate completion summaries: Cross Check discrepancy/review counts; Stock input/output, family/default-family and per-store unit/cost/sales totals; YoY monthly, group and overall current/prior-year comparisons.
 - Added profile-owned Cross Check system quantity mapping and negative-system-stock reconciliation policy, including Configuration Hub editors and explicit default-column confirmation in CLI/GUI.

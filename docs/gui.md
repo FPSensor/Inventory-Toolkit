@@ -59,6 +59,12 @@ The graphical hub edits the current schema-v3 files for:
 
 It exists alongside the CLI Configuration Hub. The CLI remains the more complete maintenance surface.
 
+## Execution lifecycle
+
+Only one processing task may run at a time. The GUI disables profile/actions and input controls across all three workflows while processing, then restores their previous states on success or failure. Controls already disabled by an option remain disabled. Tabs and the activity area remain available for reviewing progress.
+
+Close open profile/configuration windows before starting a workflow; this prevents an existing editor from changing settings during processing. Exit and window-close requests wait for the task to finish instead of terminating a saving worker. Failure to start a worker also restores the controls. After completion, existing input selections remain available for another run.
+
 ## Threading rule
 
 Long-running engine calls must not block Tk's main loop. Worker threads may perform processing, but Tk widgets/message boxes must be updated from the main thread.

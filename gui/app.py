@@ -1285,6 +1285,9 @@ class InventoryToolkitGUI(BaseWindow):
         self.geometry("980x740")
         self.minsize(880, 620)
 
+        self._busy = False
+        self._running_profile = None
+        self._locked_controls = []
         self.active_profile = tk.StringVar(value="demo")
         self._refresh_profiles()
         self._build_top_bar()
@@ -1293,6 +1296,7 @@ class InventoryToolkitGUI(BaseWindow):
         self.active_profile.trace_add("write", self._on_profile_changed)
         self._build_status_bar()
         self.bind("<Control-Shift-I>", self._show_easter_egg)
+        self.protocol("WM_DELETE_WINDOW", self._request_close)
 
     def _show_easter_egg(self, _event=None):
         """Hidden nod for people who read source code and press suspicious shortcuts."""
@@ -1319,6 +1323,7 @@ class InventoryToolkitGUI(BaseWindow):
 
     def _build_top_bar(self):
         bar = BaseFrame(self)
+        self._top_bar = bar
         bar.pack(fill="x", padx=15, pady=10)
 
         _lbl(bar, text="Active Profile:").pack(side="left", padx=5)
@@ -1345,10 +1350,12 @@ class InventoryToolkitGUI(BaseWindow):
              ).pack(side="left", padx=5)
 
         _btn(bar, "🚪 Exit",
-             self.quit, width=80 if USE_CTK else None
+             self._request_close, width=80 if USE_CTK else None
              ).pack(side="right", padx=5)
 
     def _open_new_profile(self):
+        if not self._require_idle():
+            return
         def on_done(new_id):
             self._refresh_profiles()
             if USE_CTK:
@@ -1360,6 +1367,8 @@ class InventoryToolkitGUI(BaseWindow):
         NewProfileModal(self, on_done)
 
     def _open_wizard(self):
+        if not self._require_idle():
+            return
         profile = self.active_profile.get()
         profile_dir = app_paths.profile_root(profile)
         if not profile_dir.is_dir():
@@ -1378,6 +1387,8 @@ class InventoryToolkitGUI(BaseWindow):
         )
 
     def _open_config_hub(self):
+        if not self._require_idle():
+            return
         try:
             ConfigurationManager(self.active_profile.get())
             ConfigHubWindow(self, self.active_profile.get())
@@ -1418,6 +1429,10 @@ class InventoryToolkitGUI(BaseWindow):
         self._setup_yoy_tab()
 
     def _on_profile_changed(self, *_args):
+        if self._busy:
+            if self.active_profile.get() != self._running_profile:
+                self.active_profile.set(self._running_profile)
+            return
         if hasattr(self, "yoy_sizes"):
             self._apply_yoy_profile_defaults()
 
@@ -1509,6 +1524,8 @@ class InventoryToolkitGUI(BaseWindow):
                        command=self._exec_cc).pack(pady=18)
 
     def _exec_cc(self):
+        if not self._require_idle():
+            return
         if not PANDAS_AVAILABLE:
             messagebox.showerror("Missing Dependency", "pandas is required.", parent=self)
             return
@@ -1588,6 +1605,8 @@ class InventoryToolkitGUI(BaseWindow):
                        command=self._exec_stock).pack(pady=25)
 
     def _exec_stock(self):
+        if not self._require_idle():
+            return
         files = [self.sp_raw.get(), self.sp_cost.get(), self.sp_sales.get()]
         for f in files:
             if not f or not os.path.exists(f):
@@ -1708,6 +1727,8 @@ class InventoryToolkitGUI(BaseWindow):
                        command=self._exec_yoy).pack(pady=20)
 
     def _exec_yoy(self):
+        if not self._require_idle():
+            return
         f_path = self.yoy_file.get().strip()
         if not f_path or not os.path.exists(f_path):
             messagebox.showerror("Missing File", "Sales data file not found.", parent=self)
@@ -1843,8 +1864,59 @@ class InventoryToolkitGUI(BaseWindow):
             else:
                 self._progress["value"] = 100
 
+    def _require_idle(self):
+        if self._busy:
+            messagebox.showinfo(
+                "Task running", "Wait for the current task to finish before starting another action.",
+                parent=self,
+            )
+            return False
+        return True
+
+    def _request_close(self):
+        if self._require_idle():
+            self.destroy()
+
+    def _set_busy(self, busy):
+        """Freeze run inputs and restore each control's original state on Tk's thread."""
+        self._busy = busy
+        if busy:
+            self._running_profile = self.active_profile.get()
+            self._locked_controls = []
+
+            def disable_tree(widget):
+                try:
+                    state = widget.cget("state")
+                except (tk.TclError, ValueError):
+                    state = None
+                if state is not None:
+                    self._locked_controls.append((widget, state))
+                    widget.configure(state="disabled")
+                    # Composite CTk widgets propagate state to their internals.
+                    return
+                for child in widget.winfo_children():
+                    disable_tree(child)
+
+            for root in (self._top_bar, self.tab_cc, self.tab_stock, self.tab_yoy):
+                disable_tree(root)
+        else:
+            for widget, state in self._locked_controls:
+                if widget.winfo_exists():
+                    widget.configure(state=state)
+            self._locked_controls = []
+            self._running_profile = None
+
     def _run_async(self, func, success_msg: str, warnings=None, progress_target=None):
         """Run engine work off-thread while keeping every Tk call on the UI thread."""
+        if not self._require_idle():
+            return
+        if any(isinstance(child, tk.Toplevel) for child in self.winfo_children()):
+            messagebox.showinfo(
+                "Configuration window open",
+                "Close profile and configuration windows before running a workflow.", parent=self,
+            )
+            return
+        self._set_busy(True)
         t_start = time.time()
         result_queue = queue.Queue(maxsize=1)
         progress_queue = queue.Queue()
@@ -1877,7 +1949,7 @@ class InventoryToolkitGUI(BaseWindow):
                 log.error(f"Async error: {exc}")
                 result_queue.put(("error", exc, time.time() - t_start))
 
-        def poll_result():
+        def drain_updates():
             while True:
                 try:
                     self._show_progress(progress_queue.get_nowait())
@@ -1888,12 +1960,17 @@ class InventoryToolkitGUI(BaseWindow):
                     summaries.append(self._show_stats(stats_queue.get_nowait()))
                 except queue.Empty:
                     break
+        def poll_result():
+            drain_updates()
             try:
                 kind, payload, elapsed = result_queue.get_nowait()
             except queue.Empty:
                 self.after(100, poll_result)
                 return
 
+            # Completion is queued after all updates; drain again to close the race.
+            drain_updates()
+            self._set_busy(False)
             if kind == "success":
                 out_path = payload
                 self._set_status(f"✅ Done in {elapsed:.1f}s  |  {out_path}")
@@ -1911,7 +1988,13 @@ class InventoryToolkitGUI(BaseWindow):
                 self._finish_progress(False)
                 messagebox.showerror("Execution Error", str(exc), parent=self)
 
-        threading.Thread(target=worker, daemon=True).start()
+        try:
+            threading.Thread(target=worker, daemon=True).start()
+        except Exception as exc:
+            self._set_busy(False)
+            self._set_status(f"Error: {exc}")
+            messagebox.showerror("Execution Error", str(exc), parent=self)
+            return
         self.after(100, poll_result)
 
 
