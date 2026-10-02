@@ -8,6 +8,8 @@ Development changes after `v1.4.1`. The released application version remains `1.
 
 ### Added
 
+- Added a persistent GUI last-successful-output panel with profile, duration and a copyable absolute path, plus explicit Open report/Open folder actions; retain previous results when a later run fails.
+
 - Guarded GUI workflow execution against concurrent runs, profile/configuration changes and closing the window during an active task; restore previous control states after success, failure or worker-start errors.
 
 - Added optional shared progress and final-statistics callbacks for all three engines, with concise CLI stage/percentage updates and a determinate GUI progress bar plus retained activity history, without enabling debug logging.

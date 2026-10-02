@@ -67,6 +67,9 @@ class View:
     _finish_progress = app.InventoryToolkitGUI._finish_progress
     _on_profile_changed = app.InventoryToolkitGUI._on_profile_changed
     _request_close = app.InventoryToolkitGUI._request_close
+    _record_result = app.InventoryToolkitGUI._record_result
+    _append_activity = app.InventoryToolkitGUI._append_activity
+    _open_result = app.InventoryToolkitGUI._open_result
 
     def __init__(self):
         self._busy = False
@@ -80,6 +83,12 @@ class View:
         self.tab_cc = Widget(children=[self.option])
         self.tab_stock = Widget()
         self.tab_yoy = Widget()
+        self._result_path = None
+        self._result_frame = Widget()
+        self._result_text = Variable("")
+        self._result_label = Widget()
+        self._open_report_button = Widget("disabled")
+        self._open_folder_button = Widget("disabled")
         self._activity = Widget("disabled")
         self._progress = Widget()
         self.pending = []
@@ -132,6 +141,10 @@ def test_run_blocks_overlap_and_restores_controls_after_completion(monkeypatch, 
     finished = Event()
     started = Event()
     view = View()
+    from pathlib import Path
+    previous_result = Path("previous.xlsx").resolve()
+    if failure:
+        view._result_path = previous_result
 
     def work(progress, stats):
         started.set()
@@ -177,6 +190,8 @@ def test_run_blocks_overlap_and_restores_controls_after_completion(monkeypatch, 
     if failure:
         assert dialogs[-1][0] == "error"
         assert "Cannot save output" in view.status
+        assert "Error: Cannot save output" in view._activity.content
+        assert view._result_path == previous_result
     else:
         assert "Stats:\n  Rows: 2" in view._activity.content
         assert "Stats:\n  Rows: 2" in dialogs[-1][1][1]
@@ -239,3 +254,75 @@ def test_final_stats_are_drained_again_after_completion_arrives(monkeypatch, dia
     view.pending.pop(0)()
     assert "Stats:\n  Rows: 2" in dialogs[-1][1][1]
     assert not view._busy
+
+
+@pytest.mark.parametrize("platform, command", [("linux", "xdg-open"), ("darwin", "open"), ("win32", None)])
+def test_open_result_uses_argument_paths_without_a_shell(tmp_path, monkeypatch, dialogs, platform, command):
+    path = tmp_path / "report with spaces.xlsx"
+    path.write_bytes(b"saved")
+    view = View()
+    view._record_result(path, "original-profile", 2.5)
+    assert view._result_text.get() == str(path.resolve())
+    assert view._open_report_button.state == "normal"
+    calls = []
+    monkeypatch.setattr(app.sys, "platform", platform)
+    monkeypatch.setattr(app.os, "startfile", lambda target: calls.append(target), raising=False)
+    monkeypatch.setattr(app.subprocess, "Popen", lambda arguments, **kwargs: calls.append((arguments, kwargs)))
+    view._open_result(False)
+    if command is None:
+        assert calls == [str(path)]
+    else:
+        assert calls[0][0] == [command, str(path)]
+        assert "shell" not in calls[0][1]
+
+
+def test_missing_report_can_still_open_its_existing_folder(tmp_path, monkeypatch, dialogs):
+    view = View()
+    view._record_result(tmp_path / "removed.xlsx", "test", 1)
+    calls = []
+    monkeypatch.setattr(app.sys, "platform", "linux")
+    monkeypatch.setattr(app.subprocess, "Popen", lambda arguments, **_: calls.append(arguments))
+    view._open_result(False)
+    assert not calls
+    assert dialogs[-1][0] == "error"
+    view._open_result(True)
+    assert calls == [["xdg-open", str(tmp_path)]]
+
+
+def test_opener_failure_is_reported_and_never_starts_processing(tmp_path, monkeypatch, dialogs):
+    view = View()
+    path = tmp_path / "report.xlsx"
+    path.write_bytes(b"saved")
+    view._record_result(path, "test", 1)
+    monkeypatch.setattr(app.sys, "platform", "linux")
+
+    def fail_open(*args, **kwargs):
+        raise OSError("No desktop opener")
+
+    monkeypatch.setattr(app.subprocess, "Popen", fail_open)
+    view._open_result(False)
+    assert dialogs[-1][1][0] == "Could not open result"
+    assert not view._busy
+    assert view._result_path == path
+
+
+def test_result_actions_are_blocked_while_processing(tmp_path, monkeypatch, dialogs):
+    view = View()
+    path = tmp_path / "report.xlsx"
+    path.write_bytes(b"saved")
+    view._record_result(path, "test", 1)
+    view._set_busy(True)
+    monkeypatch.setattr(app.subprocess, "Popen", lambda *_args, **_kwargs: pytest.fail("Opened during processing"))
+    view._open_result(False)
+    assert dialogs[-1][1][0] == "Task running"
+    view._set_busy(False)
+    assert view._result_path == path
+
+
+@pytest.mark.parametrize("method", ["_exec_cc", "_exec_stock", "_exec_yoy"])
+def test_every_launcher_rejects_an_active_run_before_preflight(dialogs, method):
+    view = View()
+    view._set_busy(True)
+    getattr(app.InventoryToolkitGUI, method)(view)
+    assert dialogs[-1][1][0] == "Task running"
+    assert not view.pending

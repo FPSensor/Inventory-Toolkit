@@ -47,6 +47,12 @@ Worker threads send progress, statistics and completion through queues; the Tk e
 
 The statistics have the same engine-owned meaning as the CLI summaries; see [engine.md](engine.md#final-statistics-contract).
 
+## Last successful output
+
+A persistent result panel shows the last successful report's absolute path, originating profile and duration. The path can be selected and copied. Open report delegates to the system's associated application; Open folder opens its containing directory. Neither action runs automatically. Both are disabled while processing to avoid opening a workbook during a write.
+
+The panel remains available after dismissing the success dialog and after a later failed run; its label explicitly identifies it as the last successful output. Starting a new run clears the activity area for that run, while failures are recorded there and leave the previous successful report accessible. Selecting another profile does not relabel the originating profile of the result. This state lasts for the GUI session only.
+
 ## Configuration Hub
 
 The graphical hub edits the current schema-v3 files for:

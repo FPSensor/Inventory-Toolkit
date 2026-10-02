@@ -25,6 +25,8 @@ import sys
 import json
 import queue
 import threading
+import subprocess
+from pathlib import Path
 import time
 from copy import deepcopy
 from argparse import Namespace
@@ -1288,6 +1290,7 @@ class InventoryToolkitGUI(BaseWindow):
         self._busy = False
         self._running_profile = None
         self._locked_controls = []
+        self._result_path = None
         self.active_profile = tk.StringVar(value="demo")
         self._refresh_profiles()
         self._build_top_bar()
@@ -1810,6 +1813,22 @@ class InventoryToolkitGUI(BaseWindow):
     # ── Status bar & async runner ─────────────────────────────────────────────
 
     def _build_status_bar(self):
+        self._result_frame = BaseFrame(self)
+        self._result_frame.pack(side="bottom", fill="x", padx=12, pady=6)
+        self._result_label = _lbl(self._result_frame, text="No report generated in this session.")
+        self._result_label.pack(anchor="w", padx=6, pady=(4, 2))
+        result_row = BaseFrame(self._result_frame)
+        result_row.pack(fill="x", padx=6, pady=(0, 4))
+        self._result_text = tk.StringVar(value="")
+        result_entry = _entry(result_row, textvariable=self._result_text)
+        result_entry.configure(state="readonly")
+        result_entry.pack(side="left", fill="x", expand=True, padx=(0, 6))
+        self._open_report_button = _btn(result_row, "Open report", self._open_report)
+        self._open_report_button.pack(side="left", padx=3)
+        self._open_folder_button = _btn(result_row, "Open folder", self._open_result_folder)
+        self._open_folder_button.pack(side="left", padx=3)
+        self._open_report_button.configure(state="disabled")
+        self._open_folder_button.configure(state="disabled")
         if USE_CTK:
             self._activity = ctk.CTkTextbox(self, height=100, wrap="word")
         else:
@@ -1864,6 +1883,42 @@ class InventoryToolkitGUI(BaseWindow):
             else:
                 self._progress["value"] = 100
 
+    def _record_result(self, output_path, profile, elapsed):
+        self._result_path = Path(output_path).resolve()
+        self._result_text.set(str(self._result_path))
+        self._result_label.configure(text=f"Last successful output | Profile: {profile} | {elapsed:.1f}s")
+        self._open_report_button.configure(state="normal")
+        self._open_folder_button.configure(state="normal")
+        self._append_activity(f"Output: {self._result_path}\nCompleted in {elapsed:.1f}s.\n")
+
+    def _append_activity(self, message):
+        self._activity.configure(state="normal")
+        self._activity.insert("end", message)
+        self._activity.see("end")
+        self._activity.configure(state="disabled")
+
+    def _open_report(self):
+        self._open_result(False)
+
+    def _open_result_folder(self):
+        self._open_result(True)
+
+    def _open_result(self, folder):
+        if not self._require_idle() or self._result_path is None:
+            return
+        target = self._result_path.parent if folder else self._result_path
+        if not (target.is_dir() if folder else target.is_file()):
+            messagebox.showerror("Result unavailable", f"The {'folder' if folder else 'report'} no longer exists:\n{target}", parent=self)
+            return
+        try:
+            if sys.platform == "win32":
+                os.startfile(str(target))
+            else:
+                command = "open" if sys.platform == "darwin" else "xdg-open"
+                subprocess.Popen([command, str(target)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        except OSError as exc:
+            messagebox.showerror("Could not open result", str(exc), parent=self)
+
     def _require_idle(self):
         if self._busy:
             messagebox.showinfo(
@@ -1897,7 +1952,7 @@ class InventoryToolkitGUI(BaseWindow):
                 for child in widget.winfo_children():
                     disable_tree(child)
 
-            for root in (self._top_bar, self.tab_cc, self.tab_stock, self.tab_yoy):
+            for root in (self._top_bar, self.tab_cc, self.tab_stock, self.tab_yoy, self._result_frame):
                 disable_tree(root)
         else:
             for widget, state in self._locked_controls:
@@ -1917,6 +1972,7 @@ class InventoryToolkitGUI(BaseWindow):
             )
             return
         self._set_busy(True)
+        run_profile = self._running_profile
         t_start = time.time()
         result_queue = queue.Queue(maxsize=1)
         progress_queue = queue.Queue()
@@ -1975,6 +2031,7 @@ class InventoryToolkitGUI(BaseWindow):
                 out_path = payload
                 self._set_status(f"✅ Done in {elapsed:.1f}s  |  {out_path}")
                 self._finish_progress(True)
+                self._record_result(out_path, run_profile, elapsed)
                 messagebox.showinfo(
                     "Done",
                     f"{success_msg}\n\nTime: {elapsed:.1f}s\nOutput: {out_path}"
@@ -1986,6 +2043,7 @@ class InventoryToolkitGUI(BaseWindow):
                 exc = payload
                 self._set_status(f"❌ Error: {exc}")
                 self._finish_progress(False)
+                self._append_activity(f"Error: {exc}\n")
                 messagebox.showerror("Execution Error", str(exc), parent=self)
 
         try:
@@ -1993,6 +2051,7 @@ class InventoryToolkitGUI(BaseWindow):
         except Exception as exc:
             self._set_busy(False)
             self._set_status(f"Error: {exc}")
+            self._append_activity(f"Error: {exc}\n")
             messagebox.showerror("Execution Error", str(exc), parent=self)
             return
         self.after(100, poll_result)

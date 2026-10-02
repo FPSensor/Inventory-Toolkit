@@ -198,7 +198,9 @@ The GUI currently covers:
 - Cross Check;
 - Stock Processing;
 - YoY Reports;
-- graphical Configuration Hub.
+- graphical Configuration Hub;
+- one-at-a-time workflow execution with guarded profile/input actions;
+- retained progress/statistics and a last-successful-output panel with report/folder actions.
 
 It uses CustomTkinter when installed and falls back to Tkinter/ttk. The GUI remains **experimental** and is not yet considered a full replacement for the CLI. Engine code must therefore remain headless and must not assume that terminal input is available.
 
