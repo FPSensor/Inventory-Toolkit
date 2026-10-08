@@ -185,3 +185,7 @@ CLI file selection may use Tkinter's native file dialog. Tkinter availability th
 | `cli/debug_menu.py` | level-3 Developer Console |
 | `cli/*_launcher.py` | workflow-specific prompts and engine invocation |
 | `cli/utils.py` | presentation helpers/file dialog utilities |
+
+### YoY monetary output
+
+Every interactive CLI run asks `Include sales amounts (revenue), in addition to units? [y/N]`. Enter or N produces unit counts only; Y adds monetary blocks on every generated sheet, including Full Report. This runtime choice does not rewrite the profile. Only selected metric columns are required, so a units-only run does not require the sales-amount column. Annual-comparison and monthly-segmentation choices remain independent.

@@ -16,7 +16,7 @@ from core.profile_config import DEFAULTS
 from core.configuration_manager import ConfigurationManager
 from core.logger import log, log_debug_event, log_exception
 from core.system_utils import InvalidExcelOutputPathError, normalize_xlsx_output_path
-from engine.yoy_reports.metrics import resolve_metric_specs
+from engine.yoy_reports.metrics import resolve_metric_specs, select_run_metrics
 
 
 def launch_yoy_reports(active_profile: str) -> None:
@@ -66,7 +66,16 @@ def launch_yoy_reports(active_profile: str) -> None:
         ).strip().upper()
         has_families = response != "N"
 
+    while True:
+        sales_option = input(
+            "  Include sales amounts (revenue), in addition to units? [y/N]: "
+        ).strip().lower()
+        if sales_option in ("y", "n", ""):
+            break
+        print("  Enter 'Y' or 'N'.")
+
     try:
+        yoy_config = select_run_metrics(yoy_config, sales_option == "y")
         header_frame = pd.read_excel(sales_file, nrows=0)
         metric_specs = resolve_metric_specs(yoy_config)
         required_columns = [

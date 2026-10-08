@@ -164,3 +164,11 @@ Stock and Cross Check independently resolve `pricing.article_tokenization`: `fir
 Engines are intentionally callable from Python. Callers are responsible for supplying validated paths/options/configuration context and choosing interactive vs non-interactive save behavior where applicable.
 
 New frontends should call engine/core APIs rather than importing CLI prompt functions.
+
+### YoY sales amounts and percentages
+
+The `sales` metric sums the configured `input.sales_column`, which must contain a line's total sales amount. It does not multiply that amount by quantity. If the source contains a unit price instead, prepare line amounts in the source before using this metric. Monetary output measures revenue, not average unit price or inflation-adjusted sales.
+
+Each branch/category comparison uses `(current_amount - previous_amount) / previous_amount`. Group Global and Totals comparisons apply the same formula to summed amounts, rather than averaging row or branch percentages. A zero prior-year amount produces `N/A`; a zero current amount with a positive prior amount produces -100%. Returns/negative amounts retain their signs. The monetary number format is decimal, without assuming a currency; both periods must use comparable currencies and accounting conventions.
+
+`select_run_metrics` selects units and optional sales amounts for interactive runs without mutating the stored profile. Direct engine callers continue to control `output.metrics` explicitly.

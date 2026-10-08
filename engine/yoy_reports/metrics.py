@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from copy import deepcopy
 from dataclasses import dataclass
 
 
@@ -82,3 +83,11 @@ def configured_branches(yoy_config: dict) -> list[str]:
             "YoY Reports requires at least one non-empty report group before a workbook can be generated."
         )
     return branches
+
+
+def select_run_metrics(yoy_config: dict, include_sales_amounts: bool = False) -> dict:
+    """Select unit counts and optional revenue for an interactive run only."""
+    selected = deepcopy(yoy_config)
+    selected["output"]["metrics"] = ["units", "sales"] if include_sales_amounts else ["units"]
+    resolve_metric_specs(selected)
+    return selected

@@ -152,7 +152,7 @@ def test_yoy_demo_prompt_resolves_bundled_input_from_foreign_cwd(tmp_path, monke
         raise ValueError("stop after selecting input")
 
     monkeypatch.setattr(yoy_reports_launcher.pd, "read_excel", reject_header)
-    responses = iter(("i", ""))
+    responses = iter(("i", "", ""))
     monkeypatch.setattr("builtins.input", lambda _prompt: next(responses))
 
     yoy_reports_launcher.launch_yoy_reports("demo")

@@ -19,6 +19,8 @@ Development changes after `v1.4.1`. The released application version remains `1.
 
 ### Changed
 
+- Made CLI YoY sales-amount blocks opt-in for each run (default: units only), independent of segmentation and without rewriting profile settings.
+
 - Moved bundled profile defaults, workbook labels and Guided Setup column hints into UTF-8 JSON resources; schemas, engines and interfaces consume those resources instead of embedding deployment-specific vocabulary in Python.
 - Moved historical serialized keys and legacy test payloads into dedicated JSON resources/fixtures while retaining compatibility behavior.
 - Removed demo catalog/store assumptions from regression, integrity and stress fixtures; tests use synthetic configurations instead of assuming another profile has demo families or stores.
