@@ -8,6 +8,8 @@ Development changes after `v1.4.1`. The released application version remains `1.
 
 ### Added
 
+- Connected CLI module launch to shared setup states and guided recovery, with per-page saving and explicit continuation for partial profiles. New CLI profiles return to the module menu; existing workflows remain available when only one legacy module enrolls in setup.
+
 - Promoted the desktop surface to Alpha Pre-Beta (toolkit remains 1.4.1): dark sidebar workspace, scrolling module pages, resizable activity/results area, session text scaling and inline progress/completion/errors.
 - Added graphical module setup with contextual help, sample-header/value previews, typed row editors, per-page saving/resume and actionable configuration recovery while retaining workflow inputs.
 

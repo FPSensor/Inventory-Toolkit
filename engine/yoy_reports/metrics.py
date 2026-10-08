@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from copy import deepcopy
 from dataclasses import dataclass
+from core.workflow_errors import WorkflowError, ErrorCode
 
 
 @dataclass(frozen=True)
@@ -53,8 +54,9 @@ def resolve_metric_specs(yoy_config: dict) -> list[MetricSpec]:
 
         column = str(input_config.get(template["input_key"], "")).strip()
         if not column:
-            raise ValueError(
-                f"YoY metric '{metric_key}' requires input.{template['input_key']} to be configured."
+            raise WorkflowError(ErrorCode.CONFIG_REQUIRED_FIELD,
+                f"YoY metric '{metric_key}' requires a configured input column.",
+                module="yoy_reports", step="yoy_period", field=f"input.{template['input_key']}"
             )
         resolved.append(
             MetricSpec(
@@ -79,8 +81,9 @@ def configured_branches(yoy_config: dict) -> list[str]:
         )
     )
     if not branches:
-        raise ValueError(
-            "YoY Reports requires at least one non-empty report group before a workbook can be generated."
+        raise WorkflowError(ErrorCode.CONFIG_REQUIRED_FIELD,
+            "YoY Reports requires at least one non-empty report group before a workbook can be generated.",
+            module="yoy_reports", step="yoy_groups", field="groups"
         )
     return branches
 

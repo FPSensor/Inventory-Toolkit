@@ -10,6 +10,8 @@ from copy import deepcopy
 import pandas as pd
 
 from cli.progress import show_progress, show_stats
+from cli.workflow_setup import recover_configuration
+from core.workflow_errors import WorkflowError
 from cli.utils import ask_file, load_last_paths, save_last_paths, confirm_default_column, input_default
 from core.input_columns import choose_input_columns
 from core.profile_config import DEFAULTS
@@ -90,6 +92,9 @@ def launch_yoy_reports(active_profile: str) -> None:
         required_columns = list(dict.fromkeys(required_columns))
 
     except Exception as exc:
+        if isinstance(exc, WorkflowError) and exc.can_configure:
+            recover_configuration(profile, exc)
+            return
         log.error("Could not read file headers: %s", exc)
         print("\n  ❌ APB Error: could not read the file. Is it open in another application?")
         input("  Press Enter to return...")

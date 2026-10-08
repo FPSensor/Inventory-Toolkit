@@ -403,3 +403,16 @@ def test_revenue_comparisons_use_sum_ratios_and_handle_zero_denominators():
         one = current.iloc[[0]].copy(); one['Amount'] = current_value
         prior = previous.iloc[[0]].copy(); prior['Amount'] = previous_value
         assert expected in build_yoy_stats(one, prior, pd.Timestamp('2026-01-01'), pd.Timestamp('2026-01-31'), config)[-1]
+
+
+def test_unset_revenue_column_has_a_stable_configuration_destination():
+    from engine.yoy_reports.metrics import select_run_metrics
+    from core.workflow_errors import WorkflowError, ErrorCode
+    config = _config()
+    config['input']['sales_column'] = ''
+    assert select_run_metrics(config, False)['output']['metrics'] == ['units']
+    with pytest.raises(WorkflowError) as error:
+        select_run_metrics(config, True)
+    assert error.value.code == ErrorCode.CONFIG_REQUIRED_FIELD
+    assert error.value.step == 'yoy_period'
+    assert error.value.field == 'input.sales_column'

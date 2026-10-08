@@ -65,7 +65,10 @@ class SetupSession:
 
     def metadata(self):
         path = paths.profile_root(self.profile) / 'profile.json'
-        return _read(path) if path.exists() else {}
+        data = _read(path) if path.exists() else {}
+        if not isinstance(data, dict):
+            raise WorkflowError(ErrorCode.SETUP_STATE_INVALID, 'Profile metadata must be an object.')
+        return data
 
     def reviewed(self):
         setup = self.metadata().get('setup')
@@ -76,7 +79,12 @@ class SetupSession:
         item = setup['modules'].get(self.module, {})
         if not isinstance(item, dict) or not isinstance(item.get('reviewed', {}), dict):
             raise WorkflowError(ErrorCode.SETUP_STATE_INVALID, 'Module setup metadata is invalid.')
-        return item.get('reviewed', {})
+        if item.get('legacy') is True:
+            return None
+        reviewed = item.get('reviewed', {})
+        if not all(isinstance(key, str) and isinstance(value, str) for key, value in reviewed.items()):
+            raise WorkflowError(ErrorCode.SETUP_STATE_INVALID, 'Setup reviews must contain field fingerprints.')
+        return reviewed
 
     def state(self):
         reviewed = self.reviewed()
@@ -124,6 +132,7 @@ class SetupSession:
             raise WorkflowError(ErrorCode.CONFIG_REQUIRED_FIELD, 'Add at least one report group with a store.', module=self.module, step='yoy_groups', field='groups')
 
     def save_step(self, step_id, values):
+        self.reviewed()  # Reject damaged metadata before changing a configuration file.
         step = next(s for s in self.steps if s.id == step_id)
         raw = deepcopy(self.data(step))
         for field in step.fields:
@@ -137,8 +146,9 @@ class SetupSession:
             raise WorkflowError(ErrorCode.CONFIG_INVALID, f'Review {step.title}: {exc}', module=self.module, step=step.id) from exc
         write_json(self.root / f'{step.logical}.json', raw)
         metadata = self.metadata()
-        setup = metadata.setdefault('setup', {'version': 1, 'modules': {}})
+        setup = metadata.setdefault('setup', {'version': 1, 'modules': {module: {'legacy': True, 'reviewed': {}} for module in STEPS}})
         reviewed = setup['modules'].setdefault(self.module, {'reviewed': {}})['reviewed']
+        setup['modules'][self.module].pop('legacy', None)
         reviewed[step.id] = self.fingerprint(step)
         write_json(paths.profile_root(self.profile) / 'profile.json', metadata)
 

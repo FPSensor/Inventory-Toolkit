@@ -232,3 +232,5 @@ Stable errors expose a code, module, field and setup-step destination. Only
 configuration errors with an explicit destination offer guided recovery. Missing
 input columns continue to offer the existing per-run default fallback; they are
 not interpreted as an unset configuration field.
+
+When an existing profile enrolls one module, untouched modules carry a legacy marker and remain available under their previous lifecycle. Invalid setup metadata is rejected before configuration files are changed. Review states are derived from fingerprints rather than trusting a manually edited completion flag.

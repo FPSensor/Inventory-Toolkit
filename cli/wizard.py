@@ -48,7 +48,7 @@ def _load_columns(path: str) -> tuple[list[str], object | None]:
     if not path or not PANDAS_AVAILABLE:
         return [], None
     try:
-        df = pd.read_excel(path)
+        df = pd.read_excel(path, nrows=20)
         return [str(c) for c in df.columns], df
     except Exception as exc:
         print(f"  ❌ Could not read '{path}': {exc}")
@@ -299,8 +299,9 @@ def run_setup_wizard(profile_dir: str, profile_name: str = "") -> None:
         print("  [5] YoY Reports")
         print("  [0] Back")
         choice = input("\n  What do you want to configure? ").strip().upper()
-        actions = {"1": _setup_catalog, "2": _setup_network, "3": _setup_stock,
-                   "4": _setup_cross, "5": _setup_yoy}
+        actions = {"1": _setup_catalog, "2": _setup_network, "3": lambda _configs: run_module_setup(configs.parent.name, "stock_processing"),
+                   "4": lambda _configs: run_module_setup(configs.parent.name, "cross_check"),
+                   "5": lambda _configs: run_module_setup(configs.parent.name, "yoy_reports")}
         if choice == "0": return
         if choice == "A":
             for action in actions.values():
@@ -316,3 +317,88 @@ def run_setup_wizard(profile_dir: str, profile_name: str = "") -> None:
             except ConfigurationError as exc:
                 print(f"  ❌ Configuration was not changed: {exc}")
                 input("  Press Enter...")
+
+
+def run_module_setup(profile: str, module: str, step_id: str | None = None) -> None:
+    """Configure one workflow through the shared page contract, saving each page."""
+    from core.setup_service import SetupSession
+    from core.setup_catalog import get_value, MODULE_LABELS
+
+    session = SetupSession(profile, module)
+    pending = step_id or session.first_pending()
+    index = next((i for i, step in enumerate(session.steps) if step.id == pending), 0)
+    try:
+        while index < len(session.steps):
+            step = session.steps[index]
+            clear_screen()
+            print(f'\n  {MODULE_LABELS[module]} setup | {index + 1}/{len(session.steps)}: {step.title}\n')
+            if step.shared:
+                print('  Shared settings: edits affect other modules in this profile.')
+            print('  Saved pages are retained. Ctrl+C leaves setup without saving this page.')
+            _, columns, _ = _sample_file('Optional sample workbook for headers.') if any(f.kind == 'column' for f in step.fields) else ('', [], None)
+            values = {}
+            data = session.data(step)
+            for field in step.fields:
+                key = '.'.join(field.path)
+                current = get_value(data, field.path)
+                print(f'\n  {field.label}\n  {field.help}')
+                if field.kind == 'column':
+                    values[key] = _pick(field.label, columns, current)
+                elif field.kind == 'bool':
+                    while True:
+                        answer = input(f'  Enabled? [Y/N, Enter keeps {current}]: ').strip().lower()
+                        if answer in ('', 'y', 'n'):
+                            values[key] = current if not answer else answer == 'y'
+                            break
+                elif field.kind == 'list':
+                    raw = input(f'  Comma-separated values [Enter keeps {current}; - clears]: ').strip()
+                    values[key] = current if not raw else ([] if raw == '-' else list(dict.fromkeys(x.strip() for x in raw.split(',') if x.strip())))
+                elif field.kind in {'mapping', 'rules', 'groups', 'summaries'}:
+                    values[key] = _setup_table(field.kind, current)
+                else:
+                    raw = input(f'  Value [Enter keeps {current}]: ').strip()
+                    values[key] = raw or current
+            try:
+                session.save_step(step.id, values)
+            except ValueError as exc:
+                print(f'  Not saved: {exc}')
+                input('  Press Enter to review this page...')
+                continue
+            index += 1
+        session.validate_required()
+        print('  Setup complete. Return to the menu and run when ready.')
+        input('  Press Enter...')
+    except KeyboardInterrupt:
+        print('\n  Setup paused. Previously saved pages are retained.')
+    except ConfigurationError as exc:
+        print(f'  Setup remains partial: {exc}')
+        input('  Press Enter...')
+
+
+def _setup_table(kind, current):
+    """Edit typed rows one at a time without asking operators to write JSON."""
+    from copy import deepcopy
+    result = deepcopy(current)
+    print(f'  Existing rows: {len(result)}')
+    print('  Enter a name to add/replace, -name to remove, or Enter to finish.')
+    while True:
+        name = input('  Name: ').strip()
+        if not name:
+            return result
+        if name.startswith('-'):
+            if kind == 'summaries':
+                result = [item for item in result if item['sheet_name'] != name[1:]]
+            else:
+                result.pop(name[1:], None)
+            continue
+        if kind == 'summaries':
+            entities = input('  Stores (comma-separated): ')
+            titles = input('  Display titles (comma-separated): ')
+            result = [item for item in result if item['sheet_name'] != name]
+            result.append({'sheet_name': name, 'entities': [x.strip() for x in entities.split(',') if x.strip()], 'titles': [x.strip() for x in titles.split(',') if x.strip()]})
+        else:
+            raw = input('  Members/prefixes (comma-separated): ' if kind in {'rules', 'groups'} else '  Target value: ').strip()
+            if not raw:
+                print('  Empty row ignored. Use -name to remove it.')
+                continue
+            result[name] = list(dict.fromkeys(x.strip() for x in raw.split(',') if x.strip())) if kind in {'rules', 'groups'} else raw

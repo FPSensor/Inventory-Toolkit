@@ -13,6 +13,7 @@ import sys
 from cli.utils import clear_screen, load_json, save_json, ask_yes_no
 from cli.wizard import initialize_profile_files, run_setup_wizard
 from core import paths as app_paths
+from core.setup_service import initialize_setup
 
 
 # ── Internal helpers ──────────────────────────────────────────────────────────
@@ -53,7 +54,7 @@ def _create_new_profile() -> str | None:
             .lower()
             .replace(" ", "_")
         )
-        if not folder:
+        if not folder or folder in {".", ".."} or "/" in folder or "\\" in folder:
             print("  ❌ Name cannot be empty.")
             continue
         profile_path = app_paths.profile_root(folder)
@@ -79,17 +80,10 @@ def _create_new_profile() -> str | None:
 
     print(f"\n  ✅ Profile '{display_name}' created at: {profile_path}\n")
 
-    # 4. Wizard (optional but recommended)
-    print("  The Setup Wizard reads a Stock file and configures")
-    print("  columns and stores automatically in minutes.\n")
-    if ask_yes_no("  Run the Setup Wizard now?"):
-        run_setup_wizard(str(profile_path), display_name)
-    else:
-        print(
-            "  ℹ️  You can run it later from:\n"
-            "       Main menu → ⚙️  Configuration → [W] Quick Setup Wizard"
-        )
-        input("  Press Enter to continue...")
+    initialize_setup(folder)
+    print("  Select a module from the main menu to configure only what you use.")
+    print("  Setup progress is saved independently for each module.")
+    input("  Press Enter to continue...")
 
     return folder
 

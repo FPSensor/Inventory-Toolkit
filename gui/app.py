@@ -628,7 +628,7 @@ class InventoryToolkitGUI(BaseWindow):
         try:
             yoy_config = select_run_metrics(yoy_config, self.yoy_sales_amounts.get())
         except ValueError as exc:
-            self._notify("error", "Metric Configuration Error", str(exc), parent=self)
+            self._handle_error(exc)
             return
 
         input_config = yoy_config["input"]

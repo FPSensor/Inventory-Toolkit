@@ -189,3 +189,11 @@ CLI file selection may use Tkinter's native file dialog. Tkinter availability th
 ### YoY monetary output
 
 Every interactive CLI run asks `Include sales amounts (revenue), in addition to units? [y/N]`. Enter or N produces unit counts only; Y adds monetary blocks on every generated sheet, including Full Report. This runtime choice does not rewrite the profile. Only selected metric columns are required, so a units-only run does not require the sales-amount column. Annual-comparison and monthly-segmentation choices remain independent.
+
+### Per-module setup and recovery
+
+New profile creation collects profile metadata and returns to the menu. Choosing an unconfigured module opens that module's guided setup. Each page saves independently; Ctrl+C retains previous pages and leaves the current page unreviewed. Optional sample headers are read from at most twenty rows. Named tables are edited one row at a time without JSON syntax.
+
+Partial setup warns and offers an explicit continuation or completion choice. Missing mandatory settings carry a stable code and a specific setup destination; the console offers to configure that page. Returning from setup does not automatically retry a workflow. Existing profiles without setup metadata are not forced through the assistant. Enrolling one existing module preserves the other modules' legacy lifecycle.
+
+Missing file headers are a separate `INPUT_COLUMN_MISSING` error: the established default-column confirmation still applies. Unrelated file/output errors do not offer a configuration wizard.

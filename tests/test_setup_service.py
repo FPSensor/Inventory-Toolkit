@@ -81,3 +81,22 @@ def test_setup_state_is_not_trusted_when_metadata_is_invalid(profile):
         SetupSession(profile, 'cross_check').state()
     assert error.value.code == ErrorCode.SETUP_STATE_INVALID
     assert not error.value.can_configure
+
+
+def test_enrolling_an_existing_module_preserves_other_legacy_workflows(profile):
+    session = SetupSession(profile, 'cross_check')
+    step = session.steps[0]
+    session.save_step(step.id, values(session, step))
+    assert session.state() == SetupState.PARTIAL
+    assert SetupSession(profile, 'stock_processing').state() == SetupState.COMPLETE
+    assert SetupSession(profile, 'yoy_reports').state() == SetupState.COMPLETE
+
+
+def test_corrupt_progress_cannot_change_config(profile):
+    session = SetupSession(profile, 'cross_check')
+    step = session.steps[0]
+    before = session.data(step)
+    write_json(paths.profile_root(profile) / 'profile.json', {'setup': {'version': 1, 'modules': {'cross_check': {'reviewed': {'catalog': 2}}}}})
+    with pytest.raises(WorkflowError):
+        session.save_step(step.id, values(session, step))
+    assert session.data(step) == before

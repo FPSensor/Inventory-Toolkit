@@ -7,6 +7,7 @@ from cli.cross_check_launcher import launch_cross_check
 from cli.stock_processing_launcher import launch_stock_processing
 from cli.yoy_reports_launcher import launch_yoy_reports
 from cli.wizard import PANDAS_AVAILABLE
+from cli.workflow_setup import launch_configured
 from cli.debug_menu import developer_tools_menu
 from core.logger import log, log_debug_event, set_debug_level
 
@@ -153,11 +154,11 @@ def main():
             log_debug_event("main_menu_choice", option=option, profile=current_profile)
 
             if option == "C":
-                launch_cross_check(current_profile)
+                launch_configured(current_profile, "cross_check", launch_cross_check)
             elif option == "S":
-                launch_stock_processing(current_profile)
+                launch_configured(current_profile, "stock_processing", launch_stock_processing)
             elif option == "R":
-                launch_yoy_reports(current_profile)
+                launch_configured(current_profile, "yoy_reports", launch_yoy_reports)
             elif option == "K":
                 configuration_menu(current_profile)
             elif option == "P":
