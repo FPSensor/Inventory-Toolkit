@@ -9,7 +9,11 @@ try:
     USE_CTK = True
     BaseWindow, BaseToplevel = ctk.CTk, ctk.CTkToplevel
     BaseFrame, BaseButton, BaseLabel = ctk.CTkFrame, ctk.CTkButton, ctk.CTkLabel
-    BaseEntry, BaseTextbox, BaseScrollable = ctk.CTkEntry, ctk.CTkTextbox, ctk.CTkScrollableFrame
+    BaseEntry, BaseTextbox = ctk.CTkEntry, ctk.CTkTextbox
+    class BaseScrollable(ctk.CTkScrollableFrame):
+        def tkraise(self, aboveThis=None):
+            # Layout belongs to the outer frame; raising the inner canvas is insufficient.
+            self._parent_frame.tkraise(aboveThis)
 except ImportError:
     ctk = None
     USE_CTK = False

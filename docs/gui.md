@@ -1,4 +1,4 @@
-# Experimental Desktop GUI
+# Desktop GUI — Alpha Pre-Beta
 
 `gui/app.py` is the current desktop frontend for Inventory Toolkit.
 
@@ -12,7 +12,7 @@ python -m gui.app
 
 Profile/configuration resources used by the GUI are anchored to the Inventory Toolkit application root and do not follow the process CWD.
 
-The GUI is **experimental**. It is useful for testing the direction of a desktop workflow, but the CLI remains the primary supported interface and the reference surface for developer/release tooling.
+The GUI is **Alpha Pre-Beta**. It is useful for testing the direction of a desktop workflow, but the CLI remains the primary supported interface and the reference surface for developer/release tooling.
 
 Do not assume GUI behavior is feature-complete merely because an engine is exposed there.
 
@@ -41,7 +41,7 @@ to use the profile's annual-comparison setting.
 
 ## Progress and completion summaries
 
-The status bar uses a determinate progress bar driven by engine stage events. An activity area retains concise stage messages and final statistics after the status changes to completion. The success dialog includes the final summary and any collected warnings.
+The status bar uses a determinate progress bar driven by engine stage events. An activity area retains concise stage messages and final statistics after the status changes to completion. Completion and errors stay inline in the activity/results area.
 
 Worker threads send progress, statistics and completion through queues; the Tk event loop updates widgets and dialogs. Percentages describe stage/sheet completion, not measured execution time. A failed task does not force the progress bar to 100%.
 
@@ -83,7 +83,7 @@ Core safe-saving functions support non-interactive mode. GUI callers must receiv
 
 ## Error handling
 
-The GUI validates obvious missing files/dates/configuration before launching a workflow and reports runtime failures through GUI dialogs.
+The GUI validates obvious missing files/dates/configuration before launching a workflow and reports runtime failures through inline notices.
 
 For deeper diagnosis, reproduce with CLI debug level 2/3 when practical and inspect `logs/session.log`.
 
@@ -105,3 +105,7 @@ Sales amounts are line revenue from the configured sales column, not unit prices
 ### Frontend structure
 
 `gui/app.py` owns workflow dispatch and session state. `gui/config_hub.py` keeps the advanced editors, `gui/profile_dialog.py` owns profile creation, and `gui/widgets.py` owns shared controls and the dark Tk/CustomTkinter presentation. Reusable setup contracts live in `core/setup_catalog.py` and `core/setup_service.py`, independent of Tk and console input.
+
+### Workspace layout
+
+The desktop starts dark on both backends, uses sidebar navigation and scrolling workflow pages, and supports session text scaling. Drag the divider to resize activity/results. YoY options use multiple rows. Native file/default-choice dialogs and advanced editors remain available.

@@ -70,13 +70,11 @@ def test_xlsx_output_path_warns_only_when_appending_extension():
 def test_gui_empty_output_uses_module_default_without_warning(monkeypatch):
     from gui.app import InventoryToolkitGUI
 
+    from types import SimpleNamespace
     messages = []
-    monkeypatch.setattr(
-        "gui.app.messagebox.showwarning",
-        lambda *_args, **_kwargs: messages.append("warning"),
-    )
-    assert InventoryToolkitGUI._resolve_xlsx_output(object(), "  ", "report.xlsx") == "report.xlsx"
-    assert InventoryToolkitGUI._resolve_xlsx_output(object(), "report", "fallback.xlsx") == "report.xlsx"
+    view = SimpleNamespace(_notify=lambda *_args, **_kwargs: messages.append("warning"))
+    assert InventoryToolkitGUI._resolve_xlsx_output(view, "  ", "report.xlsx") == "report.xlsx"
+    assert InventoryToolkitGUI._resolve_xlsx_output(view, "report", "fallback.xlsx") == "report.xlsx"
     assert messages == ["warning"]
 
 

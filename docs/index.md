@@ -19,7 +19,7 @@ The documentation is organized by **responsibility**, not by project history. If
 2. [Core infrastructure](core.md)
 3. [Engine subsystems](engine.md)
 4. [CLI layer](cli.md)
-5. [Experimental GUI](gui.md)
+5. [Alpha Pre-Beta GUI](gui.md)
 6. [Developer notes](dev_notes.md)
 
 ### I want to prepare a release
@@ -37,7 +37,7 @@ The documentation is organized by **responsibility**, not by project history. If
 | [installation.md](installation.md) | users / maintainers | Python dependencies, Windows helpers, manual setup, launch commands |
 | [architecture.md](architecture.md) | maintainers | layers, data flow, boundaries, business invariants |
 | [cli.md](cli.md) | users / maintainers | main menu, module launchers, configuration, hidden debug console |
-| [gui.md](gui.md) | testers / maintainers | experimental GUI scope, fallback UI, thread/error constraints |
+| [gui.md](gui.md) | testers / maintainers | Alpha Pre-Beta GUI scope, fallback UI, thread/error constraints |
 | [core.md](core.md) | maintainers | configuration manager, schemas, logging, telemetry, sanitization, safe savers |
 | [engine.md](engine.md) | maintainers / analysts | Cross Check, Stock Processing, YoY, shared family classification |
 | [profiles.md](profiles.md) | users / maintainers | schema-v3 tree, ownership, Guided Setup, Configuration Hub |

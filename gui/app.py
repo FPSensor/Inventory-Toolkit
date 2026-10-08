@@ -1,24 +1,4 @@
-"""
-app.py — Inventory Toolkit Desktop GUI
-
-Fully cross-platform (Linux / macOS / Windows) — no Windows-only APIs.
-Built on tkinter + customtkinter (falls back to plain ttk when CTk is absent).
-
-Layout:
-  Top bar   — profile selector, [New Profile], [Setup Wizard], [Config Hub], [Exit]
-  Tab row   — Cross Check | Stock Processing | YoY Sales Reports
-  Status bar — async task progress
-
-Config Hub window:
-  Left sidebar  — config file list
-  Right panel   — dynamic editor:
-    dict_list   → category list + item list with Add / Import / Delete
-    key_value   → field grid with Save button
-    stores      → active stores + regional groups, fully interactive
-    stock_output → structured editor (raw sheet, base columns, summaries)
-    yoy_reports  → structured editor (input, output, groups)
-    pricing      → structured editor (column mapping + aliases)
-"""
+"""Dark Alpha Pre-Beta desktop shell with shared engines and guided setup."""
 
 import os
 import sys
@@ -57,6 +37,9 @@ from engine.inventory_cross_check.generator import run_cross_check
 from engine.stock_processing.generator import run_stock_processing
 from engine.yoy_reports.generator import generate_sales_report
 from engine.yoy_reports.metrics import select_run_metrics
+from core.setup_service import SetupSession, SetupState
+from core.setup_catalog import MODULE_LABELS
+from core.workflow_errors import WorkflowError
 
 
 from gui.config_hub import ConfigHubWindow
@@ -66,10 +49,14 @@ class InventoryToolkitGUI(BaseWindow):
 
     def __init__(self):
         super().__init__()
-        self.title("Inventory Toolkit v1.4.1")
-        self.geometry("980x740")
-        self.minsize(880, 620)
+        self.title("Inventory Toolkit v1.4.1 | GUI Alpha Pre-Beta")
+        apply_dark_theme(self)
+        self.geometry("1160x860")
+        self.minsize(900, 680)
 
+        self._setup_panel = None
+        self._selected_module = "cross_check"
+        self._partial_permission = None
         self._busy = False
         self._running_profile = None
         self._locked_controls = []
@@ -81,12 +68,13 @@ class InventoryToolkitGUI(BaseWindow):
         self._apply_yoy_profile_defaults()
         self.active_profile.trace_add("write", self._on_profile_changed)
         self._build_status_bar()
+        self._show_module("cross_check")
         self.bind("<Control-Shift-I>", self._show_easter_egg)
         self.protocol("WM_DELETE_WINDOW", self._request_close)
 
     def _show_easter_egg(self, _event=None):
         """Hidden nod for people who read source code and press suspicious shortcuts."""
-        messagebox.showinfo(
+        self._notify("info",
             "Inventory Toolkit",
             "🥚 Longest prefix wins.\nThe scanner may improvise; the master stock does not.\n\n— FPSensor",
             parent=self,
@@ -108,36 +96,87 @@ class InventoryToolkitGUI(BaseWindow):
     # ── Top bar ───────────────────────────────────────────────────────────────
 
     def _build_top_bar(self):
-        bar = BaseFrame(self)
+        self._split = ttk.Panedwindow(self, orient="vertical")
+        self._split.pack(fill="both", expand=True, padx=12, pady=12)
+        self._body = BaseFrame(self._split)
+        self._split.add(self._body, weight=3)
+        bar = BaseFrame(self._body, width=210)
         self._top_bar = bar
-        bar.pack(fill="x", padx=15, pady=10)
-
-        _lbl(bar, text="Active Profile:").pack(side="left", padx=5)
-
+        bar.pack(side="left", fill="y", padx=(0, 12))
+        bar.pack_propagate(False)
+        _lbl(bar, text="INVENTORY\nTOOLKIT", font=("Arial", 20, "bold")).pack(anchor="w", padx=16, pady=(20, 4))
+        _lbl(bar, text="Alpha Pre-Beta | v1.4.1").pack(anchor="w", padx=16, pady=(0, 20))
+        _lbl(bar, text="Active profile").pack(anchor="w", padx=16)
         if USE_CTK:
-            self._profile_menu = ctk.CTkOptionMenu(
-                bar, values=self._profiles, variable=self.active_profile, width=140)
+            self._profile_menu = ctk.CTkOptionMenu(bar, values=self._profiles or [""], variable=self.active_profile, width=175)
         else:
-            self._profile_menu = tk.ttk.Combobox(
-                bar, values=self._profiles,
-                textvariable=self.active_profile, state="readonly", width=14)
-        self._profile_menu.pack(side="left", padx=5)
+            self._profile_menu = ttk.Combobox(bar, values=self._profiles, textvariable=self.active_profile, state="readonly", width=17)
+        self._profile_menu.pack(fill="x", padx=12, pady=8)
+        for module, label in MODULE_LABELS.items():
+            _btn(bar, label, lambda name=module: self._show_module(name)).pack(fill="x", padx=12, pady=5)
+        _btn(bar, "Set up this module", self._open_wizard).pack(fill="x", padx=12, pady=(24, 5))
+        _btn(bar, "New profile", self._open_new_profile).pack(fill="x", padx=12, pady=5)
+        _btn(bar, "Advanced configuration", self._open_config_hub).pack(fill="x", padx=12, pady=5)
+        _lbl(bar, text="Text size").pack(anchor="w", padx=16, pady=(20, 2))
+        self._scale_choice = tk.StringVar(value="100%")
+        if USE_CTK:
+            scale = ctk.CTkOptionMenu(bar, values=["100%", "115%", "130%"], variable=self._scale_choice, command=self._change_scale)
+        else:
+            scale = ttk.Combobox(bar, values=["100%", "115%", "130%"], textvariable=self._scale_choice, state="readonly")
+            scale.bind("<<ComboboxSelected>>", lambda _event: self._change_scale(self._scale_choice.get()))
+        scale.pack(fill="x", padx=12, pady=6)
+        _btn(bar, "Exit", self._request_close).pack(side="bottom", fill="x", padx=12, pady=12)
+        self._workspace_root = BaseFrame(self._body)
+        self._workspace_root.pack(side="left", fill="both", expand=True)
+        self._workspace_root.grid_columnconfigure(0, weight=1)
+        self._workspace_root.grid_rowconfigure(2, weight=1)
+        self._page_title = _lbl(self._workspace_root, text="Cross Check", font=("Arial", 22, "bold"))
+        self._page_title.grid(row=0, column=0, sticky="w", padx=16, pady=(14, 6))
+        self._feedback = BaseFrame(self._workspace_root)
+        self._feedback.grid(row=1, column=0, sticky="ew", padx=12, pady=4)
+        self._feedback_text = _lbl(self._feedback, text="Choose files, review options and run. Results stay below.", wraplength=650, justify="left")
+        self._feedback_text.pack(fill="x", padx=10, pady=8)
+        self._feedback.bind("<Configure>", lambda event: self._feedback_text.configure(wraplength=max(180, event.width - 30)))
+        self._feedback_actions = BaseFrame(self._feedback)
+        self._feedback_actions.pack(fill="x", padx=8, pady=(0, 4))
+        self._page_host = BaseFrame(self._workspace_root)
+        self._page_host.grid(row=2, column=0, sticky="nsew")
+        self._page_host.grid_columnconfigure(0, weight=1)
+        self._page_host.grid_rowconfigure(0, weight=1)
 
-        _btn(bar, "➕ New Profile",
-             self._open_new_profile, width=120 if USE_CTK else None
-             ).pack(side="left", padx=5)
+    def _change_scale(self, value):
+        fraction = int(value.rstrip("%")) / 100
+        if USE_CTK:
+            ctk.set_widget_scaling(fraction)
+        else:
+            from tkinter import font
+            for name in ("TkDefaultFont", "TkTextFont", "TkMenuFont"):
+                font.nametofont(name).configure(size=round(12 * fraction))
+            ttk.Style(self).configure(".", font=("Arial", round(12 * fraction)))
 
-        _btn(bar, "🧙 Setup Wizard",
-             self._open_wizard, width=120 if USE_CTK else None
-             ).pack(side="left", padx=5)
+    def _notify(self, kind, title, message, actions=(), **_kwargs):
+        self._feedback_text.configure(text=f"{title}: {message}")
+        for widget in self._feedback_actions.winfo_children():
+            widget.destroy()
+        for label, callback in actions:
+            _btn(self._feedback_actions, label, callback).pack(side="left", padx=4, pady=4)
+        if hasattr(self, "_activity"):
+            self._append_activity(f"{title}: {message}\n")
 
-        _btn(bar, "⚙️ Config Hub",
-             self._open_config_hub, width=110 if USE_CTK else None
-             ).pack(side="left", padx=5)
-
-        _btn(bar, "🚪 Exit",
-             self._request_close, width=80 if USE_CTK else None
-             ).pack(side="right", padx=5)
+    def _show_module(self, module):
+        if self._setup_panel is not None:
+            self._notify("info", "Setup in progress", "Leave or finish the current setup before switching modules.")
+            return
+        self._selected_module = module
+        if hasattr(self, "_pages"):
+            self._pages[module].tkraise()
+            self._page_title.configure(text=MODULE_LABELS[module])
+            try:
+                state = SetupSession(self.active_profile.get(), module).state()
+                label = {0: "Not configured", 1: "Partially configured", 2: "Configured"}[state]
+                self._notify("info", "Module setup", label, [("Configure", lambda: self._open_wizard(module))])
+            except Exception as exc:
+                self._notify("error", "Profile configuration", str(exc))
 
     def _open_new_profile(self):
         if not self._require_idle():
@@ -149,20 +188,20 @@ class InventoryToolkitGUI(BaseWindow):
             else:
                 self._profile_menu["values"] = self._profiles
             self.active_profile.set(new_id)
-            messagebox.showinfo("Profile Ready", f"Active profile set to [{new_id}].", parent=self)
+            self._notify("info", "Profile Ready", f"Active profile set to [{new_id}].", parent=self)
         NewProfileModal(self, on_done)
 
-    def _open_wizard(self):
+    def _open_wizard(self, module=None, step=None):
         if not self._require_idle():
             return
         profile = self.active_profile.get()
         profile_dir = app_paths.profile_root(profile)
         if not profile_dir.is_dir():
-            messagebox.showerror("Error", f"Profile '{profile}' not found.", parent=self)
+            self._notify("error", "Error", f"Profile '{profile}' not found.", parent=self)
             return
         # Run wizard in a thread so the GUI stays responsive; it's interactive
         # so we actually need to open a terminal-style sub-process or inform user.
-        messagebox.showinfo(
+        self._notify("info", 
             "Setup Wizard",
             "The Setup Wizard is a CLI process.\n\n"
             "Please run it from the CLI:\n"
@@ -172,6 +211,13 @@ class InventoryToolkitGUI(BaseWindow):
             parent=self
         )
 
+    def _handle_error(self, exc):
+        actions = []
+        if isinstance(exc, WorkflowError) and exc.can_configure:
+            actions = [("Configure missing setting", lambda: self._open_wizard(exc.module, exc.step))]
+        code = f" [{exc.code.value}]" if isinstance(exc, WorkflowError) else ""
+        self._notify("error", f"Operation stopped{code}", str(exc), actions)
+
     def _open_config_hub(self):
         if not self._require_idle():
             return
@@ -179,7 +225,7 @@ class InventoryToolkitGUI(BaseWindow):
             ConfigurationManager(self.active_profile.get())
             ConfigHubWindow(self, self.active_profile.get())
         except Exception as exc:
-            messagebox.showerror("Configuration Error", str(exc), parent=self)
+            self._notify("error", "Configuration Error", str(exc), parent=self)
 
     def _select_columns(self, file_path, configured, defaults):
         def confirm(field, wanted, default):
@@ -194,27 +240,21 @@ class InventoryToolkitGUI(BaseWindow):
     # ── Tabs ──────────────────────────────────────────────────────────────────
 
     def _build_tabs(self):
-        if USE_CTK:
-            self._tabs = ctk.CTkTabview(self)
-            self._tabs.pack(fill="both", expand=True, padx=15, pady=5)
-            self.tab_cc    = self._tabs.add("🔄 Cross Check")
-            self.tab_stock = self._tabs.add("📦 Stock Processing")
-            self.tab_yoy   = self._tabs.add("📊 YoY Reports")
-        else:
-            self._tabs = tk.ttk.Notebook(self)
-            self._tabs.pack(fill="both", expand=True, padx=15, pady=5)
-            self.tab_cc    = ttk.Frame(self._tabs)
-            self.tab_stock = ttk.Frame(self._tabs)
-            self.tab_yoy   = ttk.Frame(self._tabs)
-            self._tabs.add(self.tab_cc,    text="🔄 Cross Check")
-            self._tabs.add(self.tab_stock, text="📦 Stock Processing")
-            self._tabs.add(self.tab_yoy,   text="📊 YoY Reports")
-
+        self._pages = {module: BaseScrollable(self._page_host) for module in MODULE_LABELS}
+        for page in self._pages.values():
+            page.grid(row=0, column=0, sticky="nsew")
+        self.tab_cc = self._pages["cross_check"]
+        self.tab_stock = self._pages["stock_processing"]
+        self.tab_yoy = self._pages["yoy_reports"]
         self._setup_cc_tab()
         self._setup_stock_tab()
         self._setup_yoy_tab()
+        self.tab_cc.tkraise()
 
     def _on_profile_changed(self, *_args):
+        if getattr(self, "_setup_panel", None) is not None:
+            self.active_profile.set(self._setup_panel.session.profile) if self.active_profile.get() != self._setup_panel.session.profile else None
+            return
         if self._busy:
             if self.active_profile.get() != self._running_profile:
                 self.active_profile.set(self._running_profile)
@@ -240,10 +280,10 @@ class InventoryToolkitGUI(BaseWindow):
         try:
             return normalize_xlsx_output_path(
                 value.strip() or default,
-                notify=lambda message: messagebox.showwarning("Output File", message, parent=self),
+                notify=lambda message: self._notify("warning", "Output File", message, parent=self),
             )
         except InvalidExcelOutputPathError as exc:
-            messagebox.showerror("Invalid Output File", str(exc), parent=self)
+            self._notify("error", "Invalid Output File", str(exc), parent=self)
             return None
 
     def _file_row(self, parent, label_text: str, var: tk.StringVar,
@@ -314,12 +354,12 @@ class InventoryToolkitGUI(BaseWindow):
         if not self._require_idle():
             return
         if not PANDAS_AVAILABLE:
-            messagebox.showerror("Missing Dependency", "pandas is required.", parent=self)
+            self._notify("error", "Missing Dependency", "pandas is required.", parent=self)
             return
         files = [self.cc_sys.get(), self.cc_count.get(), self.cc_cost.get(), self.cc_sales.get()]
         for f in files:
             if not f or not os.path.exists(f):
-                messagebox.showerror("Missing File",
+                self._notify("error", "Missing File",
                                      f"Required file not found:\n'{f}'", parent=self)
                 return
 
@@ -339,7 +379,7 @@ class InventoryToolkitGUI(BaseWindow):
                     "sales": self._select_columns(self.cc_sales.get(), mappings["sales"], defaults["sales"]),
                 }
             except Exception as exc:
-                messagebox.showerror(
+                self._notify("error",
                     "Cross Check Preflight Error",
                     str(exc),
                     parent=self,
@@ -397,7 +437,7 @@ class InventoryToolkitGUI(BaseWindow):
         files = [self.sp_raw.get(), self.sp_cost.get(), self.sp_sales.get()]
         for f in files:
             if not f or not os.path.exists(f):
-                messagebox.showerror("Missing File",
+                self._notify("error", "Missing File",
                                      f"Required file not found:\n'{f}'", parent=self)
                 return
         out = self._resolve_xlsx_output(self.sp_out.get(), "Stock_Valuation_Report.xlsx")
@@ -415,7 +455,7 @@ class InventoryToolkitGUI(BaseWindow):
                 "sales": self._select_columns(self.sp_sales.get(), pricing, defaults),
             }
         except Exception as exc:
-            messagebox.showerror("Input Column Error", str(exc), parent=self)
+            self._handle_error(exc)
             return
         warnings = []
         args = Namespace(
@@ -451,38 +491,32 @@ class InventoryToolkitGUI(BaseWindow):
         # Date range
         date_frame = BaseFrame(self.tab_yoy)
         date_frame.pack(fill="x", padx=15, pady=8)
-        _lbl(date_frame, text="Start date (YYYY-MM-DD):").pack(side="left", padx=5)
+        _lbl(date_frame, text="Start date (YYYY-MM-DD):").grid(row=0, column=0, sticky="w", padx=5, pady=4)
         _entry(date_frame, textvariable=self.yoy_start, width=130 if USE_CTK else None
-               ).pack(side="left", padx=5)
-        _lbl(date_frame, text="End date (YYYY-MM-DD):").pack(side="left", padx=10)
+               ).grid(row=0, column=1, sticky="ew", padx=5, pady=4)
+        _lbl(date_frame, text="End date (YYYY-MM-DD):").grid(row=1, column=0, sticky="w", padx=5, pady=4)
         _entry(date_frame, textvariable=self.yoy_end, width=130 if USE_CTK else None
-               ).pack(side="left", padx=5)
+               ).grid(row=1, column=1, sticky="ew", padx=5, pady=4)
+        date_frame.columnconfigure(1, weight=1)
 
-        # Options
+        # Options use two columns rather than a clipped horizontal strip.
         opts = BaseFrame(self.tab_yoy)
         opts.pack(fill="x", padx=15, pady=6)
-
+        opts.columnconfigure(0, weight=1)
+        opts.columnconfigure(1, weight=1)
         if USE_CTK:
-            ctk.CTkSegmentedButton(
-                opts, values=["Family", "Item"], variable=self.yoy_group
-            ).pack(side="left", padx=10)
-            ctk.CTkCheckBox(opts, text="File has Family column", variable=self.yoy_has_fam
-                            ).pack(side="left", padx=10)
-            ctk.CTkCheckBox(opts, text="Segment by Month", variable=self.yoy_seg
-                            ).pack(side="left", padx=10)
-            ctk.CTkCheckBox(opts, text="Size breakdown", variable=self.yoy_sizes
-                            ).pack(side="left", padx=10)
+            group_control = ctk.CTkSegmentedButton(opts, values=["Family", "Item"], variable=self.yoy_group)
+            check_class = ctk.CTkCheckBox
         else:
-            tk.ttk.Combobox(
-                opts, values=["Family", "Item"], textvariable=self.yoy_group,
-                state="readonly", width=8
-            ).pack(side="left", padx=10)
-            ttk.Checkbutton(opts, text="Has Family col",  variable=self.yoy_has_fam
-                            ).pack(side="left", padx=6)
-            ttk.Checkbutton(opts, text="By month",        variable=self.yoy_seg
-                            ).pack(side="left", padx=6)
-            ttk.Checkbutton(opts, text="Size breakdown",  variable=self.yoy_sizes
-                            ).pack(side="left", padx=6)
+            group_control = ttk.Combobox(opts, values=["Family", "Item"], textvariable=self.yoy_group, state="readonly", width=8)
+            check_class = ttk.Checkbutton
+        group_control.grid(row=0, column=0, sticky="w", padx=10, pady=8)
+        for text, variable, row, column in [
+            ("File has Family column", self.yoy_has_fam, 0, 1),
+            ("Segment by Month", self.yoy_seg, 1, 0),
+            ("Size breakdown", self.yoy_sizes, 1, 1),
+        ]:
+            check_class(opts, text=text, variable=variable).grid(row=row, column=column, sticky="w", padx=10, pady=8)
 
         if USE_CTK:
             compare_control = ctk.CTkCheckBox(
@@ -531,28 +565,28 @@ class InventoryToolkitGUI(BaseWindow):
             return
         f_path = self.yoy_file.get().strip()
         if not f_path or not os.path.exists(f_path):
-            messagebox.showerror("Missing File", "Sales data file not found.", parent=self)
+            self._notify("error", "Missing File", "Sales data file not found.", parent=self)
             return
 
         if not PANDAS_AVAILABLE:
-            messagebox.showerror("Missing Dependency", "pandas is required.", parent=self)
+            self._notify("error", "Missing Dependency", "pandas is required.", parent=self)
             return
 
         try:
             s_dt = pd.to_datetime(self.yoy_start.get().strip(), format="%Y-%m-%d")
             e_dt = pd.to_datetime(self.yoy_end.get().strip(),   format="%Y-%m-%d")
             if s_dt > e_dt:
-                messagebox.showerror("Date Error", "Start date must be before end date.", parent=self)
+                self._notify("error", "Date Error", "Start date must be before end date.", parent=self)
                 return
             e_dt = e_dt + pd.Timedelta(days=1, seconds=-1)
         except Exception as err:
-            messagebox.showerror("Invalid Date", f"Dates must be YYYY-MM-DD format:\n{err}", parent=self)
+            self._notify("error", "Invalid Date", f"Dates must be YYYY-MM-DD format:\n{err}", parent=self)
             return
 
         config_manager = ConfigurationManager(self.active_profile.get())
         yoy_config = deepcopy(config_manager.get_yoy_reports_config())
         if not yoy_config or "input" not in yoy_config:
-            messagebox.showerror("Config Error",
+            self._notify("error", "Config Error",
                                  f"YoY config missing for profile '{self.active_profile.get()}'.\n"
                                  "Run the Setup Wizard or edit YoY Reports in Config Hub.", parent=self)
             return
@@ -560,7 +594,7 @@ class InventoryToolkitGUI(BaseWindow):
         try:
             yoy_config = select_run_metrics(yoy_config, self.yoy_sales_amounts.get())
         except ValueError as exc:
-            messagebox.showerror("Metric Configuration Error", str(exc), parent=self)
+            self._notify("error", "Metric Configuration Error", str(exc), parent=self)
             return
 
         input_config = yoy_config["input"]
@@ -594,13 +628,13 @@ class InventoryToolkitGUI(BaseWindow):
             yoy_config["input"].update(resolved)
             grouping_column = yoy_config["input"]["grouping_column" if self.yoy_group.get() == "Family" else "item_column"]
         except Exception as exc:
-            messagebox.showerror("Input Column Error", str(exc), parent=self)
+            self._handle_error(exc)
             return
 
         try:
             save_last_paths(profile, {"yoy_reports": {"file": f_path, "out": out}})
         except Exception as exc:
-            messagebox.showerror("Path Persistence Error", str(exc), parent=self)
+            self._notify("error", "Path Persistence Error", str(exc), parent=self)
             return
 
         def task(progress, stats):
@@ -616,7 +650,9 @@ class InventoryToolkitGUI(BaseWindow):
     # ── Status bar & async runner ─────────────────────────────────────────────
 
     def _build_status_bar(self):
-        self._result_frame = BaseFrame(self)
+        self._results = BaseFrame(self._split)
+        self._split.add(self._results, weight=1)
+        self._result_frame = BaseFrame(self._results)
         self._result_frame.pack(side="bottom", fill="x", padx=12, pady=6)
         self._result_label = _lbl(self._result_frame, text="No report generated in this session.")
         self._result_label.pack(anchor="w", padx=6, pady=(4, 2))
@@ -633,13 +669,13 @@ class InventoryToolkitGUI(BaseWindow):
         self._open_report_button.configure(state="disabled")
         self._open_folder_button.configure(state="disabled")
         if USE_CTK:
-            self._activity = ctk.CTkTextbox(self, height=100, wrap="word")
+            self._activity = ctk.CTkTextbox(self._results, height=140, wrap="word")
         else:
-            self._activity = tk.Text(self, height=5, wrap="word")
-        self._activity.pack(side="bottom", fill="x", padx=12, pady=(0, 6))
+            self._activity = tk.Text(self._results, height=7, wrap="word")
+        self._activity.pack(side="bottom", fill="both", expand=True, padx=12, pady=(0, 6))
         self._activity.configure(state="disabled")
         if USE_CTK:
-            bar = ctk.CTkFrame(self, height=34, corner_radius=0)
+            bar = ctk.CTkFrame(self._results, height=34, corner_radius=0)
             bar.pack(side="bottom", fill="x")
             self._status = ctk.CTkLabel(bar, text="⚡ Ready.", anchor="w")
             self._status.pack(side="left", padx=12, pady=6)
@@ -647,7 +683,7 @@ class InventoryToolkitGUI(BaseWindow):
             self._progress.pack(side="right", padx=12, pady=8)
             self._progress.set(0)
         else:
-            bar = ttk.Frame(self)
+            bar = ttk.Frame(self._results)
             bar.pack(side="bottom", fill="x")
             self._status = ttk.Label(bar, text="⚡ Ready.", anchor="w")
             self._status.pack(side="left", padx=12, pady=4)
@@ -711,7 +747,7 @@ class InventoryToolkitGUI(BaseWindow):
             return
         target = self._result_path.parent if folder else self._result_path
         if not (target.is_dir() if folder else target.is_file()):
-            messagebox.showerror("Result unavailable", f"The {'folder' if folder else 'report'} no longer exists:\n{target}", parent=self)
+            self._notify("error", "Result unavailable", f"The {'folder' if folder else 'report'} no longer exists:\n{target}", parent=self)
             return
         try:
             if sys.platform == "win32":
@@ -720,11 +756,14 @@ class InventoryToolkitGUI(BaseWindow):
                 command = "open" if sys.platform == "darwin" else "xdg-open"
                 subprocess.Popen([command, str(target)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         except OSError as exc:
-            messagebox.showerror("Could not open result", str(exc), parent=self)
+            self._notify("error", "Could not open result", str(exc), parent=self)
 
     def _require_idle(self):
+        if getattr(self, "_setup_panel", None) is not None:
+            self._notify("info", "Setup in progress", "Leave or finish setup before starting another action.")
+            return False
         if self._busy:
-            messagebox.showinfo(
+            self._notify("info",
                 "Task running", "Wait for the current task to finish before starting another action.",
                 parent=self,
             )
@@ -769,7 +808,7 @@ class InventoryToolkitGUI(BaseWindow):
         if not self._require_idle():
             return
         if any(isinstance(child, tk.Toplevel) for child in self.winfo_children()):
-            messagebox.showinfo(
+            self._notify("info",
                 "Configuration window open",
                 "Close profile and configuration windows before running a workflow.", parent=self,
             )
@@ -835,10 +874,9 @@ class InventoryToolkitGUI(BaseWindow):
                 self._set_status(f"✅ Done in {elapsed:.1f}s  |  {out_path}")
                 self._finish_progress(True)
                 self._record_result(out_path, run_profile, elapsed)
-                messagebox.showinfo(
+                self._notify("info",
                     "Done",
                     f"{success_msg}\n\nTime: {elapsed:.1f}s\nOutput: {out_path}"
-                    + ("\n\n" + summaries[-1] if summaries else "")
                     + ("\n\nWarnings:\n" + "\n".join(warnings) if warnings else ""),
                     parent=self,
                 )
@@ -847,7 +885,7 @@ class InventoryToolkitGUI(BaseWindow):
                 self._set_status(f"❌ Error: {exc}")
                 self._finish_progress(False)
                 self._append_activity(f"Error: {exc}\n")
-                messagebox.showerror("Execution Error", str(exc), parent=self)
+                self._handle_error(exc)
 
         try:
             threading.Thread(target=worker, daemon=True).start()
@@ -855,7 +893,7 @@ class InventoryToolkitGUI(BaseWindow):
             self._set_busy(False)
             self._set_status(f"Error: {exc}")
             self._append_activity(f"Error: {exc}\n")
-            messagebox.showerror("Execution Error", str(exc), parent=self)
+            self._notify("error", "Execution Error", str(exc), parent=self)
             return
         self.after(100, poll_result)
 

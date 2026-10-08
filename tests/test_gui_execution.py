@@ -59,6 +59,13 @@ class Widget:
 
 
 class View:
+    def _notify(self, kind, title, message, **kwargs):
+        callback = app.messagebox.showerror if kind == "error" else app.messagebox.showinfo
+        callback(title, message, parent=self)
+
+    def _handle_error(self, exc):
+        self._notify("error", "Execution Error", str(exc))
+
     _set_busy = app.InventoryToolkitGUI._set_busy
     _require_idle = app.InventoryToolkitGUI._require_idle
     _run_async = app.InventoryToolkitGUI._run_async
@@ -194,7 +201,7 @@ def test_run_blocks_overlap_and_restores_controls_after_completion(monkeypatch, 
         assert view._result_path == previous_result
     else:
         assert "Stats:\n  Rows: 2" in view._activity.content
-        assert "Stats:\n  Rows: 2" in dialogs[-1][1][1]
+        assert "Stats:\n  Rows: 2" not in dialogs[-1][1][1]
         assert view._progress.value == (1 if ctk else 100)
 
 
@@ -252,7 +259,7 @@ def test_final_stats_are_drained_again_after_completion_arrives(monkeypatch, dia
 
     view._run_async(work, "Completed")
     view.pending.pop(0)()
-    assert "Stats:\n  Rows: 2" in dialogs[-1][1][1]
+    assert "Stats:\n  Rows: 2" in view._activity.content
     assert not view._busy
 
 

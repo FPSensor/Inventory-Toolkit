@@ -9,11 +9,11 @@ Inventory Toolkit is a profile-driven Python application for retail inventory re
 
 It was built around real operational constraints: legacy `.xls` exports, inconsistent scanner output, variable-length article codes, multiple stores and regional groups, price lists from different sources, Excel files left open by users, and business rules that must change without forking the processing engine.
 
-The project currently exposes a mature CLI, an experimental desktop GUI, a typed configuration system, forensic logging, and a reproducible pre-release gate backed by golden-master workbooks.
+The project currently exposes a mature CLI, an Alpha Pre-Beta desktop GUI, a typed configuration system, forensic logging, and a reproducible pre-release gate backed by golden-master workbooks.
 
 > **Current release line:** `1.4.x`
 > **Primary interface:** CLI
-> **GUI status:** experimental / active testing
+> **GUI status:** Alpha Pre-Beta / active testing
 > **Configuration schema:** v3
 > **Development state:** post-1.4.1 changes are recorded under `Unreleased` in [CHANGELOG.md](CHANGELOG.md); the release badge identifies the published version.
 
@@ -29,7 +29,7 @@ Inventory Toolkit contains three production-oriented workflows:
 | **Stock Processing** | Clean and consolidate multi-store stock, assign families, attach cost/sales prices, value inventory, and create summaries | raw stock, cost list, sales list | detail + summary workbook |
 | **YoY Sales Reports** | Compare current and previous periods by family/store/group, with optional monthly segmentation and size breakdown | historical sales workbook | multi-sheet comparative report |
 
-The same engines can be used from the CLI, the experimental GUI, or directly from Python.
+The same engines can be used from the CLI, the Alpha Pre-Beta GUI, or directly from Python.
 
 ---
 
@@ -83,7 +83,7 @@ The strict pre-release gate executes all three demo workflows and compares their
 <!-- BEGIN LEGACY_COMPATIBILITY -->
 - Guarded legacy-configuration migration and a one-shot compatibility-retirement tool, also accessible from the level-3 Developer Console. Compatibility remains active until deliberately retired.
 <!-- END LEGACY_COMPATIBILITY -->
-- Experimental Tkinter/CustomTkinter desktop GUI.
+- Alpha Pre-Beta Tkinter/CustomTkinter desktop GUI.
 - Windows launcher/setup helpers plus Linux/macOS shell launcher.
 
 ---
@@ -184,7 +184,7 @@ See [docs/cli.md](docs/cli.md).
 
 ---
 
-# Experimental Desktop GUI
+# Alpha Pre-Beta Desktop GUI
 
 Launch from the repository root:
 
@@ -202,7 +202,7 @@ The GUI currently covers:
 - one-at-a-time workflow execution with guarded profile/input actions;
 - retained progress/statistics and a last-successful-output panel with report/folder actions.
 
-It uses CustomTkinter when installed and falls back to Tkinter/ttk. The GUI remains **experimental** and is not yet considered a full replacement for the CLI. Engine code must therefore remain headless and must not assume that terminal input is available.
+It uses CustomTkinter when installed and falls back to Tkinter/ttk. The GUI is **Alpha Pre-Beta**, with a dark workspace, graphical per-module setup and inline workflow feedback. Developer/release tooling remains in the CLI. Engine code must therefore remain headless and must not assume that terminal input is available.
 
 See [docs/gui.md](docs/gui.md).
 
@@ -340,7 +340,7 @@ Inventory-Toolkit/
 │   ├── yoy_reports/
 │   └── shared/
 ├── gui/
-│   └── app.py                     # experimental desktop UI
+│   └── app.py                     # Alpha Pre-Beta desktop shell
 ├── profiles/
 │   └── demo/
 ├── examples/
@@ -379,7 +379,7 @@ Start at **[docs/index.md](docs/index.md)**.
 | [Installation](docs/installation.md) | dependencies, launchers, platform notes |
 | [Architecture](docs/architecture.md) | layers, boundaries, design invariants |
 | [CLI](docs/cli.md) | menus, launchers, debug levels, Developer Console |
-| [GUI](docs/gui.md) | current experimental GUI scope and limitations |
+| [GUI](docs/gui.md) | Alpha Pre-Beta GUI scope and limitations |
 | [Core](docs/core.md) | configuration, logging, sanitization, safe savers |
 | [Engine](docs/engine.md) | all three processing pipelines and shared rules |
 | [Profiles](docs/profiles.md) | schema-v3 configuration and Guided Setup |
@@ -426,7 +426,7 @@ the archive.
 
 ## v1.5.0 — GUI beta and interface parity
 
-Target: make the desktop GUI a credible beta instead of an experimental companion.
+Target: make the desktop GUI a credible beta from the Alpha Pre-Beta foundation.
 
 - Bring profile setup and configuration workflows closer to CLI parity.
 - Finish GUI-safe error/retry handling so no engine path assumes terminal input.

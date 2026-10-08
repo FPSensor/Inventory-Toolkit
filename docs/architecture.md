@@ -10,7 +10,7 @@ The boundaries are pragmatic rather than ceremonial. Modules are split when doin
 User / automation
       │
       ├── CLI (primary)
-      └── GUI (experimental)
+      └── GUI (Alpha Pre-Beta)
              │
              ▼
       Profile + parameters
@@ -145,3 +145,7 @@ Examples:
 ## Evolution rule
 
 Before introducing a new abstraction, ask whether it creates a real boundary. Cross Check and Stock Processing remain compact because their current processor/renderer/generator split is sufficient. YoY has more rendering modules because its formula/layout responsibilities became independently complex.
+
+### Setup ownership
+
+`core/setup_catalog.py` describes labeled configuration steps. `core/setup_service.py` persists reviewed values and derives per-module readiness; `core/workflow_errors.py` exposes stable recovery targets. CLI and GUI own continuation prompts and assistant navigation. Engines own calculations, file validation and export; they do not import frontend components or open setup screens. GUI code is split into shell, advanced configuration, profile creation, shared widgets and the embedded setup wizard.
