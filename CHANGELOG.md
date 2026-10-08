@@ -21,6 +21,8 @@ Development changes after `v1.4.1`. The released application version remains `1.
 
 ### Changed
 
+- Split the GUI shell, advanced Configuration Hub, profile dialog and shared widgets into separate modules; replace raw general-setting keys with readable labels and provide an explicit dark ttk theme.
+
 - Added an unchecked GUI YoY revenue option, reset on profile changes, using the same runtime metric selection and column requirements as the CLI.
 
 - Made CLI YoY sales-amount blocks opt-in for each run (default: units only), independent of segmentation and without rewriting profile settings.
