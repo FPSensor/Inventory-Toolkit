@@ -40,6 +40,7 @@ from engine.yoy_reports.metrics import select_run_metrics
 from core.setup_service import SetupSession, SetupState
 from core.setup_catalog import MODULE_LABELS
 from core.workflow_errors import WorkflowError
+from gui.setup_wizard import SetupWizard
 
 
 from gui.config_hub import ConfigHubWindow
@@ -194,22 +195,49 @@ class InventoryToolkitGUI(BaseWindow):
     def _open_wizard(self, module=None, step=None):
         if not self._require_idle():
             return
-        profile = self.active_profile.get()
-        profile_dir = app_paths.profile_root(profile)
-        if not profile_dir.is_dir():
-            self._notify("error", "Error", f"Profile '{profile}' not found.", parent=self)
+        if any(isinstance(child, tk.Toplevel) for child in self.winfo_children()):
+            self._notify("info", "Configuration window open", "Close other profile/configuration windows before opening guided setup.")
             return
-        # Run wizard in a thread so the GUI stays responsive; it's interactive
-        # so we actually need to open a terminal-style sub-process or inform user.
-        self._notify("info", 
-            "Setup Wizard",
-            "The Setup Wizard is a CLI process.\n\n"
-            "Please run it from the CLI:\n"
-            f"  Main menu → ⚙️  Configuration → [W] Quick Setup Wizard\n\n"
-            "Or launch the CLI directly:\n"
-            "  python cli.py",
-            parent=self
-        )
+        module = module or self._selected_module
+        profile = self.active_profile.get()
+        def finish(message):
+            panel = self._setup_panel
+            self._setup_panel = None
+            panel.destroy()
+            self._profile_menu.configure(state="normal" if USE_CTK else "readonly")
+            self._show_module(module)
+            self._notify("info", "Guided setup", message)
+        try:
+            self._setup_panel = SetupWizard(self._page_host, profile, module, finish, step)
+            self._setup_panel.grid(row=0, column=0, sticky="nsew")
+            self._setup_panel.tkraise()
+            self._profile_menu.configure(state="disabled")
+        except Exception as exc:
+            self._setup_panel = None
+            self._notify("error", "Could not open setup", str(exc))
+
+    def _gate_setup(self, module):
+        profile = self.active_profile.get()
+        try:
+            session = SetupSession(profile, module)
+            state = session.state()
+            if state == SetupState.NOT_CONFIGURED:
+                self._open_wizard(module)
+                return False
+            if state == SetupState.PARTIAL and self._partial_permission != (profile, module):
+                def proceed():
+                    self._partial_permission = (profile, module)
+                    {"cross_check": self._exec_cc, "stock_processing": self._exec_stock, "yoy_reports": self._exec_yoy}[module]()
+                self._notify("warning", "Partial setup", "Some settings have not been reviewed. Continue with current settings or complete setup.",
+                    [("Continue anyway", proceed), ("Complete setup", lambda: self._open_wizard(module))])
+                return False
+            self._partial_permission = None
+            session.validate_required(include_sales=self.yoy_sales_amounts.get() if module == "yoy_reports" else False,
+                include_sizes=self.yoy_sizes.get() if module == "yoy_reports" else False)
+            return True
+        except Exception as exc:
+            self._handle_error(exc)
+            return False
 
     def _handle_error(self, exc):
         actions = []
@@ -353,6 +381,8 @@ class InventoryToolkitGUI(BaseWindow):
     def _exec_cc(self):
         if not self._require_idle():
             return
+        if not self._gate_setup("cross_check"):
+            return
         if not PANDAS_AVAILABLE:
             self._notify("error", "Missing Dependency", "pandas is required.", parent=self)
             return
@@ -433,6 +463,8 @@ class InventoryToolkitGUI(BaseWindow):
 
     def _exec_stock(self):
         if not self._require_idle():
+            return
+        if not self._gate_setup("stock_processing"):
             return
         files = [self.sp_raw.get(), self.sp_cost.get(), self.sp_sales.get()]
         for f in files:
@@ -562,6 +594,8 @@ class InventoryToolkitGUI(BaseWindow):
 
     def _exec_yoy(self):
         if not self._require_idle():
+            return
+        if not self._gate_setup("yoy_reports"):
             return
         f_path = self.yoy_file.get().strip()
         if not f_path or not os.path.exists(f_path):

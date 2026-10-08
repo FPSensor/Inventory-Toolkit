@@ -52,6 +52,7 @@ from core.logger import log
 from core import paths as app_paths
 from core.system_utils import InvalidExcelOutputPathError, normalize_xlsx_output_path
 from cli.wizard import initialize_profile_files, run_setup_wizard
+from core.setup_service import initialize_setup
 from cli.utils import save_json, load_json, load_last_paths, save_last_paths
 from engine.inventory_cross_check.generator import run_cross_check
 from engine.stock_processing.generator import run_stock_processing
@@ -69,7 +70,7 @@ class NewProfileModal(BaseToplevel):
 
         self.prof_id   = tk.StringVar()
         self.prof_name = tk.StringVar()
-        self.prof_desc = tk.StringVar(value="Retail Business Profile")
+        self.prof_desc = tk.StringVar(value="")
 
         _lbl(self, text="Folder ID (lowercase, no spaces):").pack(anchor="w", padx=20, pady=(16, 2))
         _entry(self, textvariable=self.prof_id).pack(fill="x", padx=20, pady=2)
@@ -87,7 +88,7 @@ class NewProfileModal(BaseToplevel):
 
     def _submit(self):
         raw_id = self.prof_id.get().strip().lower().replace(" ", "_")
-        if not raw_id:
+        if not raw_id or raw_id in {".", ".."} or "/" in raw_id or "\\" in raw_id:
             messagebox.showerror("Validation Error", "Profile ID is required.", parent=self)
             return
         target_dir = app_paths.profile_root(raw_id)
@@ -103,6 +104,7 @@ class NewProfileModal(BaseToplevel):
             "version":     "1.4.1",
         })
         initialize_profile_files(str(configs_path))
+        initialize_setup(raw_id)
         self.callback(raw_id)
         self.destroy()
 

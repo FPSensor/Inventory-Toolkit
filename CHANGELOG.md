@@ -8,7 +8,8 @@ Development changes after `v1.4.1`. The released application version remains `1.
 
 ### Added
 
-- Added a dark Alpha Pre-Beta desktop shell (toolkit remains 1.4.1), with sidebar navigation, scrolling workflow pages, a resizable activity/results area, session text scaling and inline progress/completion/errors.
+- Promoted the desktop surface to Alpha Pre-Beta (toolkit remains 1.4.1): dark sidebar workspace, scrolling module pages, resizable activity/results area, session text scaling and inline progress/completion/errors.
+- Added graphical module setup with contextual help, sample-header/value previews, typed row editors, per-page saving/resume and actionable configuration recovery while retaining workflow inputs.
 
 - Added shared per-module setup states (not configured, partial, complete), reviewed-field fingerprints and stable workflow error codes. Existing profiles without setup metadata retain their current lifecycle.
 

@@ -12,7 +12,7 @@ python -m gui.app
 
 Profile/configuration resources used by the GUI are anchored to the Inventory Toolkit application root and do not follow the process CWD.
 
-The GUI is **Alpha Pre-Beta**. It is useful for testing the direction of a desktop workflow, but the CLI remains the primary supported interface and the reference surface for developer/release tooling.
+The GUI is **Alpha Pre-Beta**: a dark desktop workspace for the three workflows, graphical module setup and configuration recovery. The toolkit release version remains 1.4.1. The CLI remains the reference surface for developer/release tooling. Native desktop review on Windows/macOS is still required before declaring Beta.
 
 Do not assume GUI behavior is feature-complete merely because an engine is exposed there.
 
@@ -28,11 +28,11 @@ Top-level GUI actions include:
 
 - active-profile selection;
 - new profile creation;
-- setup guidance;
+- resumable graphical setup for each module;
 - graphical Configuration Hub;
-- Cross Check tab;
-- Stock Processing tab;
-- YoY Reports tab.
+- Cross Check page;
+- Stock Processing page;
+- YoY Reports page.
 
 YoY restores its last input/output paths for the active profile. For a
 non-segmented report, the extra annual-comparison block beneath the full report
@@ -41,9 +41,9 @@ to use the profile's annual-comparison setting.
 
 ## Progress and completion summaries
 
-The status bar uses a determinate progress bar driven by engine stage events. An activity area retains concise stage messages and final statistics after the status changes to completion. Completion and errors stay inline in the activity/results area.
+The status bar uses a determinate progress bar driven by engine stage events. An activity area retains concise stage messages and final statistics after the status changes to completion. Success, errors and collected warnings are retained inline; completion does not require dismissing a dialog. Drag the divider to resize the activity/results area.
 
-Worker threads send progress, statistics and completion through queues; the Tk event loop updates widgets and dialogs. Percentages describe stage/sheet completion, not measured execution time. A failed task does not force the progress bar to 100%.
+Worker threads send progress, statistics and completion through queues; the Tk event loop updates widgets and inline notices. Percentages describe stage/sheet completion, not measured execution time. A failed task does not force the progress bar to 100%.
 
 The statistics have the same engine-owned meaning as the CLI summaries; see [engine.md](engine.md#final-statistics-contract).
 
@@ -51,7 +51,7 @@ The statistics have the same engine-owned meaning as the CLI summaries; see [eng
 
 A persistent result panel shows the last successful report's absolute path, originating profile and duration. The path can be selected and copied. Open report delegates to the system's associated application; Open folder opens its containing directory. Neither action runs automatically. Both are disabled while processing to avoid opening a workbook during a write.
 
-The panel remains available after dismissing the success dialog and after a later failed run; its label explicitly identifies it as the last successful output. Starting a new run clears the activity area for that run, while failures are recorded there and leave the previous successful report accessible. Selecting another profile does not relabel the originating profile of the result. This state lasts for the GUI session only.
+The panel remains available after completion and after a later failed run; its label explicitly identifies it as the last successful output. Starting a new run clears the activity area for that run, while failures are recorded there and leave the previous successful report accessible. Selecting another profile does not relabel the originating profile of the result. This state lasts for the GUI session only.
 
 ## Configuration Hub
 
@@ -67,7 +67,7 @@ It exists alongside the CLI Configuration Hub. The CLI remains the more complete
 
 ## Execution lifecycle
 
-Only one processing task may run at a time. The GUI disables profile/actions and input controls across all three workflows while processing, then restores their previous states on success or failure. Controls already disabled by an option remain disabled. Tabs and the activity area remain available for reviewing progress.
+Only one processing task may run at a time. The GUI disables profile/actions and input controls across all three workflows while processing, then restores their previous states on success or failure. Controls already disabled by an option remain disabled. The activity area remains available for reviewing progress.
 
 Close open profile/configuration windows before starting a workflow; this prevents an existing editor from changing settings during processing. Exit and window-close requests wait for the task to finish instead of terminating a saving worker. Failure to start a worker also restores the controls. After completion, existing input selections remain available for another run.
 
@@ -83,7 +83,7 @@ Core safe-saving functions support non-interactive mode. GUI callers must receiv
 
 ## Error handling
 
-The GUI validates obvious missing files/dates/configuration before launching a workflow and reports runtime failures through inline notices.
+The GUI validates obvious missing files/dates/configuration before launching a workflow and reports runtime failures through inline notices with explicit configuration actions when a structured error has a destination.
 
 For deeper diagnosis, reproduce with CLI debug level 2/3 when practical and inspect `logs/session.log`.
 
@@ -106,6 +106,14 @@ Sales amounts are line revenue from the configured sales column, not unit prices
 
 `gui/app.py` owns workflow dispatch and session state. `gui/config_hub.py` keeps the advanced editors, `gui/profile_dialog.py` owns profile creation, and `gui/widgets.py` owns shared controls and the dark Tk/CustomTkinter presentation. Reusable setup contracts live in `core/setup_catalog.py` and `core/setup_service.py`, independent of Tk and console input.
 
-### Workspace layout
+## Dark workspace and guided setup
 
-The desktop starts dark on both backends, uses sidebar navigation and scrolling workflow pages, and supports session text scaling. Drag the divider to resize activity/results. YoY options use multiple rows. Native file/default-choice dialogs and advanced editors remain available.
+Both backends start dark, including native ttk controls and advanced-editor listboxes. No light theme is enabled. The sidebar selects a workflow, active profile, module setup or advanced editing. Main workflow pages scroll independently; YoY options use multiple rows instead of a clipped horizontal strip. Text scaling is available at 100%, 115% and 130% for the current session.
+
+Each setup page explains at most three related fields. Column fields accept manual names or sample-workbook headers; examples are limited to five rows and stay in memory. Sample reading uses a worker and all widget updates happen on Tk's thread. Different price-list pages can use different samples. Families, groups, aliases and summaries use editable rows instead of JSON entry. Prefix rules use longest-match priority; no business category is hardcoded. Shared steps explicitly identify their effect on other modules.
+
+Save & next commits and reviews the page. Back also saves a valid page. Leave setup retains previously saved pages and discards the current unsaved page. A new profile starts with every module unconfigured. Starting that module opens its assistant. Partial setup offers Continue anyway or Complete setup; missing mandatory values produce a coded error with a direct setup action. Completing recovery does not run a report automatically. File selections and run options remain in the workflow page.
+
+Advanced Configuration Hub editing remains available for experienced users. Native file choosers and operator decisions (such as a missing-column default fallback) may still open dialogs. Main workflow progress, completion and configuration recovery use inline feedback.
+
+The design uses labeled settings with nearby explanations and validation at page boundaries, informed by the [VS Code Settings editor](https://code.visualstudio.com/docs/configure/settings) and [Qt wizard page validation](https://doc.qt.io/qt-6/qwizardpage.html). These are design references; the implementation remains Tk/CustomTkinter.

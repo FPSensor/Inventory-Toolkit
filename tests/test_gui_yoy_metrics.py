@@ -45,7 +45,7 @@ def test_gui_captures_sales_selection_and_requires_only_selected_columns(tmp_pat
 
     monkeypatch.setattr(app, 'generate_sales_report', generate)
     view = SimpleNamespace(
-        _require_idle=lambda: True,
+        _require_idle=lambda: True, _gate_setup=lambda _module: True,
         active_profile=Variable('test'), yoy_file=Variable(str(source)),
         yoy_start=Variable('2026-10-01'), yoy_end=Variable('2026-10-04'),
         yoy_group=Variable('Family'), yoy_has_fam=Variable(True),
