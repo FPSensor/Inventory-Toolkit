@@ -216,3 +216,19 @@ A configured input column that is absent requires explicit per-run consent in CL
 4. Review or remove `last_paths.json` if paths belong to the old computer. Absolute remembered paths do not relocate automatically, including remembered demo selections. Removing this convenience file does not remove business configuration; demo suggestions then resolve under the new installation.
 
 No import/export tool is needed for this folder layout. The destination must support the profile schema; current configuration headers remain strictly validated even after compatibility is retired.
+
+### Guided setup lifecycle
+
+New profiles record `setup.version = 1` and `setup.modules` in `profile.json`.
+Each module keeps fingerprints for reviewed setup steps. The computed state is
+0 (not configured), 1 (partial), or 2 (complete). Finishing a page saves it;
+leaving the assistant keeps the saved pages. Unreviewed modules remain independent.
+A shared-field change invalidates prior reviews of that field in other modules.
+Existing profiles without this metadata retain their current validated behavior;
+opening and saving a guided setup step enrolls that module in review tracking.
+These states describe operator review, not proof that every future input file matches.
+
+Stable errors expose a code, module, field and setup-step destination. Only
+configuration errors with an explicit destination offer guided recovery. Missing
+input columns continue to offer the existing per-run default fallback; they are
+not interpreted as an unset configuration field.

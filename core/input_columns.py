@@ -4,6 +4,8 @@ from collections.abc import Callable, Mapping
 
 import pandas as pd
 
+from core.workflow_errors import ErrorCode, WorkflowError
+
 
 def choose_input_columns(
     file_path: str,
@@ -27,11 +29,11 @@ def choose_input_columns(
             resolved[field] = default
             continue
         if default and default != wanted and default not in columns and confirm and confirm(field, wanted, default):
-            raise ValueError(
+            raise WorkflowError(ErrorCode.INPUT_COLUMN_MISSING,
                 f"{file_path}: configured column {wanted!r} and default {default!r} "
                 f"are both absent for {field}. Available columns: {sorted(map(str, columns))}"
             )
-        raise ValueError(
+        raise WorkflowError(ErrorCode.INPUT_COLUMN_MISSING,
             f"{file_path}: configured column {wanted!r} is absent for {field}. "
             f"Default: {default!r}. Available columns: {sorted(map(str, columns))}"
         )

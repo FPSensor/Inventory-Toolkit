@@ -8,6 +8,8 @@ Development changes after `v1.4.1`. The released application version remains `1.
 
 ### Added
 
+- Added shared per-module setup states (not configured, partial, complete), reviewed-field fingerprints and stable workflow error codes. Existing profiles without setup metadata retain their current lifecycle.
+
 - Added a persistent GUI last-successful-output panel with profile, duration and a copyable absolute path, plus explicit Open report/Open folder actions; retain previous results when a later run fails.
 
 - Guarded GUI workflow execution against concurrent runs, profile/configuration changes and closing the window during an active task; restore previous control states after success, failure or worker-start errors.
