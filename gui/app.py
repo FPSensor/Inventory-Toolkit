@@ -77,6 +77,7 @@ from cli.utils import save_json, load_json, load_last_paths, save_last_paths
 from engine.inventory_cross_check.generator import run_cross_check
 from engine.stock_processing.generator import run_stock_processing
 from engine.yoy_reports.generator import generate_sales_report
+from engine.yoy_reports.metrics import select_run_metrics
 
 
 # ── Widget helpers ────────────────────────────────────────────────────────────
@@ -1449,6 +1450,7 @@ class InventoryToolkitGUI(BaseWindow):
             return
         self.yoy_sizes.set(bool(output.get("include_sizes", False)))
         self.yoy_compare.set(False)
+        self.yoy_sales_amounts.set(False)
         self.yoy_file.set(saved.get("file", ""))
         self.yoy_out.set(saved.get("out") or str(output.get("default_path", "yoy_analysis.xlsx")))
 
@@ -1656,6 +1658,7 @@ class InventoryToolkitGUI(BaseWindow):
         self.yoy_has_fam = tk.BooleanVar(value=True)
         self.yoy_seg     = tk.BooleanVar(value=False)
         self.yoy_compare = tk.BooleanVar(value=False)
+        self.yoy_sales_amounts = tk.BooleanVar(value=False)
         self.yoy_sizes   = tk.BooleanVar(value=False)
         self.yoy_out     = tk.StringVar(value="yoy_analysis.xlsx")
 
@@ -1711,6 +1714,18 @@ class InventoryToolkitGUI(BaseWindow):
             )
         compare_control.pack(anchor="w", padx=20, pady=4)
 
+        if USE_CTK:
+            sales_control = ctk.CTkCheckBox(
+                self.tab_yoy, text="Include sales amounts (revenue), in addition to units",
+                variable=self.yoy_sales_amounts,
+            )
+        else:
+            sales_control = ttk.Checkbutton(
+                self.tab_yoy, text="Include sales amounts (revenue), in addition to units",
+                variable=self.yoy_sales_amounts,
+            )
+        sales_control.pack(anchor="w", padx=20, pady=4)
+
         def update_comparison_control(*_args):
             compare_control.configure(state="disabled" if self.yoy_seg.get() else "normal")
 
@@ -1758,6 +1773,12 @@ class InventoryToolkitGUI(BaseWindow):
             messagebox.showerror("Config Error",
                                  f"YoY config missing for profile '{self.active_profile.get()}'.\n"
                                  "Run the Setup Wizard or edit YoY Reports in Config Hub.", parent=self)
+            return
+
+        try:
+            yoy_config = select_run_metrics(yoy_config, self.yoy_sales_amounts.get())
+        except ValueError as exc:
+            messagebox.showerror("Metric Configuration Error", str(exc), parent=self)
             return
 
         input_config = yoy_config["input"]

@@ -75,14 +75,18 @@ def test_gui_yoy_restores_saved_paths_for_each_profile(tmp_path, monkeypatch):
         yoy_out=Variable(),
         yoy_sizes=Variable(),
         yoy_compare=Variable(),
+        yoy_sales_amounts=Variable(True),
     )
 
     InventoryToolkitGUI._apply_yoy_profile_defaults(view)
     assert (view.yoy_file.get(), view.yoy_out.get()) == ("sales.xlsx", "report.xlsx")
 
+    assert view.yoy_sales_amounts.get() is False
+    view.yoy_sales_amounts.set(True)
     view.active_profile.set("second")
     InventoryToolkitGUI._apply_yoy_profile_defaults(view)
     assert (view.yoy_file.get(), view.yoy_out.get()) == ("", "default.xlsx")
+    assert view.yoy_sales_amounts.get() is False
 
 
 def test_user_relative_paths_still_follow_caller_cwd(tmp_path, monkeypatch):

@@ -121,7 +121,7 @@ Owns:
 
 - input date/quantity/sales-amount/family/article/branch/size mapping;
 - default output path;
-- enabled metrics (`units` and/or `sales`) for direct engine calls; interactive CLI runs select units and explicitly opt into sales amounts for that run;
+- enabled metrics (`units` and/or `sales`) for direct engine calls; interactive CLI/GUI runs select units and explicitly opt into sales amounts for that run;
 - annual-comparison/size options;
 - report groups that define the branches rendered by the workbook.
 

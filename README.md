@@ -468,3 +468,5 @@ A 2.0 release should be earned, not used as a cosmetic version bump. Candidate c
 # License
 
 Inventory Toolkit is released under the [MIT License](LICENSE).
+
+YoY reports in the CLI and GUI show units by default. Opt into sales amounts (revenue) for the current run to add monetary sections without changing the profile. Revenue compares summed line amounts; it does not represent average unit price.

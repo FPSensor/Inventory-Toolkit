@@ -19,6 +19,8 @@ Development changes after `v1.4.1`. The released application version remains `1.
 
 ### Changed
 
+- Added an unchecked GUI YoY revenue option, reset on profile changes, using the same runtime metric selection and column requirements as the CLI.
+
 - Made CLI YoY sales-amount blocks opt-in for each run (default: units only), independent of segmentation and without rewriting profile settings.
 
 - Moved bundled profile defaults, workbook labels and Guided Setup column hints into UTF-8 JSON resources; schemas, engines and interfaces consume those resources instead of embedding deployment-specific vocabulary in Python.
