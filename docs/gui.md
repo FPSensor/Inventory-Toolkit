@@ -86,6 +86,8 @@ Core safe-saving functions support non-interactive mode. GUI callers must receiv
 
 The GUI validates obvious missing files/dates/configuration before launching a workflow and reports runtime failures through inline notices with explicit configuration actions when a structured error has a destination.
 
+Use **Inspect selected files** on a workflow page for an optional, background read of up to five rows per selected workbook. The activity area lists column counts, required headers found or missing, and possible unique replacements. It respects the current YoY grouping/revenue/size choices. This inspection does not generate a report, apply default fallbacks, or modify the profile; running the workflow continues to use its normal confirmation and validation rules.
+
 For deeper diagnosis, reproduce with CLI debug level 2/3 when practical and inspect `logs/session.log`.
 
 ## Current limitations

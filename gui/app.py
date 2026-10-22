@@ -40,6 +40,7 @@ from engine.yoy_reports.metrics import select_run_metrics
 from core.setup_service import SetupSession, SetupState
 from core.setup_catalog import MODULE_LABELS
 from core.profile_overview import inspect_profile
+from core.input_doctor import inspect_workflow_inputs
 from core.workflow_errors import WorkflowError
 from gui.setup_wizard import SetupWizard
 
@@ -421,6 +422,8 @@ class InventoryToolkitGUI(BaseWindow):
                             ).pack(side="left", padx=10)
             ttk.Button(self.tab_cc, text="▶  Run Inventory Cross Check",
                        command=self._exec_cc).pack(pady=18)
+        _btn(self.tab_cc, "Inspect selected files", lambda: self._inspect_inputs("cross_check")
+            ).pack(pady=(0, 14))
 
     def _exec_cc(self):
         if not self._require_idle():
@@ -504,6 +507,8 @@ class InventoryToolkitGUI(BaseWindow):
         else:
             ttk.Button(self.tab_stock, text="▶  Run Stock Processing",
                        command=self._exec_stock).pack(pady=25)
+        _btn(self.tab_stock, "Inspect selected files", lambda: self._inspect_inputs("stock_processing")
+            ).pack(pady=(0, 14))
 
     def _exec_stock(self):
         if not self._require_idle():
@@ -635,6 +640,57 @@ class InventoryToolkitGUI(BaseWindow):
         else:
             ttk.Button(self.tab_yoy, text="▶  Generate YoY Sales Report",
                        command=self._exec_yoy).pack(pady=20)
+        _btn(self.tab_yoy, "Inspect selected file", lambda: self._inspect_inputs("yoy_reports")
+            ).pack(pady=(0, 14))
+
+    def _inspect_inputs(self, module):
+        if not self._require_idle():
+            return
+        paths = {
+            "cross_check": lambda: {"system": self.cc_sys.get(), "count": self.cc_count.get(),
+                "cost": self.cc_cost.get(), "sales": self.cc_sales.get()},
+            "stock_processing": lambda: {"stock": self.sp_raw.get(), "cost": self.sp_cost.get(),
+                "sales": self.sp_sales.get()},
+            "yoy_reports": lambda: {"file": self.yoy_file.get()},
+        }[module]()
+        options = ({"include_sales": self.yoy_sales_amounts.get(),
+            "include_sizes": self.yoy_sizes.get(), "grouping": self.yoy_group.get().lower(),
+            "has_families": self.yoy_has_fam.get()} if module == "yoy_reports" else {})
+        profile = self.active_profile.get()
+        result = queue.Queue(maxsize=1)
+        self._set_busy(True)
+        self._set_status("Inspecting selected workbook samples...")
+
+        def worker():
+            try:
+                result.put((True, inspect_workflow_inputs(profile, module, paths, **options)))
+            except Exception as exc:
+                result.put((False, exc))
+
+        def poll():
+            try:
+                ok, payload = result.get_nowait()
+            except queue.Empty:
+                self.after(100, poll)
+                return
+            self._set_busy(False)
+            if ok:
+                self._append_activity("\n" + payload.render() + "\n")
+                self._set_status("Input inspection complete.")
+                self._notify("info" if payload.ready else "warning", "Input inspection",
+                    "Selected files look compatible." if payload.ready else
+                    "Some files or configured headers need review. Details are in the activity area.")
+            else:
+                self._set_status("Input inspection failed.")
+                self._notify("error", "Input inspection", str(payload))
+
+        try:
+            threading.Thread(target=worker, daemon=True).start()
+        except RuntimeError as exc:
+            self._set_busy(False)
+            self._notify("error", "Input inspection", str(exc))
+            return
+        self.after(100, poll)
 
     def _exec_yoy(self):
         if not self._require_idle():

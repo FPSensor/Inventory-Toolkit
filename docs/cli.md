@@ -205,3 +205,5 @@ Guided module setup can inspect sample headers, identify absent configured colum
 # Profile overview
 
 Press **H** in the main menu to see whether each workflow is ready, how many setup pages have been reviewed, and the next page needing attention. Select a numbered workflow to open its module setup there. Existing profiles without review metadata show as ready after configuration validation; new profiles report their independent review progress. The overview describes configuration review, not whether a particular spreadsheet has matching columns.
+
+From this overview, enter **I1**, **I2** or **I3** to inspect remembered input files for Cross Check, Stock Processing or YoY. Demo defaults are used when no path has been remembered for the demo profile. YoY inspection asks which grouping, Family-column presence, revenue and size choices to check. Each workbook inspection reads up to five rows and does not alter files or configuration.

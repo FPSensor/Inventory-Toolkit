@@ -8,6 +8,8 @@ Development changes after `v1.4.1`. The released application version remains `1.
 
 ### Added
 
+- Added optional pre-run workbook inspection in the GUI and CLI profile overview. It samples only five rows per selected file, checks the headers actually required by each module and the chosen YoY options, handles headerless scanner readings correctly, and reports missing/ambiguous columns without generating a report or changing profile settings.
+
 - Added a shared profile overview in the CLI and GUI with module readiness, reviewed-page counts, the next pending page and direct access to targeted setup. Existing profiles remain ready without forced enrollment, and damaged configuration is shown as an actionable status instead of hiding all modules.
 
 - Added conservative sample-header advice for guided setup: exact and normalized matches are distinguished from unique vocabulary suggestions, ambiguous headers are left for operator selection, and matching vocabulary stays in JSON resources. Advice never rewrites a profile by itself.
