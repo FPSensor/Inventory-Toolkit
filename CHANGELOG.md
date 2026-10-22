@@ -8,6 +8,8 @@ Development changes after `v1.4.1`. The released application version remains `1.
 
 ### Added
 
+- Added a shared profile overview in the CLI and GUI with module readiness, reviewed-page counts, the next pending page and direct access to targeted setup. Existing profiles remain ready without forced enrollment, and damaged configuration is shown as an actionable status instead of hiding all modules.
+
 - Added conservative sample-header advice for guided setup: exact and normalized matches are distinguished from unique vocabulary suggestions, ambiguous headers are left for operator selection, and matching vocabulary stays in JSON resources. Advice never rewrites a profile by itself.
 
 - Connected CLI module launch to shared setup states and guided recovery, with per-page saving and explicit continuation for partial profiles. New CLI profiles return to the module menu; existing workflows remain available when only one legacy module enrolls in setup.

@@ -39,6 +39,7 @@ from engine.yoy_reports.generator import generate_sales_report
 from engine.yoy_reports.metrics import select_run_metrics
 from core.setup_service import SetupSession, SetupState
 from core.setup_catalog import MODULE_LABELS
+from core.profile_overview import inspect_profile
 from core.workflow_errors import WorkflowError
 from gui.setup_wizard import SetupWizard
 
@@ -56,7 +57,7 @@ class InventoryToolkitGUI(BaseWindow):
         self.minsize(900, 680)
 
         self._setup_panel = None
-        self._selected_module = "cross_check"
+        self._selected_module = None
         self._partial_permission = None
         self._busy = False
         self._running_profile = None
@@ -69,7 +70,7 @@ class InventoryToolkitGUI(BaseWindow):
         self._apply_yoy_profile_defaults()
         self.active_profile.trace_add("write", self._on_profile_changed)
         self._build_status_bar()
-        self._show_module("cross_check")
+        self._show_module("overview")
         self.bind("<Control-Shift-I>", self._show_easter_egg)
         self.protocol("WM_DELETE_WINDOW", self._request_close)
 
@@ -113,6 +114,7 @@ class InventoryToolkitGUI(BaseWindow):
         else:
             self._profile_menu = ttk.Combobox(bar, values=self._profiles, textvariable=self.active_profile, state="readonly", width=17)
         self._profile_menu.pack(fill="x", padx=12, pady=8)
+        _btn(bar, "Profile overview", lambda: self._show_module("overview")).pack(fill="x", padx=12, pady=(16, 8))
         for module, label in MODULE_LABELS.items():
             _btn(bar, label, lambda name=module: self._show_module(name)).pack(fill="x", padx=12, pady=5)
         _btn(bar, "Set up this module", self._open_wizard).pack(fill="x", padx=12, pady=(24, 5))
@@ -170,6 +172,12 @@ class InventoryToolkitGUI(BaseWindow):
             return
         self._selected_module = module
         if hasattr(self, "_pages"):
+            if module == "overview":
+                self._render_overview()
+                self._pages[module].tkraise()
+                self._page_title.configure(text="Profile overview")
+                self._notify("info", "Profile overview", "Choose a workflow to inspect or configure.")
+                return
             self._pages[module].tkraise()
             self._page_title.configure(text=MODULE_LABELS[module])
             try:
@@ -199,12 +207,16 @@ class InventoryToolkitGUI(BaseWindow):
             self._notify("info", "Configuration window open", "Close other profile/configuration windows before opening guided setup.")
             return
         module = module or self._selected_module
+        if module not in MODULE_LABELS:
+            self._notify("info", "Select a workflow", "Choose a workflow before opening its setup assistant.")
+            return
         profile = self.active_profile.get()
         def finish(message):
             panel = self._setup_panel
             self._setup_panel = None
             panel.destroy()
             self._profile_menu.configure(state="normal" if USE_CTK else "readonly")
+            self._render_overview()
             self._show_module(module)
             self._notify("info", "Guided setup", message)
         try:
@@ -268,16 +280,46 @@ class InventoryToolkitGUI(BaseWindow):
     # ── Tabs ──────────────────────────────────────────────────────────────────
 
     def _build_tabs(self):
-        self._pages = {module: BaseScrollable(self._page_host) for module in MODULE_LABELS}
+        self._pages = {module: BaseScrollable(self._page_host) for module in ("overview", *MODULE_LABELS)}
         for page in self._pages.values():
             page.grid(row=0, column=0, sticky="nsew")
+        self.tab_overview = self._pages["overview"]
         self.tab_cc = self._pages["cross_check"]
         self.tab_stock = self._pages["stock_processing"]
         self.tab_yoy = self._pages["yoy_reports"]
         self._setup_cc_tab()
         self._setup_stock_tab()
         self._setup_yoy_tab()
-        self.tab_cc.tkraise()
+        self.tab_overview.tkraise()
+
+    def _render_overview(self):
+        page = self.tab_overview
+        for child in page.winfo_children():
+            child.destroy()
+        entries = inspect_profile(self.active_profile.get())
+        ready = sum(entry.state == SetupState.COMPLETE for entry in entries)
+        _lbl(page, text=f"{ready} of {len(entries)} workflows ready", font=("Arial", 17, "bold")
+            ).pack(anchor="w", padx=20, pady=(12, 5))
+        _lbl(page, text="Review setup pages by workflow. 'Ready' reflects configuration review; input headers are checked when you select a file.",
+            wraplength=650, justify="left").pack(anchor="w", padx=20, pady=(0, 10))
+        for entry in entries:
+            card = BaseFrame(page)
+            card.pack(fill="x", padx=18, pady=7)
+            _lbl(card, text=f"{entry.label}   |   {entry.status}", font=("Arial", 16, "bold")
+                ).pack(anchor="w", padx=12, pady=(10, 4))
+            count = f"{entry.reviewed}/{entry.total} pages reviewed" if entry.reviewed is not None else "Existing profile"
+            detail = (entry.issue or (f"Next: {entry.pending_titles[0]}"
+                + (f" · {len(entry.pending_titles) - 1} more" if len(entry.pending_titles) > 1 else "")
+                if entry.pending_titles else "Configuration reviewed. Select a workflow to choose files and run."))
+            _lbl(card, text=f"{count}   |   {detail}", wraplength=620, justify="left"
+                ).pack(anchor="w", padx=12, pady=(0, 6))
+            buttons = BaseFrame(card)
+            buttons.pack(anchor="w", padx=10, pady=(0, 10))
+            _btn(buttons, "Open workflow", lambda name=entry.module: self._show_module(name)
+                ).pack(side="left", padx=3)
+            if not entry.issue:
+                _btn(buttons, "Review setup", lambda name=entry.module, step=entry.pending_step: self._open_wizard(name, step)
+                    ).pack(side="left", padx=3)
 
     def _on_profile_changed(self, *_args):
         if getattr(self, "_setup_panel", None) is not None:
@@ -289,6 +331,8 @@ class InventoryToolkitGUI(BaseWindow):
             return
         if hasattr(self, "yoy_sizes"):
             self._apply_yoy_profile_defaults()
+        if getattr(self, "_selected_module", None) == "overview" and hasattr(self, "tab_overview"):
+            self._render_overview()
 
     def _apply_yoy_profile_defaults(self):
         """Restore YoY file paths and profile-owned defaults for the active profile."""
@@ -828,7 +872,7 @@ class InventoryToolkitGUI(BaseWindow):
                 for child in widget.winfo_children():
                     disable_tree(child)
 
-            for root in (self._top_bar, self.tab_cc, self.tab_stock, self.tab_yoy, self._result_frame):
+            for root in (self._top_bar, self.tab_overview, self.tab_cc, self.tab_stock, self.tab_yoy, self._result_frame):
                 disable_tree(root)
         else:
             for widget, state in self._locked_controls:

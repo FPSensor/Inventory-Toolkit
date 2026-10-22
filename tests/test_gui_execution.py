@@ -87,6 +87,7 @@ class View:
         self.profile_menu = Widget("readonly")
         self.option = Widget("disabled")
         self._top_bar = Widget(children=[self.action, self.profile_menu])
+        self.tab_overview = Widget()
         self.tab_cc = Widget(children=[self.option])
         self.tab_stock = Widget()
         self.tab_yoy = Widget()

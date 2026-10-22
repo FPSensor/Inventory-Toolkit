@@ -197,6 +197,11 @@ New profile creation collects profile metadata and returns to the menu. Choosing
 Partial setup warns and offers an explicit continuation or completion choice. Missing mandatory settings carry a stable code and a specific setup destination; the console offers to configure that page. Returning from setup does not automatically retry a workflow. Existing profiles without setup metadata are not forced through the assistant. Enrolling one existing module preserves the other modules' legacy lifecycle.
 
 Missing file headers are a separate `INPUT_COLUMN_MISSING` error: the established default-column confirmation still applies. Unrelated file/output errors do not offer a configuration wizard.
+
 # Excel sample advice
 
 Guided module setup can inspect sample headers, identify absent configured columns, and display unique suggestions based on normalized names and resource-owned vocabulary. Suggestions are informational: enter the desired header or choose its numbered entry before saving that page. Ambiguous matches require a manual choice.
+
+# Profile overview
+
+Press **H** in the main menu to see whether each workflow is ready, how many setup pages have been reviewed, and the next page needing attention. Select a numbered workflow to open its module setup there. Existing profiles without review metadata show as ready after configuration validation; new profiles report their independent review progress. The overview describes configuration review, not whether a particular spreadsheet has matching columns.

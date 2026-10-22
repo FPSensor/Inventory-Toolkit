@@ -26,6 +26,7 @@ CustomTkinter is optional and is not required by `requirements.txt`.
 
 Top-level GUI actions include:
 
+- a profile overview showing each workflow's review state and its next setup page;
 - active-profile selection;
 - new profile creation;
 - resumable graphical setup for each module;

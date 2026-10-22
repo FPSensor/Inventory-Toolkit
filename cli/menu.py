@@ -8,6 +8,7 @@ from cli.stock_processing_launcher import launch_stock_processing
 from cli.yoy_reports_launcher import launch_yoy_reports
 from cli.wizard import PANDAS_AVAILABLE
 from cli.workflow_setup import launch_configured
+from cli.profile_overview import show_profile_overview
 from cli.debug_menu import developer_tools_menu
 from core.logger import log, log_debug_event, set_debug_level
 
@@ -71,6 +72,7 @@ def _draw_menu(current_profile: str, debug_level: int = 1) -> None:
     print(_row())
     print(_rule())
     print(_row("    K  ›  Configuration"))
+    print(_row("    H  ›  Profile Overview"))
     print(_row("    P  ›  Change Profile"))
     if debug_level == 3:
         print(_row("    D  ›  Developer / Release Tools"))
@@ -161,6 +163,8 @@ def main():
                 launch_configured(current_profile, "yoy_reports", launch_yoy_reports)
             elif option == "K":
                 configuration_menu(current_profile)
+            elif option == "H":
+                show_profile_overview(current_profile)
             elif option == "P":
                 current_profile = select_profile(current_profile)
                 log_debug_event("profile_selected", profile=current_profile, startup=False)
