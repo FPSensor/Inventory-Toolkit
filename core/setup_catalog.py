@@ -8,6 +8,8 @@ class SetupField:
     label: str
     help: str
     kind: str = 'column'
+    hint_key: str | None = None
+    sample_required: bool = True
 
 
 @dataclass(frozen=True)
@@ -19,16 +21,16 @@ class SetupStep:
     shared: bool = False
 
 
-def field(path, label, help, kind='column'):
-    return SetupField(tuple(path.split('.')), label, help, kind)
+def field(path, label, help, kind='column', *, hint_key=None, sample_required=True):
+    return SetupField(tuple(path.split('.')), label, help, kind, hint_key, sample_required)
 
 
 ARTICLE_HELP = 'Select the column identifying each product, such as ABC-123 or 21334. This is an identifier, not a product description.'
 PRICE_HELP = 'Select a monetary value column. Use the same currency and accounting convention in both lists.'
 
 CATALOG = SetupStep('catalog', 'Product identifiers', 'general/catalog', (
-    field('columns.article', 'Article / SKU column', ARTICLE_HELP),
-    field('columns.family', 'Family output column', 'Name of the family column generated in reports. An existing family column may also be used.'),
+    field('columns.article', 'Article / SKU column', ARTICLE_HELP, hint_key='article_hints'),
+    field('columns.family', 'Family output column', 'Name of the family column generated in reports. An existing family column may also be used.', hint_key='family_hints', sample_required=False),
     field('default_family', 'Unmatched family', 'Label for products without a matching family rule.', 'text'),
 ), True)
 FAMILIES = SetupStep('families', 'Family rules', 'general/families', (
@@ -43,13 +45,13 @@ NETWORK = SetupStep('network', 'Stores and locations', 'general/network', (
 STEPS = {
     'cross_check': (CATALOG, FAMILIES,
         SetupStep('cross_input', 'System stock quantities', 'cross_check/settings', (
-            field('input.quantity_column', 'System quantity column', 'Column containing the recorded quantity for each article.'),)),
+            field('input.quantity_column', 'System quantity column', 'Column containing the recorded quantity for each article.', hint_key='qty_hints'),)),
         SetupStep('cross_cost', 'Cost price list', 'cross_check/settings', (
-            field('price_lists.cost.article_column', 'Cost-list article column', ARTICLE_HELP),
-            field('price_lists.cost.price_column', 'Cost-list price column', PRICE_HELP))),
+            field('price_lists.cost.article_column', 'Cost-list article column', ARTICLE_HELP, hint_key='article_hints'),
+            field('price_lists.cost.price_column', 'Cost-list price column', PRICE_HELP, hint_key='price_hints'))),
         SetupStep('cross_sales', 'Sales price list', 'cross_check/settings', (
-            field('price_lists.sales.article_column', 'Sales-list article column', ARTICLE_HELP),
-            field('price_lists.sales.price_column', 'Sales-list price column', PRICE_HELP))),
+            field('price_lists.sales.article_column', 'Sales-list article column', ARTICLE_HELP, hint_key='article_hints'),
+            field('price_lists.sales.price_column', 'Sales-list price column', PRICE_HELP, hint_key='price_hints'))),
         SetupStep('cross_policy', 'Matching and reconciliation', 'cross_check/settings', (
             field('pricing.article_tokenization', 'Price-list article matching', 'first_token uses text before the first space; whole keeps the entire cleaned identifier.', 'token'),
             field('reconciliation.ignore_negative_system_stock_when_counted', 'Ignore negative system stock when counted', 'Use the counted quantity instead of subtracting negative system stock.', 'bool'))),
@@ -62,9 +64,9 @@ STEPS = {
             field('cleaning.numeric_columns', 'Numeric columns', 'One quantity/value column name per line.', 'list'),
             field('cleaning.drop_columns', 'Remove columns', 'Columns to exclude. Do not remove required identifiers or quantities.', 'list'))),
         SetupStep('stock_prices', 'Price-list columns', 'stock_processing/settings', (
-            field('pricing.columns.article', 'Price-list article column', ARTICLE_HELP),
-            field('pricing.columns.database', 'Price-list store / origin column', 'Column identifying the store or origin for a price.'),
-            field('pricing.columns.price', 'Price column', PRICE_HELP))),
+            field('pricing.columns.article', 'Price-list article column', ARTICLE_HELP, hint_key='article_hints'),
+            field('pricing.columns.database', 'Price-list store / origin column', 'Column identifying the store or origin for a price.', hint_key='db_hints'),
+            field('pricing.columns.price', 'Price column', PRICE_HELP, hint_key='price_hints'))),
         SetupStep('stock_matching', 'Price matching', 'stock_processing/settings', (
             field('pricing.article_tokenization', 'Article matching', 'first_token uses text before a space; whole preserves the full identifier.', 'token'),
             field('pricing.aliases', 'Origin aliases', 'Map price-list origins to configured stores.', 'mapping'))),
@@ -75,17 +77,17 @@ STEPS = {
             field('output.summaries', 'Summary sheets and stores', 'Each row defines a sheet, its stores and display titles. Leave empty to omit extra summaries.', 'summaries'),))),
     'yoy_reports': (CATALOG, FAMILIES,
         SetupStep('yoy_period', 'Sales dates and quantities', 'yoy_reports/settings', (
-            field('input.date_column', 'Date column', 'Column containing transaction dates, used to select current and prior-year periods.'),
-            field('input.quantity_column', 'Units sold column', 'Quantity of units on each transaction line.'),
-            field('input.sales_column', 'Sales amount column', 'Total revenue of each transaction line, not its unit price. Used only when revenue is enabled.'))),
+            field('input.date_column', 'Date column', 'Column containing transaction dates, used to select current and prior-year periods.', hint_key='date_hints'),
+            field('input.quantity_column', 'Units sold column', 'Quantity of units on each transaction line.', hint_key='qty_hints'),
+            field('input.sales_column', 'Sales amount column', 'Total revenue of each transaction line, not its unit price. Used only when revenue is enabled.', hint_key='sales_hints'))),
         SetupStep('yoy_products', 'Products and locations', 'yoy_reports/settings', (
-            field('input.item_column', 'Article / SKU column', ARTICLE_HELP),
-            field('input.grouping_column', 'Family column', 'Existing family header or the name generated from prefix rules.'),
-            field('input.branch_column', 'Store / location column', 'Transaction store identifiers must match the report-group members.'))),
+            field('input.item_column', 'Article / SKU column', ARTICLE_HELP, hint_key='article_hints'),
+            field('input.grouping_column', 'Family column', 'Existing family header or the name generated from prefix rules.', hint_key='family_hints', sample_required=False),
+            field('input.branch_column', 'Store / location column', 'Transaction store identifiers must match the report-group members.', hint_key='branch_hints'))),
         SetupStep('yoy_groups', 'Comparison groups', 'yoy_reports/settings', (
             field('groups', 'Report groups and stores', 'Name a group and list its stores. Multi-store groups get a Global comparison; single-store groups do not.', 'groups'),)),
         SetupStep('yoy_sizes', 'Size breakdown', 'yoy_reports/settings', (
-            field('input.size_column', 'Size column', 'Header used only when the optional size breakdown is requested.'),
+            field('input.size_column', 'Size column', 'Header used only when the optional size breakdown is requested.', hint_key='size_hints', sample_required=False),
             field('output.include_sizes', 'Default size breakdown', 'Enable only when your sales file contains size values.', 'bool'))),
         SetupStep('yoy_output', 'Report preferences', 'yoy_reports/settings', (
             field('output.default_path', 'Default report filename', 'A filename ending in .xlsx, or a filename without an extension.', 'text'),

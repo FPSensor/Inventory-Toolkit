@@ -234,3 +234,7 @@ input columns continue to offer the existing per-run default fallback; they are
 not interpreted as an unset configuration field.
 
 When an existing profile enrolls one module, untouched modules carry a legacy marker and remain available under their previous lifecycle. Invalid setup metadata is rejected before configuration files are changed. Review states are derived from fingerprints rather than trusting a manually edited completion flag.
+
+# Header advice in guided setup
+
+The assistant can inspect a small Excel sample on each column-mapping page. It reports which configured headers exist and suggests a unique normalized or vocabulary match when possible. Ambiguous matches require a manual choice. Suggestions are never saved until the operator explicitly adopts them and saves the page. Matching vocabulary is stored in `core/resources/column_hints.json`, not in the matching algorithm.

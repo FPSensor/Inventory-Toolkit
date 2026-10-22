@@ -323,6 +323,7 @@ def run_module_setup(profile: str, module: str, step_id: str | None = None) -> N
     """Configure one workflow through the shared page contract, saving each page."""
     from core.setup_service import SetupSession
     from core.setup_catalog import get_value, MODULE_LABELS
+    from core.column_assist import advise_columns
 
     session = SetupSession(profile, module)
     pending = step_id or session.first_pending()
@@ -338,6 +339,18 @@ def run_module_setup(profile: str, module: str, step_id: str | None = None) -> N
             _, columns, _ = _sample_file('Optional sample workbook for headers.') if any(f.kind == 'column' for f in step.fields) else ('', [], None)
             values = {}
             data = session.data(step)
+            if columns:
+                current = {'.'.join(field.path): get_value(data, field.path) for field in step.fields if field.kind == 'column'}
+                for advice in advise_columns(step.fields, current, columns):
+                    if advice.present:
+                        continue
+                    field = next(field for field in step.fields if '.'.join(field.path) == advice.field)
+                    if advice.suggestion:
+                        print(f'  {field.label}: configured {advice.configured!r} is absent; possible {advice.suggestion!r}.')
+                    elif advice.ambiguous:
+                        print(f'  {field.label}: multiple possible headers ({", ".join(advice.ambiguous)}). Choose manually.')
+                    elif field.sample_required:
+                        print(f'  {field.label}: configured {advice.configured!r} is absent from this sample.')
             for field in step.fields:
                 key = '.'.join(field.path)
                 current = get_value(data, field.path)

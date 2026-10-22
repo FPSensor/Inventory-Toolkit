@@ -112,6 +112,8 @@ Both backends start dark, including native ttk controls and advanced-editor list
 
 Each setup page explains at most three related fields. Column fields accept manual names or sample-workbook headers; examples are limited to five rows and stay in memory. Sample reading uses a worker and all widget updates happen on Tk's thread. Different price-list pages can use different samples. Families, groups, aliases and summaries use editable rows instead of JSON entry. Prefix rules use longest-match priority; no business category is hardcoded. Shared steps explicitly identify their effect on other modules.
 
+After choosing a sample, the page distinguishes an existing header from a missing configured header and a unique suggestion. Ambiguous suggestions require manual choice. The **Use unique suggestions** action updates only the current unsaved page; review each field and save to persist it. Samples are kept per setup page, so a cost-list sample never appears while configuring the sales list.
+
 Save & next commits and reviews the page. Back also saves a valid page. Leave setup retains previously saved pages and discards the current unsaved page. A new profile starts with every module unconfigured. Starting that module opens its assistant. Partial setup offers Continue anyway or Complete setup; missing mandatory values produce a coded error with a direct setup action. Completing recovery does not run a report automatically. File selections and run options remain in the workflow page.
 
 Advanced Configuration Hub editing remains available for experienced users. Native file choosers and operator decisions (such as a missing-column default fallback) may still open dialogs. Main workflow progress, completion and configuration recovery use inline feedback.

@@ -7,6 +7,7 @@ import pandas as pd
 from tkinter import filedialog
 
 from core.setup_catalog import MODULE_LABELS, get_value
+from core.column_assist import advise_columns
 from core.setup_service import SetupSession, SetupState
 from core.workflow_errors import WorkflowError
 from gui.widgets import BaseFrame, BaseScrollable, BaseTextbox, USE_CTK, ctk, ttk, _btn, _lbl, _entry
@@ -60,7 +61,9 @@ class SetupWizard(BaseFrame):
         self._closed = False
         self._loading = False
         self._samples = {}
+        self._samples_by_step = {}
         self._getters = {}
+        self._column_variables = {}
         self._render()
 
     def _render(self, draft=None):
@@ -68,6 +71,8 @@ class SetupWizard(BaseFrame):
             widget.destroy()
         step = self.session.steps[self.index]
         self._getters = {}
+        self._column_variables = {}
+        self._samples = self._samples_by_step.get(step.id, {})
         _lbl(self, text=f'{MODULE_LABELS[self.session.module]} setup | Step {self.index + 1} of {len(self.session.steps)}', font=('Arial', 15, 'bold')).pack(anchor='w', padx=20, pady=(16, 6))
         _lbl(self, text=step.title, font=('Arial', 20, 'bold')).pack(anchor='w', padx=20)
         if step.shared:
@@ -78,6 +83,8 @@ class SetupWizard(BaseFrame):
         sample_bar.pack(fill='x', padx=20, pady=6)
         self._sample_button = _btn(sample_bar, 'Choose sample Excel', self._load_sample)
         self._sample_button.pack(side='left', padx=4)
+        if self._samples and any(field.kind == 'column' for field in step.fields):
+            _btn(sample_bar, 'Use unique suggestions', self._apply_suggestions).pack(side='left', padx=4)
         _lbl(sample_bar, text='Optional: read headers and up to five example rows.').pack(side='left', padx=8)
         self.content = BaseScrollable(self)
         self.content.pack(fill='both', expand=True, padx=20, pady=6)
@@ -128,13 +135,40 @@ class SetupWizard(BaseFrame):
                 _entry(block, textvariable=variable).pack(fill='x', padx=10, pady=8)
             self._getters[key] = (lambda: tokens[variable.get()]) if field.kind == "token" else (lambda: variable.get().strip())
             if field.kind == 'column':
+                self._column_variables[key] = variable
                 preview = _lbl(block, text='', wraplength=600, justify='left')
                 preview.pack(fill='x', padx=10, pady=(0, 8))
                 def update(*_args):
                     sample = self._samples.get(variable.get())
-                    preview.configure(text=('Examples: ' + ' | '.join(sample)) if sample else 'No sample values for this header. You can type a header manually.')
+                    if self._samples:
+                        advice = advise_columns((field,), {key: variable.get()}, self._samples)[0]
+                        if advice.present:
+                            status = 'Found in this sample.'
+                        elif advice.suggestion:
+                            status = f'Configured header absent. Suggestion: {advice.suggestion} ({advice.reason}).'
+                        elif advice.ambiguous:
+                            status = 'Multiple possible matches: ' + ', '.join(advice.ambiguous) + '. Choose manually.'
+                        elif not field.sample_required:
+                            status = 'This header may be generated or needed only for an optional report.'
+                        else:
+                            status = 'Configured header absent from this sample. Choose a header or type one.'
+                    else:
+                        status = 'Choose a sample to check this mapping, or type a header manually.'
+                    preview.configure(text=status + ((' Examples: ' + ' | '.join(sample)) if sample else ''))
                 variable.trace_add('write', update)
                 update()
+
+    def _apply_suggestions(self):
+        step = self.session.steps[self.index]
+        values = {key: variable.get() for key, variable in self._column_variables.items()}
+        advice = advise_columns(step.fields, values, self._samples)
+        adopted = [item for item in advice if item.suggestion and not item.present]
+        for item in adopted:
+            self._column_variables[item.field].set(item.suggestion)
+        self.notice.configure(text=(
+            f'Applied {len(adopted)} suggestion(s) to this unsaved page. Review each mapping, then save.'
+            if adopted else 'No unique suggestions available. Review the headers manually.'
+        ))
 
     def _render_table(self, parent, kind, value, key):
         rows = []
@@ -253,9 +287,9 @@ class SetupWizard(BaseFrame):
                 self.notice.configure(text=f'Fix the unfinished table row before loading another sample: {exc}')
                 return
             if ok:
-                self._samples = payload
+                self._samples_by_step[self.session.steps[self.index].id] = payload
                 self._render(draft)
-                self.notice.configure(text=f'Read {len(payload)} columns. Sample values stay in this session only.')
+                self.notice.configure(text=f'Read {len(payload)} columns for this page. Sample values stay in this session only.')
             else:
                 self._sample_button.configure(state='normal')
                 self._next_button.configure(state='normal')
