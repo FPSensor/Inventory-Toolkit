@@ -29,3 +29,12 @@ def test_failed_second_replacement_restores_configuration_and_metadata(tmp_path,
         json_documents.write_documents({config: {"new": 2}, metadata: {"reviewed": True}})
     assert [config.read_bytes(), metadata.read_bytes()] == before
     assert not list(tmp_path.glob("*.tmp"))
+
+
+def test_windows_utf8_bom_is_accepted_with_strict_json_rules(tmp_path):
+    path = tmp_path / 'settings.json'
+    path.write_bytes(b'\xef\xbb\xbf{"version": 3}')
+    assert json_documents.read_document(path) == {'version': 3}
+    path.write_bytes(b'\xef\xbb\xbf{"version": 3, "version": 4}')
+    with pytest.raises(ConfigurationFileError, match='duplicate JSON key'):
+        json_documents.read_document(path)

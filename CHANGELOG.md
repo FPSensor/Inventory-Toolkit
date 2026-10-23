@@ -8,6 +8,8 @@ Development changes after `v1.4.1`. The released application version remains `1.
 
 ### Added
 
+- **core: history:** Add bounded local configuration checkpoints with checksums, exact-byte restoration and a pre-restore safety copy. Validate enabled settings before restoring, preserve disabled settings verbatim, recover missing live documents and exclude history from Git/source distributions. UTF-8 BOM JSON is accepted consistently.
+
 - **core: diagnostics:** Add read-only profile checks with stable issue codes and setup destinations. Detect missing/invalid enabled documents, colliding source columns, required cleanup removals, invalid or repeated Excel sheet names, unavailable summary/group locations and ambiguous category prefixes. Inspection never initializes missing profiles or reviews setup pages.
 
 - **tests: desktop:** Exercise real Tk and CustomTkinter widgets in isolated subprocesses: small-window navigation, 130% scaling, configuration/setup/profile panels, disabled workflows and results-pane focus. The checks require a desktop display and skip explicitly in headless runs.

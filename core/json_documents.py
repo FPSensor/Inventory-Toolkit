@@ -16,17 +16,24 @@ def _unique_object(pairs):
     return result
 
 
+def decode_document(payload, path):
+    """Parse UTF-8 bytes consistently, including Windows UTF-8 BOM documents."""
+    try:
+        return json.loads(payload.decode('utf-8-sig'), object_pairs_hook=_unique_object,
+            parse_constant=lambda value: (_ for _ in ()).throw(ValueError(f"non-finite JSON value {value}")))
+    except (ValueError, UnicodeError) as exc:
+        raise ConfigurationFileError(path, f"invalid JSON: {exc}") from exc
+
+
 def read_document(path):
     path = Path(path)
     try:
-        return json.loads(path.read_text(encoding="utf-8"), object_pairs_hook=_unique_object,
-            parse_constant=lambda value: (_ for _ in ()).throw(ValueError(f"non-finite JSON value {value}")))
+        payload = path.read_bytes()
     except FileNotFoundError:
         raise
-    except ValueError as exc:
-        raise ConfigurationFileError(path, f"invalid JSON: {exc}") from exc
-    except (OSError, UnicodeError) as exc:
+    except OSError as exc:
         raise ConfigurationFileError(path, f"could not be read: {exc}") from exc
+    return decode_document(payload, path)
 
 
 def write_documents(documents):
@@ -37,6 +44,14 @@ def write_documents(documents):
     """
     encoded = {Path(path): (json.dumps(value, indent=4, ensure_ascii=False, allow_nan=False) + "\n").encode("utf-8")
         for path, value in documents.items()}
+    write_payloads(encoded)
+
+
+def write_payloads(encoded):
+    """Apply already-encoded document bytes with the same rollback contract."""
+    encoded = {Path(path): payload for path, payload in encoded.items()}
+    if any(not isinstance(payload, bytes) for payload in encoded.values()):
+        raise TypeError('Document payloads must be bytes.')
     staged, original, replaced = {}, {}, []
     try:
         for path, payload in encoded.items():

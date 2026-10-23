@@ -33,6 +33,8 @@ def distribution_files(build=BUILD):
                 yield path
     for name in ("examples/demo", "examples/businesses", "profiles/demo"):
         for path in sorted((ROOT / name).rglob("*")):
+            if '.history' in path.relative_to(ROOT).parts:
+                continue
             if path.is_file() and path.suffix in {".json", ".xlsx", ".xls", ".md"}:
                 yield path
 
