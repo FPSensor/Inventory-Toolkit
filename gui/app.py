@@ -28,6 +28,7 @@ except ImportError:
 
 from core.business_schema import ARTICLE_COLUMN, DATABASE_ORIGIN_COLUMN, DEFAULT_FAMILY, FAMILY_COLUMN, PRICE_COLUMN, RAW_DATA_SHEET, VARIANT_COLUMN
 from core.configuration_manager import ConfigurationManager
+from core.workflow_contracts import stock_input, stock_price_columns, cross_article_column
 from core.input_columns import choose_input_columns
 from core.profile_config import DEFAULTS
 from core.logger import log
@@ -472,7 +473,7 @@ class InventoryToolkitGUI(BaseWindow):
                 defaults = DEFAULTS["cross_check/settings"]["price_lists"]
                 overrides = {
                     "system": self._select_columns(self.cc_sys.get(),
-                        { "article": cm.get_catalog_columns()["article"],
+                        { "article": cross_article_column(cm),
                           "quantity": cross_config["input"]["quantity_column"]},
                         {"article": DEFAULTS["general/catalog"]["columns"]["article"],
                          "quantity": DEFAULTS["cross_check/settings"]["input"]["quantity_column"]}),
@@ -554,10 +555,10 @@ class InventoryToolkitGUI(BaseWindow):
             defaults = DEFAULTS["stock_processing/settings"]["pricing"]["columns"]
             overrides = {
                 "stock": self._select_columns(self.sp_raw.get(),
-                    {"article": cm.get_catalog_columns()["article"]},
+                    {"article": stock_input(cm)["article_column"]},
                     {"article": DEFAULTS["general/catalog"]["columns"]["article"]}),
-                "cost": self._select_columns(self.sp_cost.get(), pricing, defaults),
-                "sales": self._select_columns(self.sp_sales.get(), pricing, defaults),
+                "cost": self._select_columns(self.sp_cost.get(), stock_price_columns(cm, "cost"), defaults),
+                "sales": self._select_columns(self.sp_sales.get(), stock_price_columns(cm, "sales"), defaults),
             }
         except Exception as exc:
             self._handle_error(exc)

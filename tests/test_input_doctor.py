@@ -10,8 +10,11 @@ class Config:
         return {'article': 'Item'}
 
     def get_cross_check_config(self):
-        return {'input': {'quantity_column': 'Count'}, 'price_lists': {
+        return {'input': {'article_column': '', 'quantity_column': 'Count'}, 'price_lists': {
             name: {'article_column': 'Item', 'price_column': 'Price'} for name in ('cost', 'sales')}}
+
+    def get_stock_processing_config(self):
+        return {'input': {'article_column': '', 'quantity_columns': {}, 'deposit_columns': None}}
 
     def get_stock_pricing(self):
         return {'columns': {'article': 'Item', 'database': 'Origin', 'price': 'Price'}}

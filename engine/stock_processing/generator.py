@@ -15,6 +15,7 @@ from core.telemetry import execution_timer
 from engine.shared.families import build_family_rules
 from engine.stock_processing.contracts import INTERNAL_ARTICLE_COLUMN, INTERNAL_FAMILY_COLUMN, StockProcessingPlan
 from engine.stock_processing.data_processor import (
+    adapt_stock_headers,
     add_regional_groups,
     classify_stock_families,
     merge_stock_database_columns,
@@ -114,9 +115,8 @@ def run_stock_processing(args):
         log.info("Processing Stock data...")
         raw_frame = pd.read_excel(args.stock_processing_raw)
         input_rows, input_columns = raw_frame.shape
-        source_article = overrides.get("stock", {}).get("article", plan.article_column)
-        if source_article != plan.article_column:
-            raw_frame = raw_frame.rename(columns={source_article: plan.article_column})
+        source_article = overrides.get("stock", {}).get("article", plan.input["article_column"])
+        raw_frame = adapt_stock_headers(raw_frame, plan, source_article)
         raw_frame, missing_article_warning = remove_unidentified_stock(raw_frame, plan)
         excluded_rows = input_rows - len(raw_frame)
         if missing_article_warning:
@@ -164,8 +164,8 @@ def run_stock_processing(args):
 
     with execution_timer("Stock Pricing & Valuation"):
         log.info("Processing pricing files...")
-        cost_frame = process_pricing(args.shared_cost, {**plan.pricing, "columns": overrides.get("cost", plan.pricing["columns"])})
-        sales_frame = process_pricing(args.shared_sales, {**plan.pricing, "columns": overrides.get("sales", plan.pricing["columns"])})
+        cost_frame = process_pricing(args.shared_cost, {**plan.pricing, "columns": overrides.get("cost", plan.pricing.get("cost_columns") or plan.pricing["columns"])})
+        sales_frame = process_pricing(args.shared_sales, {**plan.pricing, "columns": overrides.get("sales", plan.pricing.get("sales_columns") or plan.pricing["columns"])})
         log_debug_event(
             "stock_processing_pricing_ready",
             cost_shape=getattr(cost_frame, "shape", None),

@@ -8,6 +8,8 @@ Development changes after `v1.4.1`. The released application version remains `1.
 
 ### Added
 
+- **core: mappings:** Separate Stock and Cross Check article headers from catalog output labels. Stock owns store-to-quantity/deposit mappings and independent cost/sales price columns; existing profiles inherit their previous mappings until explicitly reviewed. CLI/GUI preflight and input inspection use the same resolved contracts.
+
 - **core: modules:** Add profile-owned workflow selection during CLI/GUI profile creation and in the desktop overview. Disabled workflows retain settings but cannot run or force configuration/validation of their files. Existing profiles continue with all workflows enabled.
 
 - **core: build:** Centralize runtime version, debug/release capabilities and permitted interfaces in `build.prop`. CLI, GUI and new profile metadata now read the same manifest; a lazy application launcher supports CLI-only, GUI-only or both interfaces.

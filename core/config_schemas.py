@@ -87,6 +87,19 @@ class PricingConfig(_StrictConfigModel):
     article_tokenization: Literal["first_token", "whole"] = "first_token"
     columns: PricingColumns = Field(default_factory=PricingColumns)
     aliases: Dict[str, str] = Field(default_factory=dict)
+    cost_columns: PricingColumns | None = None
+    sales_columns: PricingColumns | None = None
+    default_store: str = ""
+
+
+class StockInputConfig(_StrictConfigModel):
+    article_column: str = ""
+    format: Literal["wide", "long"] = "wide"
+    quantity_columns: Dict[str, str] = Field(default_factory=dict)
+    deposit_columns: Dict[str, str] | None = None
+    quantity_column: str = ""
+    branch_column: str = ""
+    default_store: str = ""
 
 
 class StockSummaryConfig(_StrictConfigModel):
@@ -102,6 +115,7 @@ class StockOutputConfig(_StrictConfigModel):
 
 
 class StockProcessingConfig(_Config):
+    input: StockInputConfig = Field(default_factory=StockInputConfig)
     cleaning: CleaningConfig = Field(default_factory=CleaningConfig)
     pricing: PricingConfig = Field(default_factory=PricingConfig)
     output: StockOutputConfig = Field(default_factory=StockOutputConfig)
@@ -123,6 +137,7 @@ class CrossCheckPriceLists(_StrictConfigModel):
 
 
 class CrossCheckInput(_StrictConfigModel):
+    article_column: str = ""
     quantity_column: str = DEFAULTS["cross_check/settings"]["input"]["quantity_column"]
 
     @field_validator("quantity_column")

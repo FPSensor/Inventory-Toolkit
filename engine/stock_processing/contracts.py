@@ -13,6 +13,7 @@ from typing import Any, Mapping
 
 from core.business_schema import ARTICLE_COLUMN, FAMILY_COLUMN, RAW_DATA_SHEET
 from core.configuration_manager import ConfigurationManager
+from core.workflow_contracts import stock_input
 
 INTERNAL_ARTICLE_COLUMN = "__itk_article"
 INTERNAL_FAMILY_COLUMN = "__itk_family"
@@ -36,6 +37,7 @@ class StockProcessingPlan:
     base_columns: tuple[str, ...]
     raw_data_sheet: str
     summaries: tuple[Mapping[str, Any], ...]
+    input: Mapping[str, Any]
 
     @classmethod
     def from_manager(cls, config: ConfigurationManager) -> "StockProcessingPlan":
@@ -46,6 +48,7 @@ class StockProcessingPlan:
         catalog_columns = catalog["columns"]
         cleaning = stock["cleaning"]
         output = stock["output"]
+        source = stock_input(config)
 
         article_column = str(catalog_columns["article"]).strip()
         family_column = str(catalog_columns["family"]).strip()
@@ -63,12 +66,12 @@ class StockProcessingPlan:
             family_column=family_column,
             default_family=catalog["default_family"],
             family_rules=config.get_family_rules(),
-            active_stores=tuple(network["active"]),
+            active_stores=tuple(source["quantity_columns"]) or tuple(network["active"]),
             regional_groups={
                 name: tuple(branches)
                 for name, branches in network["regional_groups"].items()
             },
-            stock_database_columns=dict(network["stock_database_columns"]),
+            stock_database_columns=dict(source["deposit_columns"]),
             text_columns=tuple(cleaning.get("text_columns", [])),
             numeric_columns=tuple(cleaning.get("numeric_columns", [])),
             drop_columns=tuple(cleaning.get("drop_columns", [])),
@@ -78,6 +81,7 @@ class StockProcessingPlan:
             ),
             raw_data_sheet=output.get("raw_data_sheet", RAW_DATA_SHEET),
             summaries=tuple(output.get("summaries", [])),
+            input=source,
         )
 
     @property

@@ -14,6 +14,7 @@ from cli.utils import (
     load_last_paths, save_last_paths,
     confirm_default_column, input_default,
 )
+from core.workflow_contracts import stock_input, stock_price_columns, cross_article_column
 from core.input_columns import choose_input_columns
 from core.configuration_manager import ConfigurationManager
 from core.profile_config import DEFAULTS
@@ -47,7 +48,7 @@ def launch_cross_check(active_profile: str) -> None:
         overrides = {
             "system": choose_input_columns(
                 system_file,
-                {"article": config.get_catalog_columns()["article"],
+                {"article": cross_article_column(config),
                  "quantity": cross_config["input"]["quantity_column"]},
                 {"article": DEFAULTS["general/catalog"]["columns"]["article"],
                  "quantity": DEFAULTS["cross_check/settings"]["input"]["quantity_column"]},

@@ -37,7 +37,7 @@ FAMILIES = SetupStep('families', 'Family rules', 'general/families', (
     field('rules', 'Families and article prefixes', 'Add a family and its prefixes. The longest matching prefix wins; equal prefixes in different families should be reviewed.', 'rules'),
 ), True)
 NETWORK = SetupStep('network', 'Stores and locations', 'general/network', (
-    field('active', 'Active stores', 'One store per line. For Stock, these must match the stock quantity headers.', 'list'),
+    field('active', 'Active stores', 'One store per line. These are display identifiers, not spreadsheet headers. Map stock headers separately.', 'list'),
     field('stock_database_columns', 'Store to deposit columns', 'Map a store to its deposit quantity column. Leave empty if no deposit column is used.', 'mapping'),
     field('regional_groups', 'Regional groups', 'Optional named groups of stores. Separate members with commas.', 'groups'),
 ), True)
@@ -45,6 +45,7 @@ NETWORK = SetupStep('network', 'Stores and locations', 'general/network', (
 STEPS = {
     'cross_check': (CATALOG, FAMILIES,
         SetupStep('cross_input', 'System stock quantities', 'cross_check/settings', (
+            field('input.article_column', 'System article / SKU column', ARTICLE_HELP, hint_key='article_hints'),
             field('input.quantity_column', 'System quantity column', 'Column containing the recorded quantity for each article.', hint_key='qty_hints'),)),
         SetupStep('cross_cost', 'Cost price list', 'cross_check/settings', (
             field('price_lists.cost.article_column', 'Cost-list article column', ARTICLE_HELP, hint_key='article_hints'),
@@ -59,6 +60,10 @@ STEPS = {
             field('filters.ignored_articles', 'Ignored articles', 'One exact article identifier per line; leave empty to keep all articles.', 'list'),
             field('filters.ignored_terms', 'Ignored terms', 'One filtering term per line. Review these terms before excluding articles.', 'list')))),
     'stock_processing': (CATALOG, FAMILIES, NETWORK,
+        SetupStep('stock_input', 'Stock file columns', 'stock_processing/settings', (
+            field('input.article_column', 'Stock article / SKU column', ARTICLE_HELP, hint_key='article_hints'),
+            field('input.quantity_columns', 'Quantity column for each store', 'Store names are stable labels. Map each name to the quantity header in this stock file.', 'mapping'),
+            field('input.deposit_columns', 'Additional deposit quantities', 'Optional map from a store to an additional quantity header that should be added to it.', 'mapping'))),
         SetupStep('stock_cleaning', 'Stock cleaning', 'stock_processing/settings', (
             field('cleaning.text_columns', 'Trim text columns', 'One column name per line.', 'list'),
             field('cleaning.numeric_columns', 'Numeric columns', 'One quantity/value column name per line.', 'list'),

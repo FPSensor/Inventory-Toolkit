@@ -72,7 +72,7 @@ def run_cross_check(args):
     default_family = config.get_default_family()
     cross_check_config = config.get_cross_check_config()
     overrides = getattr(args, "column_overrides", {})
-    input_article_column = overrides.get("system", {}).get("article", article_column)
+    input_article_column = overrides.get("system", {}).get("article", cross_check_config["input"]["article_column"] or article_column)
     input_quantity_column = overrides.get("system", {}).get(
         "quantity", cross_check_config["input"]["quantity_column"]
     )

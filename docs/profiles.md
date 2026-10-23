@@ -229,3 +229,7 @@ YoY `input.variant_column` identifies an optional product dimension, such as fla
 ## Enabled workflows
 
 `profile.json` may contain `enabled_modules`, a nonempty list drawn from `cross_check`, `stock_processing` and `yoy_reports`. Missing selection means all workflows for existing profiles. Disabled workflows retain their configuration and setup progress; they do not need review before another workflow runs. Frontends and direct engine entry points reject disabled workflows. Configuration loading can target one module, so a malformed disabled module file does not block an enabled workflow. Shared catalog/family/network documents still belong to the profile.
+
+## Module-owned input mappings
+
+Catalog column names describe shared output vocabulary. Stock `input.article_column` and Cross Check `input.article_column` select independent input headers. Empty values inherit the earlier catalog mapping until setup is reviewed. Stock `input.quantity_columns` maps stable store identifiers to stock-file headers; `input.deposit_columns` maps optional additional quantities. An absent deposit map inherits the previous network mapping, while an explicit empty object disables deposits. Stock `pricing.cost_columns` and `sales_columns` independently override the earlier shared `columns` contract. Setup displays effective inherited values and saves explicit mappings on review. YoY retains its independent input mapping and report groups.

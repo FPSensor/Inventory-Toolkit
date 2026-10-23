@@ -26,6 +26,22 @@ def _normalize_numeric(series: pd.Series) -> pd.Series:
     return pd.to_numeric(normalized, errors="coerce").fillna(0).astype(int)
 
 
+def adapt_stock_headers(raw_frame, plan, source_article):
+    """Resolve explicit headers once; never silently fall back to an output label."""
+    mappings = [(source_article, plan.article_column), *
+        ((header, store) for store, header in plan.input["quantity_columns"].items())]
+    sources = [source for source, _ in mappings]
+    if len(set(sources)) != len(sources):
+        raise ValueError("Article and store quantities must use distinct input columns.")
+    missing = [source for source in sources if source not in raw_frame.columns]
+    if missing:
+        raise ValueError(f"Stock input is missing configured columns: {missing}")
+    renames = dict(mappings)
+    if any(target in raw_frame.columns and target not in renames for source, target in mappings if source != target):
+        raise ValueError("Stock input mapping collides with another existing column.")
+    return raw_frame.rename(columns=renames)
+
+
 def prepare_stock_frame(raw_frame: pd.DataFrame, plan: StockProcessingPlan) -> pd.DataFrame:
     """Validate/clean raw stock and establish private canonical catalog keys."""
     if plan.article_column not in raw_frame.columns:

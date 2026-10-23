@@ -7,6 +7,7 @@ import pandas as pd
 
 from core.column_assist import ColumnAdvice, advise_columns
 from core.configuration_manager import ConfigurationManager
+from core.workflow_contracts import stock_input, stock_price_columns, cross_article_column
 from core.setup_catalog import MODULE_LABELS, field
 
 
@@ -64,7 +65,7 @@ def _requirements(config, module, *, include_sales, include_variants, grouping, 
     if module == "cross_check":
         settings = config.get_cross_check_config()
         return {
-            "system": ("System stock", (article,
+            "system": ("System stock", (("Article / SKU", cross_article_column(config), "article_hints"),
                 ("System quantity", settings["input"]["quantity_column"], "qty_hints"))),
             "count": ("Physical count (scanner)", None),
             "cost": ("Cost list", (("Cost article", settings["price_lists"]["cost"]["article_column"], "article_hints"),
@@ -74,16 +75,19 @@ def _requirements(config, module, *, include_sales, include_variants, grouping, 
         }
     if module == "stock_processing":
         network = config.get_network_config()
-        pricing = config.get_stock_pricing()["columns"]
-        stock_columns = [article]
-        stock_columns.extend((f"Store {store}", store, None) for store in network["active"])
+        source = stock_input(config)
+        stock_columns = [("Article / SKU", source["article_column"], "article_hints")]
+        stock_columns.extend((f"Store {store}", source["quantity_columns"][store], None) for store in source["quantity_columns"])
         stock_columns.extend((f"Deposit for {store}", deposit, None)
-            for store, deposit in network["stock_database_columns"].items())
-        price_columns = (("Price article", pricing["article"], "article_hints"),
-            ("Price origin", pricing["database"], "db_hints"),
-            ("Price value", pricing["price"], "price_hints"))
-        return {"stock": ("Raw stock", tuple(stock_columns)),
-            "cost": ("Cost list", price_columns), "sales": ("Sales list", price_columns)}
+            for store, deposit in source["deposit_columns"].items())
+        result = {"stock": ("Raw stock", tuple(stock_columns))}
+        for side, label in [("cost", "Cost list"), ("sales", "Sales list")]:
+            pricing = stock_price_columns(config, side)
+            result[side] = (label, tuple((f"Price {role}", name, hint) for role, name, hint in (
+                ("article", pricing["article"], "article_hints"),
+                ("origin", pricing["database"], "db_hints"),
+                ("value", pricing["price"], "price_hints")) if name))
+        return result
     if module == "yoy_reports":
         inputs = config.get_yoy_reports_config()["input"]
         required = [("Date", inputs["date_column"], "date_hints"),

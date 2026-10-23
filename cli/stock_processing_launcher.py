@@ -14,6 +14,7 @@ from cli.utils import (
     confirm_default_column, input_default,
 )
 from cli.progress import show_progress, show_stats
+from core.workflow_contracts import stock_input, stock_price_columns, cross_article_column
 from core.input_columns import choose_input_columns
 from core.configuration_manager import ConfigurationManager
 from core.profile_config import DEFAULTS
@@ -44,12 +45,12 @@ def launch_stock_processing(active_profile: str) -> None:
         default_stock = DEFAULTS["stock_processing/settings"]["pricing"]["columns"]
         overrides = {
             "stock": choose_input_columns(
-                stock_file, {"article": config.get_catalog_columns()["article"]},
+                stock_file, {"article": stock_input(config)["article_column"]},
                 {"article": DEFAULTS["general/catalog"]["columns"]["article"]},
                 confirm_default_column,
             ),
-            "cost": choose_input_columns(cost_file, stock_columns, default_stock, confirm_default_column),
-            "sales": choose_input_columns(sales_file, stock_columns, default_stock, confirm_default_column),
+            "cost": choose_input_columns(cost_file, stock_price_columns(config, "cost"), default_stock, confirm_default_column),
+            "sales": choose_input_columns(sales_file, stock_price_columns(config, "sales"), default_stock, confirm_default_column),
         }
     except Exception as exc:
         print(f"\n  ❌ Input column validation: {exc}")

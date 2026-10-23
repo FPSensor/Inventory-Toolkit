@@ -58,7 +58,18 @@ class SetupSession:
         ensure_profile_config(self.root, logical_names={step.logical for step in self.steps})
 
     def data(self, step):
-        return _CONFIG_MODELS[step.logical].model_validate(_read(self.root / f'{step.logical}.json')).model_dump()
+        data = _CONFIG_MODELS[step.logical].model_validate(_read(self.root / f'{step.logical}.json')).model_dump()
+        if step.logical in {'stock_processing/settings', 'cross_check/settings'}:
+            if not data['input']['article_column']:
+                data['input']['article_column'] = _read(self.root / 'general/catalog.json')['columns']['article']
+        if step.logical == 'stock_processing/settings':
+            network = _read(self.root / 'general/network.json')
+            data['input']['quantity_columns'] = data['input']['quantity_columns'] or {name: name for name in network['active']}
+            if data['input']['deposit_columns'] is None:
+                data['input']['deposit_columns'] = network['stock_database_columns']
+            for side in ('cost', 'sales'):
+                data['pricing'][f'{side}_columns'] = data['pricing'][f'{side}_columns'] or data['pricing']['columns'].copy()
+        return data
 
     def fingerprint(self, step):
         data = self.data(step)
