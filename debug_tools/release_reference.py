@@ -231,6 +231,21 @@ def _semantic_parts(path: Path) -> dict[str, bytes]:
     return parts
 
 
+def _raw_part_hashes(path: Path) -> dict[str, str]:
+    """Fast bounded-memory equality check before normalizing equivalent XML."""
+    result = {}
+    with zipfile.ZipFile(path, "r") as archive:
+        for name in sorted(archive.namelist()):
+            if not _is_semantic_part(name):
+                continue
+            digest = hashlib.sha256()
+            with archive.open(name) as stream:
+                for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+                    digest.update(chunk)
+            result[name] = digest.hexdigest()
+    return result
+
+
 def workbook_semantic_sha256(path: Path) -> str:
     """Hash workbook semantics independently of XLSX ZIP metadata."""
     digest = hashlib.sha256()
@@ -445,6 +460,7 @@ def _diagnose_presentation_differences(
     expected = load_workbook(expected_path, data_only=False, read_only=False)
     actual = load_workbook(actual_path, data_only=False, read_only=False)
     truncated = False
+    expected_styles, actual_styles = {}, {}
     try:
         for sheet_name in (name for name in expected.sheetnames if name in actual.sheetnames):
             expected_sheet = expected[sheet_name]
@@ -470,7 +486,10 @@ def _diagnose_presentation_differences(
                 for column in range(1, max_column + 1):
                     expected_cell = expected_sheet.cell(row=row, column=column)
                     actual_cell = actual_sheet.cell(row=row, column=column)
-                    if _cell_style_signature(expected_cell) != _cell_style_signature(actual_cell):
+                    for cell, cache in ((expected_cell, expected_styles), (actual_cell, actual_styles)):
+                        if cell.style_id not in cache:
+                            cache[cell.style_id] = _cell_style_signature(cell)
+                    if expected_styles[expected_cell.style_id] != actual_styles[actual_cell.style_id]:
                         truncated = _append_difference(
                             differences,
                             f"{sheet_name}!{expected_cell.coordinate}: effective cell style changed",
@@ -492,6 +511,8 @@ def compare_workbooks(
     """Compare workbook semantics; diagnose cells only when a mismatch exists."""
     expected_path = Path(expected_path)
     actual_path = Path(actual_path)
+    if _raw_part_hashes(expected_path) == _raw_part_hashes(actual_path):
+        return WorkbookComparison(True, ())
     expected_parts = _semantic_parts(expected_path)
     actual_parts = _semantic_parts(actual_path)
     if expected_parts == actual_parts:

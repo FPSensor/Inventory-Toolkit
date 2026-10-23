@@ -50,6 +50,8 @@ Development changes after `v1.4.1`. The released application version remains `1.
 
 ### Changed
 
+- **debug: comparison:** Stream hashes of semantic XLSX parts before allocating canonical XML trees. Identical report parts compare with bounded memory; serializer differences still use canonical/model checks. Cache styles in mismatch diagnostics as well.
+
 - **docs: workspace:** Consolidate the current setup, module ownership, variants, build capabilities and developer-package documentation. Mark the desktop as RC preview after Linux real-widget checks, with native Windows/macOS review explicitly pending; keep the published toolkit version at 1.4.1.
 
 - **core: launchers:** Route Linux/macOS and Windows launchers through the build-selected interface and reject disabled direct module entry points. Verify isolated CLI-only, GUI-only and combined release source trees without debug packages.

@@ -158,3 +158,5 @@ The golden comparator first compares canonical workbook XML. When libraries seri
 ## Real desktop widgets
 
 With a desktop display available, run `python -m pytest -q tests/test_gui_desktop.py`. The checks launch each available backend in a separate process, use temporary profiles, resize to 900×680, apply 130% scaling and exercise configuration/setup/profile navigation. Headless runs skip these checks explicitly. Linux virtual-display coverage does not certify native Windows/macOS rendering.
+
+Before XML normalization, the comparator streams hashes of the same semantic XLSX parts. Byte-identical report parts therefore pass without allocating canonical XML trees; ZIP timestamps and non-semantic document properties remain excluded. Serializer differences still follow the stricter canonical/model paths.
