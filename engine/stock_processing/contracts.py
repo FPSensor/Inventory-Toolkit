@@ -38,6 +38,8 @@ class StockProcessingPlan:
     raw_data_sheet: str
     summaries: tuple[Mapping[str, Any], ...]
     input: Mapping[str, Any]
+    quantity_label: str = "units"
+    quantity_format: str = "#,##0"
 
     @classmethod
     def from_manager(cls, config: ConfigurationManager) -> "StockProcessingPlan":
@@ -82,6 +84,8 @@ class StockProcessingPlan:
             raw_data_sheet=output.get("raw_data_sheet", RAW_DATA_SHEET),
             summaries=tuple(output.get("summaries", [])),
             input=source,
+            quantity_label=output["quantity_label"],
+            quantity_format=output["quantity_format"],
         )
 
     @property

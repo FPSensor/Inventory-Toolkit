@@ -18,7 +18,7 @@ def build_yoy_stats(current_frame, previous_frame, start_date, end_date, yoy_con
     previous_months = previous.groupby(previous[date_column].dt.to_period("M"))[metric.column].sum()
 
     def amount(value):
-        return f"{value:,.0f}" if metric.key == "units" else f"{value:,.2f}"
+        return f"{value:,.6f}".rstrip('0').rstrip('.') if metric.key == "units" else f"{value:,.2f}"
 
     def comparison(current_value, previous_value):
         if previous_value == 0:

@@ -233,3 +233,7 @@ YoY `input.variant_column` identifies an optional product dimension, such as fla
 ## Module-owned input mappings
 
 Catalog column names describe shared output vocabulary. Stock `input.article_column` and Cross Check `input.article_column` select independent input headers. Empty values inherit the earlier catalog mapping until setup is reviewed. Stock `input.quantity_columns` maps stable store identifiers to stock-file headers; `input.deposit_columns` maps optional additional quantities. An absent deposit map inherits the previous network mapping, while an explicit empty object disables deposits. Stock `pricing.cost_columns` and `sales_columns` independently override the earlier shared `columns` contract. Setup displays effective inherited values and saves explicit mappings on review. YoY retains its independent input mapping and report groups.
+
+## Fractional quantities
+
+Stock numeric cleaning preserves decimal quantities, including store/deposit columns. For weighted or volume-based goods, set Stock `output.quantity_label` (for example `kg`) and `output.quantity_format` (`#,##0.###`). YoY has the same format option and a report-block `quantity_label` such as `Quantity (kg)`. This is display configuration; quantity arithmetic uses the supplied values and never converts units. Do not combine incompatible units in a single quantity total.

@@ -56,6 +56,8 @@ def render_stock_excel(
     raw_data_sheet,
     family_column=FAMILY_COLUMN,
     interactive=True,
+    quantity_format="#,##0",
+    quantity_columns=(),
 ):
     log.info("Generating dynamic reports and applying formats...")
     log_debug_event(
@@ -106,6 +108,8 @@ def render_stock_excel(
         export_columns = [family_column]
         column_formats = {}
         for entity in valid_entities:
+            if quantity_format != "#,##0":
+                column_formats[len(export_columns) + 1] = quantity_format
             cost_column = f"{entity}.{COST_COLUMN}"
             sales_column = f"{entity}.{SALES_VALUE_LABEL}"
             margin_column = f"{MARGIN_PREFIX}{entity}"
@@ -153,6 +157,7 @@ def render_stock_excel(
         for index, column in enumerate(stock_frame.columns, 1)
         if str(column).endswith((f".{COST_COLUMN}", f".{SALES_VALUE_LABEL}"))
     }
+    raw_formats.update({index: quantity_format for index, column in enumerate(stock_frame.columns, 1) if column in quantity_columns})
     apply_excel_formatting(data_worksheet, is_summary=False, column_formats=raw_formats)
     log_debug_event(
         "stock_raw_sheet_ready",

@@ -38,6 +38,8 @@ Development changes after `v1.4.1`. The released application version remains `1.
 
 ### Changed
 
+- **stock: quantities:** Preserve fractional stock quantities instead of truncating them to integers, including mapped store/deposit columns. Stock and YoY quantity labels and Excel formats are configurable, and final statistics retain fractional values. Existing report formats remain the default.
+
 - **yoy: variants:** Generalize the optional size breakdown into a profile-mapped variant dimension (for example package weight, flavor or size). Reports use the chosen header; products without variants require no variant column. Existing size keys are accepted when reading and saved under variant names when reviewed.
 
 - **core: profiles:** Move validated profile persistence into core and remove GUI imports of CLI helpers and its wizard. GUI-only distributions can now create/edit profiles without shipping the CLI package.

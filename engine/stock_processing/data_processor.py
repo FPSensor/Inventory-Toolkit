@@ -23,7 +23,7 @@ def _normalize_text(series: pd.Series) -> pd.Series:
 
 def _normalize_numeric(series: pd.Series) -> pd.Series:
     normalized = series.astype(str).str.replace(",", ".", regex=False).str.strip()
-    return pd.to_numeric(normalized, errors="coerce").fillna(0).astype(int)
+    return pd.to_numeric(normalized, errors="coerce").fillna(0)
 
 
 def adapt_stock_headers(raw_frame, plan, source_article):
@@ -65,7 +65,7 @@ def prepare_stock_frame(raw_frame: pd.DataFrame, plan: StockProcessingPlan) -> p
         if column in frame.columns:
             frame[column] = _normalize_text(frame[column])
 
-    for column in plan.numeric_columns:
+    for column in dict.fromkeys((*plan.numeric_columns, *plan.active_stores, *plan.stock_database_columns.values())):
         if column in frame.columns:
             frame[column] = _normalize_numeric(frame[column])
 

@@ -78,6 +78,9 @@ STEPS = {
         SetupStep('stock_output', 'Workbook layout', 'stock_processing/settings', (
             field('output.raw_data_sheet', 'Raw-data sheet name', 'Name of the sheet containing processed stock.', 'text'),
             field('output.base_columns', 'Leading output columns', 'One header per line; include the configured article and family headers.', 'list'))),
+        SetupStep('stock_quantities', 'Quantity display', 'stock_processing/settings', (
+            field('output.quantity_label', 'Quantity unit label', 'Label used in statistics, such as units, kg or liters.', 'text'),
+            field('output.quantity_format', 'Excel quantity format', 'Use #,##0 for whole units or #,##0.### to show fractions.', 'text'))),
         SetupStep('stock_summaries', 'Summary sheets', 'stock_processing/settings', (
             field('output.summaries', 'Summary sheets and stores', 'Each row defines a sheet, its stores and display titles. Leave empty to omit extra summaries.', 'summaries'),))),
     'yoy_reports': (CATALOG, FAMILIES,
@@ -94,6 +97,9 @@ STEPS = {
         SetupStep('yoy_variants', 'Variant breakdown', 'yoy_reports/settings', (
             field('input.variant_column', 'Variant column', 'Optional product dimension: size, package weight, flavor or another attribute. Choose its actual spreadsheet header. This is separate from the numeric quantity sold.', hint_key='variant_hints', sample_required=False),
             field('output.include_variants', 'Default variant breakdown', 'Enable only when the sales file contains variant values; leave disabled for products without variants.', 'bool'))),
+        SetupStep('yoy_quantities', 'Quantity display', 'yoy_reports/settings', (
+            field('output.quantity_label', 'Quantity metric label', 'Label used in report blocks, such as Quantity (kg) or Units Sold.', 'text'),
+            field('output.quantity_format', 'Excel quantity format', 'Use #,##0 for whole units or #,##0.### to show fractions.', 'text'))),
         SetupStep('yoy_output', 'Report preferences', 'yoy_reports/settings', (
             field('output.default_path', 'Default report filename', 'A filename ending in .xlsx, or a filename without an extension.', 'text'),
             field('output.annual_comparison', 'Prior-year comparisons for monthly reports', 'Interactive full reports have a separate per-run comparison option.', 'bool'),

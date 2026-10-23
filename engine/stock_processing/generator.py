@@ -77,8 +77,8 @@ def _stock_stats(result_frame, stock_frame, plan, input_rows, input_columns, exc
         total_units += units
         total_cost += cost
         total_sales += sales
-        lines.append(f"  {store}: {units:,.0f} units | cost {cost:,.2f} | sale {sales:,.2f}")
-    lines.append(f"Total active stores: {total_units:,.0f} units | cost {total_cost:,.2f} | sale {total_sales:,.2f}")
+        lines.append(f"  {store}: {units:,.6f}".rstrip('0').rstrip('.') + f" {plan.quantity_label} | cost {cost:,.2f} | sale {sales:,.2f}")
+    lines.append(f"Total active stores: {total_units:,.6f}".rstrip('0').rstrip('.') + f" {plan.quantity_label} | cost {total_cost:,.2f} | sale {total_sales:,.2f}")
     return lines
 
 
@@ -209,6 +209,8 @@ def run_stock_processing(args):
             result_frame.columns,
             plan.raw_data_sheet,
             family_column=plan.family_column,
+            quantity_format=plan.quantity_format,
+            quantity_columns=plan.entities_to_value,
             interactive=interactive,
         )
 

@@ -109,6 +109,8 @@ class StockSummaryConfig(_StrictConfigModel):
 
 
 class StockOutputConfig(_StrictConfigModel):
+    quantity_label: str = "units"
+    quantity_format: str = "#,##0"
     raw_data_sheet: str = RAW_DATA_SHEET
     base_columns: List[str] = Field(default_factory=lambda: [ARTICLE_COLUMN, FAMILY_COLUMN])
     summaries: List[StockSummaryConfig] = Field(default_factory=list)
@@ -178,6 +180,8 @@ class YoYInputConfig(_StrictConfigModel):
 
 
 class YoYOutputConfig(_StrictConfigModel):
+    quantity_label: str = "Units Sold"
+    quantity_format: str = "#,##0"
     default_path: str = "analysis_report.xlsx"
 
     @field_validator("default_path")
