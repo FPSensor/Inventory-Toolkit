@@ -308,6 +308,10 @@ See [docs/core.md](docs/core.md).
 
 ---
 
+# Profile checks and recovery
+
+Use `python -m inventory_toolkit doctor --profile demo` to explain configuration contradictions without editing files. Setup keeps the last ten local configuration checkpoints; list them with `python -m inventory_toolkit history list --profile demo`. See [diagnostics](docs/diagnostics.md) and [configuration recovery](docs/profile_history.md).
+
 # Project Structure
 
 ```text

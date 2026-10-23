@@ -19,7 +19,10 @@ _DOCUMENTS = ('profile.json', *(f'configs/{logical}.json' for logical in _CONFIG
 
 
 def _history(profile):
-    return profile_directory(profile) / '.history'
+    root = profile_directory(profile)
+    if not root.is_dir():
+        raise ValueError('The profile does not exist.')
+    return root / '.history'
 
 
 def list_checkpoints(profile):

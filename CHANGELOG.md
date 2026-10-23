@@ -8,6 +8,8 @@ Development changes after `v1.4.1`. The released application version remains `1.
 
 ### Added
 
+- **core: maintenance:** Expose headless `doctor` and configuration-history commands through the application launcher in every build. Support machine-readable diagnostics, meaningful exit statuses and explicit confirmation for non-interactive restores without loading CLI or GUI packages.
+
 - **setup: recovery:** Create a local configuration checkpoint before saving a changed setup page or workflow selection. Identical saves avoid redundant writes/checkpoints, and new-profile initialization does not create a misleading pre-creation restore point.
 
 - **core: history:** Add bounded local configuration checkpoints with checksums, exact-byte restoration and a pre-restore safety copy. Validate enabled settings before restoring, preserve disabled settings verbatim, recover missing live documents and exclude history from Git/source distributions. UTF-8 BOM JSON is accepted consistently.

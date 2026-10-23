@@ -9,3 +9,13 @@ A restore first saves the current state, then replaces the saved documents using
 Checkpoints are local convenience recovery, not an off-machine backup. Copy the profile folder to another location for a separate backup. Concurrent writers to the same profile remain unsupported; close the other application instance before editing or restoring.
 
 Setup automatically checkpoints the current profile before saving a changed page. Changing enabled workflows also checkpoints an existing profile. Saving identical values and review state does not generate another checkpoint; initial profile creation starts with empty history. A failed checkpoint prevents the corresponding configuration edit from proceeding.
+
+## Headless commands
+
+```bash
+python -m inventory_toolkit history list --profile demo
+python -m inventory_toolkit history create --profile demo --label "Before weekend edits"
+python -m inventory_toolkit history restore --profile demo --checkpoint IDENTIFIER
+```
+
+Copy an identifier from the list. Interactive restore asks for `RESTORE`; automation requires an explicit `--yes`. Close other Inventory Toolkit instances before restoring. Headless maintenance is available even when a build contains only the GUI.
