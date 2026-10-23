@@ -13,15 +13,13 @@ from core.build import BUILD
 
 SOURCE_DIRS = ("inventory_toolkit", "cli", "core", "engine", "gui", "debug_tools", "tools", "tests", "docs")
 ROOT_FILES = (
-    "build.prop", "cli.py", "requirements.txt", "pytest.ini", "README.md", "CHANGELOG.md",
+    "build.prop", "requirements.txt", "pytest.ini", "README.md", "CHANGELOG.md",
     "LICENSE", "Inventory Toolkit.sh", "Inventory Toolkit.bat", "Setup Environment.bat",
 )
 
 
 def distribution_files(build=BUILD):
     for name in ROOT_FILES:
-        if name == "cli.py" and not build.supports("cli"):
-            continue
         path = ROOT / name
         if path.is_file():
             yield path

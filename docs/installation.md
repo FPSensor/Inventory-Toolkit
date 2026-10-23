@@ -59,7 +59,7 @@ Launch with:
 or:
 
 ```bash
-python cli.py
+python -m cli
 ```
 
 Some Linux distributions package Tkinter separately (for example `python3-tk`). Install the platform package if file dialogs or the GUI cannot start.
@@ -88,7 +88,7 @@ For interactive developer tooling, launch the normal CLI, type the hidden comman
 
 The Windows and shell launchers still change to the repository root for convenience, but Inventory Toolkit no longer relies on the process CWD to locate its own resources. Profiles, built-in examples, logs, tools, and release references are anchored to the application root.
 
-User-supplied relative workbook paths keep normal shell semantics and resolve from the directory where the command was invoked. For example, invoking `python C:/path/to/Inventory-Toolkit/cli.py` while standing in `C:/Work/Today` will still interpret `stock.xlsx` as `C:/Work/Today/stock.xlsx`, while the active profile continues to come from `C:/path/to/Inventory-Toolkit/profiles/`.
+User-supplied relative workbook paths keep normal shell semantics and resolve from the directory where the command was invoked. For example, with the application root available on `PYTHONPATH`, invoking `python -m cli` from `C:/Work/Today` interprets `stock.xlsx` as `C:/Work/Today/stock.xlsx`, while the active profile comes from the application-owned `profiles/` directory. Without an installation or `PYTHONPATH`, launch Python modules from the repository root.
 
 The RC preview GUI is still normally launched as a module from the repository root (`python -m inventory_toolkit --interface gui`) because Python module discovery is separate from Inventory Toolkit resource-path resolution.
 

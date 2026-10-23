@@ -21,7 +21,7 @@ The launcher imports only the selected interface. GUI persistence does not impor
 
 ## Layer responsibilities
 
-### Presentation — `cli/`, `cli.py`, `gui/`
+### Presentation — `inventory_toolkit/`, `cli/`, `gui/`
 
 Presentation code may:
 

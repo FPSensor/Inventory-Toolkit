@@ -124,6 +124,10 @@ Development changes after `v1.4.1`. The released application version remains `1.
 - Removed the special family-label shortcut so every article follows profile rules and longest-prefix priority, including articles whose text resembles a review marker.
 - Kept explicit current-schema object/version validation outside removable compatibility code, preserving clear errors and rejected file contents after retirement.
 
+### Removed
+
+- **cli: entrypoint:** Remove the redundant root `cli.py` wrapper. Platform launchers keep using the build-selected `python -m inventory_toolkit`; explicit console startup is `python -m cli`. Update source distributions, documentation and foreign-working-directory coverage.
+
 ### Documentation
 
 - Updated README, module guides, configuration ownership, progress/statistics semantics, profile copying, release certification and retirement documentation to match the cumulative development state.

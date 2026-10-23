@@ -111,7 +111,7 @@ Activate the virtual environment, then:
 ```bash
 python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
-python cli.py
+python -m cli
 ```
 
 Linux/macOS users can also run:
@@ -176,8 +176,8 @@ Available levels:
 The historical startup forms remain available for automation:
 
 ```bash
-python cli.py -debug_level 3
-python cli.py --debug-level 3
+python -m cli -debug_level 3
+python -m cli --debug-level 3
 ```
 
 At level 3, the Developer Console can run pytest, quick verification, demo smoke workflows, full golden-master certification, reference regeneration, session-log inspection.
@@ -312,7 +312,7 @@ See [docs/core.md](docs/core.md).
 
 ```text
 Inventory-Toolkit/
-├── cli.py                         # CLI entry point
+├── inventory_toolkit/             # build-selected application launcher
 ├── cli/                           # interactive presentation layer
 │   ├── menu.py
 │   ├── debug_menu.py

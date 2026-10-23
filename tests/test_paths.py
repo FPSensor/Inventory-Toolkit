@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 import subprocess
+import os
 import sys
 
 from cli import profiles as cli_profiles
@@ -181,9 +182,12 @@ def test_cli_profile_discovery_is_application_owned(tmp_path, monkeypatch):
 
 
 def test_cli_entrypoint_imports_cleanly_from_foreign_cwd(tmp_path):
+    environment = os.environ.copy()
+    environment["PYTHONPATH"] = str(app_paths.APPLICATION_ROOT) + os.pathsep + environment.get("PYTHONPATH", "")
     result = subprocess.run(
-        [sys.executable, str(app_paths.APPLICATION_ROOT / "cli.py"), "--help"],
+        [sys.executable, "-m", "cli", "--help"],
         cwd=tmp_path,
+        env=environment,
         capture_output=True,
         text=True,
         check=False,

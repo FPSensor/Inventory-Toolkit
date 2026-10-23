@@ -30,7 +30,7 @@ When `build.prop` selects a debug build and `debug_tools` is present, level 3 ex
 Startup flags remain supported for automation:
 
 ```bash
-python cli.py --debug-level 3
+python -m cli --debug-level 3
 ```
 
 See [`../docs/cli.md`](../docs/cli.md) for the full reference.

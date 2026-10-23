@@ -5,10 +5,10 @@ The CLI is Inventory Toolkit's primary interface and the most complete surface f
 Entry point:
 
 ```bash
-python cli.py
+python -m cli
 ```
 
-Windows and Linux/macOS launchers ultimately call the same entry point.
+Windows and Linux/macOS launchers call `python -m inventory_toolkit`, which selects the default interface from `build.prop`. Use `python -m cli` or `python -m inventory_toolkit --interface cli` to request the console explicitly.
 
 ## Startup
 
@@ -110,7 +110,7 @@ The level can be changed while Inventory Toolkit is running. Existing log handle
 Automation can still start directly in a specific level:
 
 ```bash
-python cli.py --debug-level 3
+python -m cli --debug-level 3
 ```
 
 The historical `-debug_level 3` spelling remains supported.
@@ -147,7 +147,8 @@ CLI file selection may use Tkinter's native file dialog. Tkinter availability th
 
 | File | Responsibility |
 | --- | --- |
-| `cli.py` | top-level entry point |
+| `inventory_toolkit/__main__.py` | build-selected application entry point |
+| `cli/__main__.py` | explicit CLI entry point |
 | `cli/menu.py` | main menu, profile routing, runtime debug selector, easter egg |
 | `cli/profiles.py` | profile discovery/selection |
 | `cli/config_menu.py` | domain-oriented Configuration Hub |
