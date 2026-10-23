@@ -7,9 +7,9 @@ import argparse
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SOURCE_DIRS = ("cli", "core", "engine", "gui", "tools", "tests", "docs")
+SOURCE_DIRS = ("inventory_toolkit", "cli", "core", "engine", "gui", "tools", "tests", "docs")
 ROOT_FILES = (
-    "cli.py", "requirements.txt", "pytest.ini", "README.md", "CHANGELOG.md",
+    "build.prop", "cli.py", "requirements.txt", "pytest.ini", "README.md", "CHANGELOG.md",
     "LICENSE", "Inventory Toolkit.sh", "Inventory Toolkit.bat", "Setup Environment.bat",
 )
 

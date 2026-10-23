@@ -140,3 +140,9 @@ Before introducing a new abstraction, ask whether it creates a real boundary. Cr
 ### Setup ownership
 
 `core/setup_catalog.py` describes labeled configuration steps. `core/setup_service.py` persists reviewed values and derives per-module readiness; `core/workflow_errors.py` exposes stable recovery targets. CLI and GUI own continuation prompts and assistant navigation. Engines own calculations, file validation and export; they do not import frontend components or open setup screens. GUI code is split into shell, advanced configuration, profile creation, shared widgets and the embedded setup wizard.
+
+## Build capabilities
+
+`build.prop` is the runtime source of version and distribution capabilities. `ver` controls runtime branding and new profile metadata; the README badge continues to identify the published release. `type` is `debug` or `release`. `control-type` is `cli`, `gui` or `both`; `default-control` must select an included interface. `gui-stage` describes the desktop maturity. Invalid or duplicate properties fail explicitly.
+
+Run `python -m inventory_toolkit --interface gui` (or `cli`). The selected interface loads lazily; core and engines never import a frontend. Direct `python -m cli` and `python -m gui` entry points also respect build capabilities. Changing the manifest does not change an existing profile or report.

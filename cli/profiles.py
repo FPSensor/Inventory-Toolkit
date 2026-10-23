@@ -9,6 +9,7 @@ Linear new-profile flow:
 """
 
 import os
+from core.build import BUILD
 import sys
 from cli.utils import clear_screen, load_json, save_json, ask_yes_no
 from cli.wizard import initialize_profile_files, run_setup_wizard
@@ -75,7 +76,7 @@ def _create_new_profile() -> str | None:
     save_json(str(profile_path / "profile.json"), {
         "name":        display_name,
         "description": description,
-        "version":     "1.4.1"
+        "version":     BUILD.version
     })
 
     print(f"\n  ✅ Profile '{display_name}' created at: {profile_path}\n")

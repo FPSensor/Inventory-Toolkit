@@ -1,4 +1,5 @@
 import sys
+from core.build import BUILD
 import argparse
 from cli.utils import clear_screen
 from cli.profiles import select_profile
@@ -20,7 +21,7 @@ except ImportError as e:
     MODULES_LOADED = False
     _import_error = e
 
-_VERSION = "1.4.1"
+_VERSION = BUILD.version
 
 _LOGO = r"""
   ██╗███╗   ██╗██╗   ██╗███████╗███╗   ██╗████████╗ ██████╗ ██████╗ ██╗   ██╗
@@ -118,6 +119,7 @@ def _show_easter_egg() -> None:
     input("  Press Enter to return...")
 
 def main():
+    BUILD.require("cli")
     parser = argparse.ArgumentParser(description="Inventory Toolkit CLI")
     parser.add_argument('-debug_level', '--debug-level', dest='debug_level', type=int, choices=[1, 2, 3], default=1,
                         help=argparse.SUPPRESS)

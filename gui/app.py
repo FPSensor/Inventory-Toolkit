@@ -1,6 +1,7 @@
 """Dark Alpha Pre-Beta desktop shell with shared engines and guided setup."""
 
 import os
+from core.build import BUILD
 import sys
 import json
 import queue
@@ -52,7 +53,7 @@ class InventoryToolkitGUI(BaseWindow):
 
     def __init__(self):
         super().__init__()
-        self.title("Inventory Toolkit v1.4.1 | GUI Alpha Pre-Beta")
+        self.title(f"Inventory Toolkit v{BUILD.version} | GUI {BUILD.gui_stage}")
         apply_dark_theme(self)
         self.geometry("1160x860")
         self.minsize(900, 680)
@@ -108,7 +109,7 @@ class InventoryToolkitGUI(BaseWindow):
         bar.pack(side="left", fill="y", padx=(0, 12))
         bar.pack_propagate(False)
         _lbl(bar, text="INVENTORY\nTOOLKIT", font=("Arial", 20, "bold")).pack(anchor="w", padx=16, pady=(20, 4))
-        _lbl(bar, text="Alpha Pre-Beta | v1.4.1").pack(anchor="w", padx=16, pady=(0, 20))
+        _lbl(bar, text=f"{BUILD.gui_stage} | v{BUILD.version}").pack(anchor="w", padx=16, pady=(0, 20))
         _lbl(bar, text="Active profile").pack(anchor="w", padx=16)
         if USE_CTK:
             self._profile_menu = ctk.CTkOptionMenu(bar, values=self._profiles or [""], variable=self.active_profile, width=175)
@@ -1035,6 +1036,7 @@ class InventoryToolkitGUI(BaseWindow):
 # ── Entry point ───────────────────────────────────────────────────────────────
 
 def launch_gui():
+    BUILD.require("gui")
     app = InventoryToolkitGUI()
     app.mainloop()
 

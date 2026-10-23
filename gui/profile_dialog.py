@@ -21,6 +21,7 @@ Config Hub window:
 """
 
 import os
+from core.build import BUILD
 import sys
 import json
 import queue
@@ -101,7 +102,7 @@ class NewProfileModal(BaseToplevel):
         save_json(str(target_dir / "profile.json"), {
             "name":        self.prof_name.get().strip() or raw_id,
             "description": self.prof_desc.get().strip(),
-            "version":     "1.4.1",
+            "version":     BUILD.version,
         })
         initialize_profile_files(str(configs_path))
         initialize_setup(raw_id)

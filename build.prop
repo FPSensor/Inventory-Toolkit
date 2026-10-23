@@ -1,0 +1,6 @@
+# Runtime/distribution capabilities. This is data, never executable code.
+ver = 1.4.1
+type = debug
+control-type = both
+default-control = cli
+gui-stage = Alpha Pre-Beta
