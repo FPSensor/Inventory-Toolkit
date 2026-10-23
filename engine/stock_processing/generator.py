@@ -113,9 +113,9 @@ def run_stock_processing(args):
 
     with execution_timer("Stock Input & Cleaning"):
         log.info("Processing Stock data...")
-        raw_frame = pd.read_excel(args.stock_processing_raw)
-        input_rows, input_columns = raw_frame.shape
         source_article = overrides.get("stock", {}).get("article", plan.input["article_column"])
+        raw_frame = pd.read_excel(args.stock_processing_raw, dtype={source_article: str})
+        input_rows, input_columns = raw_frame.shape
         raw_frame = adapt_stock_headers(raw_frame, plan, source_article)
         raw_frame, missing_article_warning = remove_unidentified_stock(raw_frame, plan)
         excluded_rows = input_rows - len(raw_frame)

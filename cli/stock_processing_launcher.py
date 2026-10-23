@@ -49,8 +49,8 @@ def launch_stock_processing(active_profile: str) -> None:
                 {"article": DEFAULTS["general/catalog"]["columns"]["article"]},
                 confirm_default_column,
             ),
-            "cost": choose_input_columns(cost_file, stock_price_columns(config, "cost"), default_stock, confirm_default_column),
-            "sales": choose_input_columns(sales_file, stock_price_columns(config, "sales"), default_stock, confirm_default_column),
+            "cost": choose_input_columns(cost_file, stock_price_columns(config, "cost", required_only=True), default_stock, confirm_default_column),
+            "sales": choose_input_columns(sales_file, stock_price_columns(config, "sales", required_only=True), default_stock, confirm_default_column),
         }
     except Exception as exc:
         print(f"\n  ❌ Input column validation: {exc}")

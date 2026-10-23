@@ -561,8 +561,8 @@ class InventoryToolkitGUI(BaseWindow):
                 "stock": self._select_columns(self.sp_raw.get(),
                     {"article": stock_input(cm)["article_column"]},
                     {"article": DEFAULTS["general/catalog"]["columns"]["article"]}),
-                "cost": self._select_columns(self.sp_cost.get(), stock_price_columns(cm, "cost"), defaults),
-                "sales": self._select_columns(self.sp_sales.get(), stock_price_columns(cm, "sales"), defaults),
+                "cost": self._select_columns(self.sp_cost.get(), stock_price_columns(cm, "cost", required_only=True), defaults),
+                "sales": self._select_columns(self.sp_sales.get(), stock_price_columns(cm, "sales", required_only=True), defaults),
             }
         except Exception as exc:
             self._handle_error(exc)

@@ -12,9 +12,10 @@ def stock_input(config):
     return source
 
 
-def stock_price_columns(config, side):
+def stock_price_columns(config, side, *, required_only=False):
     pricing = config.get_stock_pricing()
-    return pricing.get(f"{side}_columns") or pricing["columns"]
+    columns = pricing.get(f"{side}_columns") or pricing["columns"]
+    return {key: value for key, value in columns.items() if value} if required_only else columns
 
 
 def cross_article_column(config):

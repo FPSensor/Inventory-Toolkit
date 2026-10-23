@@ -28,6 +28,29 @@ def _normalize_numeric(series: pd.Series) -> pd.Series:
 
 def adapt_stock_headers(raw_frame, plan, source_article):
     """Resolve explicit headers once; never silently fall back to an output label."""
+    if plan.input.get("format") == "long":
+        quantity = plan.input["quantity_column"]
+        branch = plan.input["branch_column"]
+        needed = [source_article, quantity] + ([branch] if branch else [])
+        if not quantity or len(set(needed)) != len(needed) or any(column not in raw_frame.columns for column in needed):
+            raise ValueError("Long stock requires distinct configured product, quantity and optional location columns.")
+        frame = raw_frame.copy()
+        locations = frame[branch].fillna("").astype(str).str.strip() if branch else pd.Series(plan.input["default_store"], index=frame.index)
+        unknown = ~locations.isin(plan.active_stores)
+        if unknown.any():
+            rows = [int(position) + 2 for position in np.flatnonzero(unknown.to_numpy())[:20]]
+            raise ValueError(f"Stock has unknown or missing locations at Excel rows {rows}.")
+        amounts = pd.to_numeric(frame[quantity].astype(str).str.replace(",", ".", regex=False), errors="coerce")
+        if not np.isfinite(amounts).all():
+            raise ValueError("Long stock contains missing or invalid numeric quantities.")
+        if source_article != plan.article_column and plan.article_column in frame.columns:
+            raise ValueError("Stock product mapping collides with an existing output column.")
+        frame = frame.rename(columns={source_article: plan.article_column})
+        for store in plan.active_stores:
+            if store in frame.columns:
+                raise ValueError(f"Stock location label {store!r} collides with an input column.")
+            frame[store] = amounts.where(locations.eq(store), 0)
+        return frame
     mappings = [(source_article, plan.article_column), *
         ((header, store) for store, header in plan.input["quantity_columns"].items())]
     sources = [source for source, _ in mappings]

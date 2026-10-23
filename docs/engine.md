@@ -176,3 +176,9 @@ Each branch/category comparison uses `(current_amount - previous_amount) / previ
 ## Physical count formats
 
 Cross Check `input.count_mode` defaults to `scans`: one headerless row means one physical unit. `quantities` reads a headered table using `count_article_column` and `count_quantity_column`; each row contributes its actual nonnegative, finite quantity. Invalid or unidentified nonzero counts stop with source Excel rows. `input.matching` can be `longest_prefix` (existing scanner behavior) or `exact` (no suffix inference). `reconciliation.quantity_tolerance` defaults to zero and may be increased deliberately for fractional measurement noise. Cost and sale valuations use the resulting quantity difference without integer truncation.
+
+## Stock layouts and simple price lists
+
+Stock `input.format` is `wide` (one quantity column per location) or `long` (each source row has `quantity_column` and optionally `branch_column`). With no branch column, `input.default_store` selects a configured location. Long-form processing preserves each source row instead of inventing SKU/variant aggregation rules. Unknown locations and invalid numeric quantities fail explicitly. The active location list is still shared; stock-file headers are module-owned.
+
+For a price list applying to one location, leave its `database` mapping empty and set `pricing.default_store`. Otherwise map the actual origin column. `pricing.aliases` maps origin values to stable location names. Cost and sales mappings may differ. Product identifiers are read as text so textual codes such as `001` are preserved.

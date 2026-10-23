@@ -12,10 +12,10 @@ from engine.stock_processing.contracts import INTERNAL_ARTICLE_COLUMN
 def _resolve_pricing_columns(dataframe: pd.DataFrame, pricing_config: dict) -> tuple[str, str, str]:
     """Require the selected profile columns, including explicit per-run overrides."""
     configured = pricing_config.get("columns", {})
-    missing = {field: name for field, name in configured.items() if name not in dataframe.columns}
+    missing = {field: name for field, name in configured.items() if name and name not in dataframe.columns}
     if missing:
         raise ValueError(f"Configured price-list columns are absent: {missing}.")
-    return configured["article"], configured["database"], configured["price"]
+    return configured["article"], configured.get("database", ""), configured["price"]
 
 
 def process_pricing(file_path, pricing_config=None):
@@ -24,18 +24,25 @@ def process_pricing(file_path, pricing_config=None):
         raise FileNotFoundError(f"Required price list is missing: {file_path}")
 
     try:
-        dataframe = pd.read_excel(file_path)
+        pricing_config = pricing_config or {}
+        dataframe = pd.read_excel(file_path, dtype={pricing_config.get("columns", {}).get("article", ""): str})
         log_debug_event(
             "pricing_loaded",
             file_path=file_path,
             shape=dataframe.shape,
             columns=list(dataframe.columns),
         )
-        pricing_config = pricing_config or {}
         article_column, database_column, value_column = _resolve_pricing_columns(
             dataframe,
             pricing_config,
         )
+        if not database_column:
+            default_store = pricing_config.get("default_store", "")
+            if not default_store:
+                raise ValueError("A price list without an origin column needs a configured default store.")
+            database_column = "__itk_price_origin"
+            dataframe[database_column] = default_store
+        dataframe[database_column] = dataframe[database_column].astype(str).str.strip().replace(pricing_config.get("aliases", {}))
 
         article_values = dataframe[article_column].astype(str)
         if pricing_config.get("article_tokenization", "first_token") == "first_token":

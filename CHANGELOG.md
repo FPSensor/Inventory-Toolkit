@@ -8,6 +8,8 @@ Development changes after `v1.4.1`. The released application version remains `1.
 
 ### Added
 
+- **stock: inputs:** Accept row-based stock with an explicit location column or one configured location, preserving source rows and fractional values. Single-location price lists no longer need an invented origin column; price-origin aliases now resolve configured location names. Product identifiers are read as text to preserve leading zeroes.
+
 - **cross: counts:** Support headered physical-count tables with configured product/quantity columns, including fractional counts, alongside the existing headerless scanner mode. Add explicit exact/prefix matching and a configurable quantity tolerance; reject missing products and invalid physical quantities with original Excel row numbers.
 
 - **core: mappings:** Separate Stock and Cross Check article headers from catalog output labels. Stock owns store-to-quantity/deposit mappings and independent cost/sales price columns; existing profiles inherit their previous mappings until explicitly reviewed. CLI/GUI preflight and input inspection use the same resolved contracts.

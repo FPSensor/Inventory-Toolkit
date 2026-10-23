@@ -77,9 +77,14 @@ def _requirements(config, module, *, include_sales, include_variants, grouping, 
         network = config.get_network_config()
         source = stock_input(config)
         stock_columns = [("Article / SKU", source["article_column"], "article_hints")]
-        stock_columns.extend((f"Store {store}", source["quantity_columns"][store], None) for store in source["quantity_columns"])
-        stock_columns.extend((f"Deposit for {store}", deposit, None)
-            for store, deposit in source["deposit_columns"].items())
+        if source.get("format") == "long":
+            stock_columns.append(("Quantity", source["quantity_column"], "qty_hints"))
+            if source["branch_column"]:
+                stock_columns.append(("Location", source["branch_column"], "branch_hints"))
+        else:
+            stock_columns.extend((f"Store {store}", header, None) for store, header in source["quantity_columns"].items())
+            stock_columns.extend((f"Deposit for {store}", deposit, None)
+                for store, deposit in source["deposit_columns"].items())
         result = {"stock": ("Raw stock", tuple(stock_columns))}
         for side, label in [("cost", "Cost list"), ("sales", "Sales list")]:
             pricing = stock_price_columns(config, side)
