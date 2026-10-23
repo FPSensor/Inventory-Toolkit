@@ -44,6 +44,8 @@ Development changes after `v1.4.1`. The released application version remains `1.
 
 ### Changed
 
+- **gui: appearance:** Introduce a consistent dark navy palette, clearer typography and controls, selected/disabled navigation states, keyboard shortcuts and native mouse-wheel scrolling. Keep final statistics in a dedicated results tab instead of mixing them with stage events, and preserve the native ttk fallback.
+
 - **gui: configuration:** Replace the separate configuration window and duplicated editors with an embedded, searchable settings workspace. Search friendly field names, filter by workflow, edit one section through the same assistant, and return to the settings workspace without losing run inputs.
 
 - **cli: configuration:** Replace duplicate JSON-oriented editors with searchable module settings backed by the same typed assistant. Add single-section editing, back/pause navigation, reusable input samples, and workflow activation without configuring unused modules.

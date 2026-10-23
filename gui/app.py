@@ -18,7 +18,7 @@ from tkinter import filedialog, messagebox, simpledialog
 
 from gui.widgets import (ctk, ttk, USE_CTK, BaseWindow, BaseToplevel, BaseFrame,
     BaseButton, BaseLabel, BaseEntry, BaseTextbox, BaseScrollable,
-    _btn, _lbl, _entry, _pack_btn, apply_dark_theme)
+    _btn, _lbl, _entry, _pack_btn, apply_dark_theme, COLORS)
 
 try:
     import pandas as pd
@@ -57,7 +57,7 @@ class InventoryToolkitGUI(BaseWindow):
         super().__init__()
         self.title(f"Inventory Toolkit v{BUILD.version} | GUI {BUILD.gui_stage}")
         apply_dark_theme(self)
-        self.geometry("1160x860")
+        self.geometry("1240x900")
         self.minsize(900, 680)
 
         self._setup_panel = None
@@ -76,6 +76,9 @@ class InventoryToolkitGUI(BaseWindow):
         self._build_status_bar()
         self._show_module("overview")
         self.bind("<Control-Shift-I>", self._show_easter_egg)
+        self.bind('<Control-comma>', lambda _event: self._open_config_hub())
+        self.bind('<Control-n>', lambda _event: self._open_new_profile())
+        self.bind('<Escape>', lambda _event: self._setup_panel._leave() if self._setup_panel is not None else None)
         self.protocol("WM_DELETE_WINDOW", self._request_close)
 
     def _show_easter_egg(self, _event=None):
@@ -106,23 +109,25 @@ class InventoryToolkitGUI(BaseWindow):
         self._split.pack(fill="both", expand=True, padx=12, pady=12)
         self._body = BaseFrame(self._split)
         self._split.add(self._body, weight=3)
-        bar = BaseFrame(self._body, width=210)
+        bar = BaseFrame(self._body, width=228)
         self._top_bar = bar
         bar.pack(side="left", fill="y", padx=(0, 12))
         bar.pack_propagate(False)
         _lbl(bar, text="INVENTORY\nTOOLKIT", font=("Arial", 20, "bold")).pack(anchor="w", padx=16, pady=(20, 4))
-        _lbl(bar, text=f"{BUILD.gui_stage} | v{BUILD.version}").pack(anchor="w", padx=16, pady=(0, 20))
+        _lbl(bar, text=f"v{BUILD.version} · {BUILD.gui_stage}", style="Muted.TLabel").pack(anchor="w", padx=16, pady=(0, 20))
         _lbl(bar, text="Active profile").pack(anchor="w", padx=16)
         if USE_CTK:
             self._profile_menu = ctk.CTkOptionMenu(bar, values=self._profiles or [""], variable=self.active_profile, width=175)
         else:
             self._profile_menu = ttk.Combobox(bar, values=self._profiles, textvariable=self.active_profile, state="readonly", width=17)
         self._profile_menu.pack(fill="x", padx=12, pady=8)
-        _btn(bar, "Profile overview", lambda: self._show_module("overview")).pack(fill="x", padx=12, pady=(16, 8))
-        for module, label in MODULE_LABELS.items():
-            _btn(bar, label, lambda name=module: self._show_module(name)).pack(fill="x", padx=12, pady=5)
+        self._nav_buttons = {}
+        for module, label in [('overview', 'Overview'), ('cross_check', 'Cross Check'), ('stock_processing', 'Stock'), ('yoy_reports', 'YoY Reports')]:
+            button = _btn(bar, label, lambda name=module: self._show_module(name), variant='ghost', anchor='w')
+            button.pack(fill='x', padx=12, pady=4)
+            self._nav_buttons[module] = button
         _btn(bar, "Set up this module", self._open_wizard).pack(fill="x", padx=12, pady=(24, 5))
-        _btn(bar, "New profile", self._open_new_profile).pack(fill="x", padx=12, pady=5)
+        _btn(bar, "New profile", self._open_new_profile, variant="primary").pack(fill="x", padx=12, pady=5)
         _btn(bar, "Configuration", self._open_config_hub).pack(fill="x", padx=12, pady=5)
         _lbl(bar, text="Text size").pack(anchor="w", padx=16, pady=(20, 2))
         self._scale_choice = tk.StringVar(value="100%")
@@ -132,12 +137,12 @@ class InventoryToolkitGUI(BaseWindow):
             scale = ttk.Combobox(bar, values=["100%", "115%", "130%"], textvariable=self._scale_choice, state="readonly")
             scale.bind("<<ComboboxSelected>>", lambda _event: self._change_scale(self._scale_choice.get()))
         scale.pack(fill="x", padx=12, pady=6)
-        _btn(bar, "Exit", self._request_close).pack(side="bottom", fill="x", padx=12, pady=12)
+        _btn(bar, "Exit", self._request_close, variant="ghost").pack(side="bottom", fill="x", padx=12, pady=12)
         self._workspace_root = BaseFrame(self._body)
         self._workspace_root.pack(side="left", fill="both", expand=True)
         self._workspace_root.grid_columnconfigure(0, weight=1)
         self._workspace_root.grid_rowconfigure(2, weight=1)
-        self._page_title = _lbl(self._workspace_root, text="Cross Check", font=("Arial", 22, "bold"))
+        self._page_title = _lbl(self._workspace_root, text="Cross Check", font=("Arial", 26, "bold"))
         self._page_title.grid(row=0, column=0, sticky="w", padx=16, pady=(14, 6))
         self._feedback = BaseFrame(self._workspace_root)
         self._feedback.grid(row=1, column=0, sticky="ew", padx=12, pady=4)
@@ -162,12 +167,13 @@ class InventoryToolkitGUI(BaseWindow):
             ttk.Style(self).configure(".", font=("Arial", round(12 * fraction)))
 
     def _notify(self, kind, title, message, actions=(), **_kwargs):
-        self._feedback_text.configure(text=f"{title}: {message}")
+        tone = COLORS.get({'error': 'error', 'warning': 'warning', 'success': 'positive'}.get(kind, 'muted'))
+        self._feedback_text.configure(text=f"{title}: {message}", **({'text_color': tone} if USE_CTK else {'foreground': tone}))
         for widget in self._feedback_actions.winfo_children():
             widget.destroy()
         for label, callback in actions:
             _btn(self._feedback_actions, label, callback).pack(side="left", padx=4, pady=4)
-        if hasattr(self, "_activity"):
+        if hasattr(self, "_activity") and kind in {"warning", "error"}:
             self._append_activity(f"{title}: {message}\n")
 
     def _show_module(self, module):
@@ -178,6 +184,13 @@ class InventoryToolkitGUI(BaseWindow):
             self._notify("info", "Workflow disabled", "Enable this workflow in Profile overview before opening it.")
             return
         self._selected_module = module
+        for name, button in getattr(self, '_nav_buttons', {}).items():
+            selected = name == module
+            enabled = name not in MODULE_LABELS or name in enabled_modules(self.active_profile.get())
+            if USE_CTK:
+                button.configure(fg_color=COLORS['border'] if selected else 'transparent', text_color=COLORS['text'] if selected else COLORS['muted'], state='normal' if enabled else 'disabled')
+            else:
+                button.configure(style='NavActive.TButton' if selected else 'Nav.TButton', state='normal' if enabled else 'disabled')
         if hasattr(self, "_pages"):
             if module == "settings":
                 self._render_settings()
@@ -297,7 +310,7 @@ class InventoryToolkitGUI(BaseWindow):
     # ── Tabs ──────────────────────────────────────────────────────────────────
 
     def _build_tabs(self):
-        self._pages = {module: BaseScrollable(self._page_host) for module in ("overview", "settings", *MODULE_LABELS)}
+        self._pages = {module: (BaseFrame(self._page_host) if module == "settings" else BaseScrollable(self._page_host)) for module in ("overview", "settings", *MODULE_LABELS)}
         for page in self._pages.values():
             page.grid(row=0, column=0, sticky="nsew")
         self.tab_overview = self._pages["overview"]
@@ -423,6 +436,7 @@ class InventoryToolkitGUI(BaseWindow):
     # ── Tab 1: Cross Check ────────────────────────────────────────────────────
 
     def _setup_cc_tab(self):
+        _lbl(self.tab_cc, text="Compare recorded stock with your physical count and value the differences.", wraplength=700, justify="left", style="Muted.TLabel").pack(anchor="w", padx=20, pady=(12, 4))
         self.cc_sys    = tk.StringVar()
         self.cc_count  = tk.StringVar()
         self.cc_cost   = tk.StringVar()
@@ -526,6 +540,7 @@ class InventoryToolkitGUI(BaseWindow):
     # ── Tab 2: Stock Processing ───────────────────────────────────────────────
 
     def _setup_stock_tab(self):
+        _lbl(self.tab_stock, text="Prepare quantities, classify products and value inventory by location.", wraplength=700, justify="left", style="Muted.TLabel").pack(anchor="w", padx=20, pady=(12, 4))
         self.sp_raw   = tk.StringVar()
         self.sp_cost  = tk.StringVar()
         self.sp_sales = tk.StringVar()
@@ -843,12 +858,17 @@ class InventoryToolkitGUI(BaseWindow):
         self._open_folder_button.pack(side="left", padx=3)
         self._open_report_button.configure(state="disabled")
         self._open_folder_button.configure(state="disabled")
-        if USE_CTK:
-            self._activity = ctk.CTkTextbox(self._results, height=140, wrap="word")
-        else:
-            self._activity = tk.Text(self._results, height=7, wrap="word")
-        self._activity.pack(side="bottom", fill="both", expand=True, padx=12, pady=(0, 6))
-        self._activity.configure(state="disabled")
+        self._result_tabs = ttk.Notebook(self._results)
+        self._result_tabs.pack(side='bottom', fill='both', expand=True, padx=12, pady=(0, 6))
+        activity_page, stats_page = BaseFrame(self._result_tabs), BaseFrame(self._result_tabs)
+        self._result_tabs.add(activity_page, text='Activity')
+        self._result_tabs.add(stats_page, text='Statistics')
+        self._stats_page = stats_page
+        self._activity = BaseTextbox(activity_page, height=140 if USE_CTK else 7, wrap='word')
+        self._statistics = BaseTextbox(stats_page, height=140 if USE_CTK else 7, wrap='word')
+        for text in (self._activity, self._statistics):
+            text.pack(fill='both', expand=True)
+            text.configure(state='disabled')
         if USE_CTK:
             bar = ctk.CTkFrame(self._results, height=34, corner_radius=0)
             bar.pack(side="bottom", fill="x")
@@ -878,12 +898,17 @@ class InventoryToolkitGUI(BaseWindow):
         self._activity.configure(state="disabled")
 
     def _show_stats(self, event):
-        """Keep final results visible after the task status changes."""
+        """Keep final statistics separate from the stage event history."""
         rendered = event.render()
-        self._activity.configure(state="normal")
-        self._activity.insert("end", f"\n{rendered}\n")
-        self._activity.see("end")
-        self._activity.configure(state="disabled")
+        target = getattr(self, '_statistics', self._activity)
+        target.configure(state='normal')
+        if hasattr(self, '_statistics'):
+            target.delete('1.0', 'end')
+        target.insert('end', f'\n{rendered}\n')
+        target.see('end')
+        target.configure(state='disabled')
+        if hasattr(self, '_result_tabs'):
+            self._result_tabs.select(self._stats_page)
         return rendered
 
     def _set_status(self, text: str):

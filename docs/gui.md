@@ -126,3 +126,7 @@ The design uses labeled settings with nearby explanations and validation at page
 ## Integrated configuration
 
 Configuration is an embedded workspace, not a separate window or JSON-file list. Search human field names/help text and filter by enabled workflow. Shared sections appear once. Edit settings opens the same typed assistant used for setup, saves one section, and returns to the settings workspace. Run inputs remain intact. Workflow activation is managed through Profile overview.
+
+## Desktop appearance and navigation
+
+The desktop remains dark by default on both CustomTkinter and native ttk, with shared color/typography tokens and distinct primary/secondary actions. Navigation indicates the current workflow and disables workflows excluded by the profile. Activity and final statistics have separate result tabs. Use Ctrl+, for configuration, Ctrl+N for a new profile, and Escape to request leaving setup. The native scroll container supports the mouse wheel on Windows/macOS and X11.
