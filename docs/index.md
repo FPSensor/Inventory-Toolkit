@@ -55,3 +55,5 @@ Some directories keep a short local README for context when browsing the reposit
 - [`../tests/release_reference/README.md`](../tests/release_reference/README.md)
 
 Those local files intentionally stay shorter than the documents here.
+
+For normal operation, local recovery and a guided source-reading route, start with [Operating and maintaining Inventory Toolkit independently](maintenance.md). Detailed contracts: [diagnostics](diagnostics.md) and [configuration checkpoints](profile_history.md).

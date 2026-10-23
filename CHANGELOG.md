@@ -150,6 +150,8 @@ Development changes after `v1.4.1`. The released application version remains `1.
 
 ### Documentation
 
+- **docs: maintenance:** Add an offline operation/recovery handbook, diagnostic-code lookup and a practical source-reading route. Link it from the README and documentation index so configuration and development workflows remain usable without an online assistant.
+
 - Updated README, module guides, configuration ownership, progress/statistics semantics, profile copying, release certification and retirement documentation to match the cumulative development state.
 - Required changelog and affected-document updates alongside future behavior changes rather than deferring them until release preparation.
 

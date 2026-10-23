@@ -30,3 +30,5 @@ See [`../docs/core.md`](../docs/core.md) and [`../docs/architecture.md`](../docs
 - `module_preferences.py` owns enabled workflows; `setup_catalog.py` and `setup_service.py` own conditional forms, review state and recovery destinations.
 
 `resources/new_profile_defaults.json` defines neutral defaults for newly created profiles. `profile_defaults.json` retains inherited schema-v3 defaults for existing profiles. Product catalogs, prefixes and location mappings belong to profile/example data, never to these services.
+
+`profile_metadata.py` validates profile selection metadata without initialization. `profile_diagnostics.py` reports cross-setting contradictions without writing defaults. `profile_history.py` manages bounded local restore points; `json_documents.py` provides strict decoding and rollback-safe byte replacement/deletion. These services are shared by console, desktop and headless maintenance commands.
