@@ -296,8 +296,9 @@ def _workbook_model_signature(path: Path) -> tuple[Any, ...]:
     workbook = load_workbook(path, data_only=False, read_only=False)
     try:
         sheets = []
+        style_cache = {}
         for worksheet in workbook.worksheets:
-            cells = []
+            cells = hashlib.sha256()
             for row in worksheet.iter_rows(
                 min_row=1,
                 max_row=worksheet.max_row,
@@ -305,12 +306,19 @@ def _workbook_model_signature(path: Path) -> tuple[Any, ...]:
                 max_col=worksheet.max_column,
             ):
                 for cell in row:
-                    cells.append((
-                        cell.coordinate,
-                        cell.value,
-                        cell.data_type,
-                        _cell_style_signature(cell),
-                    ))
+                    style_key = cell.style_id
+                    if style_key not in style_cache:
+                        style_cache[style_key] = hashlib.sha256(json.dumps(
+                            _cell_style_signature(cell), ensure_ascii=False,
+                            separators=(",", ":")).encode("utf-8")).hexdigest()
+                    value = cell.value
+                    # Python compares whole-valued floats and integers equally.
+                    if isinstance(value, float) and value.is_integer():
+                        value = int(value)
+                    signature = (cell.coordinate, value, cell.data_type, style_cache[style_key])
+                    cells.update(json.dumps(signature, ensure_ascii=False, default=str,
+                        separators=(",", ":")).encode("utf-8"))
+                    cells.update(b"\0")
 
             row_dimensions = tuple(
                 (index, _dimension_signature(dimension))
@@ -331,7 +339,7 @@ def _workbook_model_signature(path: Path) -> tuple[Any, ...]:
                 tuple(sorted(str(item) for item in worksheet.merged_cells.ranges)),
                 row_dimensions,
                 column_dimensions,
-                tuple(cells),
+                cells.hexdigest(),
             ))
         return tuple(sheets)
     finally:

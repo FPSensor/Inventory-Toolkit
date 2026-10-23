@@ -152,3 +152,5 @@ See [`../tests/release_reference/README.md`](../tests/release_reference/README.m
 ## Small-business setup scenarios
 
 See [the synthetic business scenarios](../examples/businesses/README.md) for module-independent mappings, fractional quantities, optional variants and a reproducible setup-service/engine option matrix. Run `python -m pytest -q tests/test_business_scenarios.py`; profiles and workbooks are created only in temporary test directories.
+
+The golden comparator first compares canonical workbook XML. When libraries serialize equivalent styles differently, its object-model fallback hashes cells incrementally and caches effective style signatures. This reduces memory consumption without accepting changed values, formulas or applied styles.

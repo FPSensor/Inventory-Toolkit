@@ -183,3 +183,18 @@ def test_json_fixture_fingerprint_detects_semantic_change(tmp_path):
     second.write_text('{"version": 3, "enabled": false}\n', encoding="utf-8")
 
     assert _fixture_hash(first) != _fixture_hash(second)
+
+
+def test_model_comparison_preserves_numbers_and_applied_styles(tmp_path):
+    from openpyxl import load_workbook
+    from openpyxl.styles import Font
+    from tools.release_reference import _workbook_model_signature
+    first, second = tmp_path / 'first.xlsx', tmp_path / 'second.xlsx'
+    _save_sample(first, 1)
+    _save_sample(second, 1.0)
+    assert _workbook_model_signature(first) == _workbook_model_signature(second)
+    workbook = load_workbook(second)
+    workbook.active['A2'].font = Font(bold=True, color='FF0000')
+    workbook.save(second)
+    workbook.close()
+    assert _workbook_model_signature(first) != _workbook_model_signature(second)

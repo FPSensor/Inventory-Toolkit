@@ -48,6 +48,8 @@ Development changes after `v1.4.1`. The released application version remains `1.
 
 ### Changed
 
+- **debug: certification:** Bound the fallback workbook comparison signature by hashing cells incrementally and reusing effective style signatures. Large stock reports no longer retain a separate copy of every cell style while preserving value, formula and applied-style checks.
+
 - **gui: layout:** Correct CustomTkinter empty-container sizing found during real widget rendering, keep the sidebar scrollable at smaller sizes, set an initial workspace/results split, and explicitly style native notebook/readonly controls dark.
 
 - **gui: profiles:** Replace the modal new-profile dialog with embedded onboarding: a display name, generated portable folder ID, optional description and workflow choices. Validate inline, create through the shared neutral-profile service, and guard an uncreated draft before leaving.
