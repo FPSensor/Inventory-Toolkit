@@ -6,7 +6,7 @@ import tkinter as tk
 import pandas as pd
 from tkinter import filedialog
 
-from core.setup_catalog import MODULE_LABELS, get_value
+from core.setup_catalog import MODULE_LABELS, STEPS, get_value
 from core.column_assist import advise_columns
 from core.setup_service import SetupSession, SetupState
 from core.workflow_errors import WorkflowError
@@ -53,9 +53,9 @@ def split_members(value):
 
 
 class SetupWizard(BaseFrame):
-    def __init__(self, parent, profile, module, on_exit, step_id=None):
+    def __init__(self, parent, profile, module, on_exit, step_id=None, *, edit_mode=False):
         super().__init__(parent)
-        self.session = SetupSession(profile, module)
+        self.session = SetupSession(profile, module, include_advanced=edit_mode or bool(step_id and any(step.id == step_id and step.advanced for step in STEPS[module])))
         self.on_exit = on_exit
         self.index = next((i for i, step in enumerate(self.session.steps) if step.id == (step_id or self.session.first_pending())), 0)
         self._closed = False
@@ -114,6 +114,12 @@ class SetupWizard(BaseFrame):
             cls = ctk.CTkCheckBox if USE_CTK else ttk.Checkbutton
             cls(block, text='Enabled', variable=variable).pack(anchor='w', padx=10, pady=8)
             self._getters[key] = variable.get
+        elif field.kind == 'metrics':
+            variables = {name: tk.BooleanVar(value=name in value) for name in ('units', 'sales')}
+            for name, title in [('units', 'Quantities'), ('sales', 'Revenue')]:
+                cls = ctk.CTkCheckBox if USE_CTK else ttk.Checkbutton
+                cls(block, text=title, variable=variables[name]).pack(anchor='w', padx=10, pady=5)
+            self._getters[key] = lambda: [name for name, variable in variables.items() if variable.get()]
         elif field.kind == 'list':
             box = BaseTextbox(block, height=85 if USE_CTK else 4)
             box.pack(fill='x', padx=10, pady=8)
@@ -122,18 +128,20 @@ class SetupWizard(BaseFrame):
         elif field.kind in {'rules', 'groups', 'mapping', 'summaries'}:
             self._render_table(block, field.kind, value, key)
         else:
-            tokens = {"First word only": "first_token", "Full identifier": "whole"}
-            display = next((label for label, stored in tokens.items() if stored == value), value) if field.kind == "token" else value
+            tokens = dict(field.choices) if field.kind == "choice" else {"First word only": "first_token", "Full identifier": "whole"}
+            display = next((label for label, stored in tokens.items() if stored == value), value) if field.kind in {"token", "choice"} else value
             variable = tk.StringVar(value=display)
-            values = list(tokens) if field.kind == "token" else list(self._samples)
-            if field.kind in {'column', 'token'}:
+            values = list(tokens) if field.kind in {"token", "choice"} else list(self._samples)
+            if field.kind in {'column', 'token', 'choice'}:
                 combo = ctk.CTkComboBox(block, values=values or [''], variable=variable) if USE_CTK else ttk.Combobox(block, values=values, textvariable=variable)
                 if field.kind == 'token':
                     combo.configure(state='readonly')
                 combo.pack(fill='x', padx=10, pady=8)
             else:
                 _entry(block, textvariable=variable).pack(fill='x', padx=10, pady=8)
-            self._getters[key] = (lambda: tokens[variable.get()]) if field.kind == "token" else (lambda: variable.get().strip())
+            self._getters[key] = (lambda: tokens[variable.get()]) if field.kind in {"token", "choice"} else (lambda: variable.get().strip())
+            if field.kind == "number":
+                self._getters[key] = lambda: float(variable.get())
             if field.kind == 'column':
                 self._column_variables[key] = variable
                 preview = _lbl(block, text='', wraplength=600, justify='left')

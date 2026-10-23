@@ -48,14 +48,26 @@ def initialize_setup(profile):
 
 
 class SetupSession:
-    def __init__(self, profile, module):
+    def __init__(self, profile, module, *, include_advanced=False):
         if module not in STEPS:
             raise ValueError(f'Unknown workflow: {module}')
         require_enabled(profile, module)
         self.profile, self.module = profile, module
-        self.steps = STEPS[module]
+        self.all_steps = STEPS[module]
+        self.include_advanced = include_advanced
         self.root = paths.profile_configs_root(profile)
-        ensure_profile_config(self.root, logical_names={step.logical for step in self.steps})
+        ensure_profile_config(self.root, logical_names={step.logical for step in self.all_steps})
+
+    @property
+    def steps(self):
+        result = []
+        for step in self.all_steps:
+            if step.advanced and not self.include_advanced:
+                continue
+            if step.condition and get_value(self.data(step), tuple(step.condition[0].split('.'))) != step.condition[1]:
+                continue
+            result.append(step)
+        return tuple(result)
 
     def data(self, step):
         data = _CONFIG_MODELS[step.logical].model_validate(_read(self.root / f'{step.logical}.json')).model_dump()
@@ -69,6 +81,10 @@ class SetupSession:
                 data['input']['deposit_columns'] = network['stock_database_columns']
             for side in ('cost', 'sales'):
                 data['pricing'][f'{side}_columns'] = data['pricing'][f'{side}_columns'] or data['pricing']['columns'].copy()
+            if not data['pricing']['default_store'] and len(network['active']) == 1:
+                data['pricing']['default_store'] = network['active'][0]
+            if not data['input']['default_store'] and len(network['active']) == 1:
+                data['input']['default_store'] = network['active'][0]
         return data
 
     def fingerprint(self, step):
@@ -99,6 +115,34 @@ class SetupSession:
             raise WorkflowError(ErrorCode.SETUP_STATE_INVALID, 'Setup reviews must contain field fingerprints.')
         return reviewed
 
+    def effective_reviews(self):
+        own = self.reviewed()
+        if own is None:
+            return None
+        combined = dict(own)
+        modules = self.metadata().get('setup', {}).get('modules', {})
+        for step in self.steps:
+            if step.shared and step.id not in own:
+                fingerprint = self.fingerprint(step)
+                if any(item.get('reviewed', {}).get(step.id) == fingerprint for item in modules.values() if isinstance(item, dict)):
+                    combined[step.id] = fingerprint
+        return combined
+
+    def review_summary(self):
+        lines = []
+        for step in self.steps:
+            data = self.data(step)
+            for field in step.fields:
+                value = get_value(data, field.path)
+                if isinstance(value, (dict, list)):
+                    value = f'{len(value)} configured entries'
+                elif field.kind == 'choice':
+                    value = next((label for label, stored in field.choices if stored == value), value)
+                elif isinstance(value, bool):
+                    value = 'Yes' if value else 'No'
+                lines.append(f'{field.label}: {value if value != "" else "Not used"}')
+        return lines
+
     def state(self):
         reviewed = self.reviewed()
         if reviewed is None:
@@ -107,6 +151,7 @@ class SetupSession:
         if not reviewed:
             return SetupState.NOT_CONFIGURED
         try:
+            reviewed = self.effective_reviews()
             complete = all(reviewed.get(step.id) == self.fingerprint(step) for step in self.steps)
             if complete:
                 self.validate_required()
@@ -123,12 +168,12 @@ class SetupSession:
                     value = get_value(raw, field.path)
                 except (KeyError, TypeError):
                     value = None
-                required = field.kind in {'column', 'text'}
+                required = field.kind in {'column', 'text'} and not field.optional
                 if self.module == 'yoy_reports':
                     if field.path == ('input', 'sales_column'):
                         required = include_sales
                     elif field.path == ('input', 'variant_column'):
-                        required = include_variants
+                        required = include_variants or raw["output"]["include_variants"]
                 if required and (not isinstance(value, str) or not value.strip()):
                     raise WorkflowError(ErrorCode.CONFIG_REQUIRED_FIELD,
                         f'{field.label} has not been configured.', module=self.module,
@@ -144,14 +189,20 @@ class SetupSession:
         if self.module == 'yoy_reports' and not any(raw.get('groups', {}).values()):
             raise WorkflowError(ErrorCode.CONFIG_REQUIRED_FIELD, 'Add at least one report group with a store.', module=self.module, step='yoy_groups', field='groups')
 
+        if self.module == 'stock_processing':
+            stock = self.data(next(s for s in self.steps if s.id == 'stock_layout'))
+            if any(not stock['pricing'][f'{side}_columns']['database'] for side in ('cost', 'sales')) and not stock['pricing']['default_store']:
+                raise WorkflowError(ErrorCode.CONFIG_REQUIRED_FIELD, 'Choose a location for price lists without a location column.', module=self.module, step='stock_price_location', field='pricing.default_store')
+            if stock['input']['format'] == 'long' and not stock['input']['branch_column'] and stock['input']['default_store'] not in raw['active']:
+                raise WorkflowError(ErrorCode.CONFIG_REQUIRED_FIELD, 'Choose an active location for row-based stock without a location column.', module=self.module, step='stock_long', field='input.default_store')
+
     def save_step(self, step_id, values):
         self.reviewed()  # Reject damaged metadata before changing a configuration file.
-        step = next(s for s in self.steps if s.id == step_id)
+        step = next(s for s in self.all_steps if s.id == step_id)
         raw = deepcopy(self.data(step))
         for field in step.fields:
             value = values['.'.join(field.path)]
-            optional_variant = field.path == ('input', 'variant_column') and not values.get('output.include_variants', False)
-            if field.kind in {'column', 'text'} and not optional_variant and (not isinstance(value, str) or not value.strip()):
+            if field.kind in {'column', 'text'} and not field.optional and (not isinstance(value, str) or not value.strip()):
                 raise WorkflowError(ErrorCode.CONFIG_REQUIRED_FIELD, f'{field.label} cannot be empty.', module=self.module, step=step.id, field='.'.join(field.path))
             set_value(raw, field.path, value)
         try:
@@ -167,7 +218,7 @@ class SetupSession:
         write_json(paths.profile_root(self.profile) / 'profile.json', metadata)
 
     def first_pending(self):
-        reviewed = self.reviewed() or {}
+        reviewed = self.effective_reviews() or {}
         for step in self.steps:
             try:
                 if reviewed.get(step.id) == self.fingerprint(step):

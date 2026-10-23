@@ -61,7 +61,7 @@ def _auto(columns: Iterable[str], hints: Iterable[str]) -> Optional[str]:
     return None
 
 
-def _pick(label: str, columns: list[str], current: str = "", hints=()) -> str:
+def _pick(label: str, columns: list[str], current: str = "", hints=(), *, optional=False) -> str:
     detected = _auto(columns, hints) if columns else None
     default = current or detected or ""
     print(f"\n  {label}")
@@ -72,13 +72,15 @@ def _pick(label: str, columns: list[str], current: str = "", hints=()) -> str:
             marker = " ← current" if col == current else ""
             print(f"    [{idx:02d}] {col}{marker}")
         raw = input(f"  Choose number or type a column name [Enter={default or 'keep'}]: ").strip()
+        if raw == "-" and optional:
+            return ""
         if not raw:
             return default
         if raw.isdigit() and 1 <= int(raw) <= len(columns):
             return columns[int(raw) - 1]
         return raw
     raw = input(f"  {label} [Enter={default or 'unchanged'}]: ").strip()
-    return raw or default
+    return "" if raw == "-" and optional else (raw or default)
 
 
 def _sample_file(label: str) -> tuple[str, list[str], object | None]:
@@ -319,7 +321,7 @@ def run_module_setup(profile: str, module: str, step_id: str | None = None) -> N
     from core.setup_catalog import get_value, MODULE_LABELS
     from core.column_assist import advise_columns
 
-    session = SetupSession(profile, module)
+    session = SetupSession(profile, module, include_advanced=include_advanced)
     pending = step_id or session.first_pending()
     index = next((i for i, step in enumerate(session.steps) if step.id == pending), 0)
     try:
@@ -350,21 +352,41 @@ def run_module_setup(profile: str, module: str, step_id: str | None = None) -> N
                 current = get_value(data, field.path)
                 print(f'\n  {field.label}\n  {field.help}')
                 if field.kind == 'column':
-                    values[key] = _pick(field.label, columns, current)
+                    values[key] = _pick(field.label, columns, current, optional=field.optional)
                 elif field.kind == 'bool':
                     while True:
                         answer = input(f'  Enabled? [Y/N, Enter keeps {current}]: ').strip().lower()
                         if answer in ('', 'y', 'n'):
                             values[key] = current if not answer else answer == 'y'
                             break
-                elif field.kind == 'list':
+                elif field.kind == 'choice':
+                    for number, (label, stored) in enumerate(field.choices, 1):
+                        print(f'    {number}. {label}' + (' (current)' if stored == current else ''))
+                    while True:
+                        raw = input('  Choose a number [Enter keeps current]: ').strip()
+                        if not raw:
+                            values[key] = current
+                            break
+                        if raw.isdigit() and 1 <= int(raw) <= len(field.choices):
+                            values[key] = field.choices[int(raw) - 1][1]
+                            break
+                        print('  Choose one of the numbered options.')
+                elif field.kind == 'number':
+                    while True:
+                        raw = input(f'  Number [Enter={current}]: ').strip()
+                        try:
+                            values[key] = float(raw) if raw else current
+                            break
+                        except ValueError:
+                            print('  Enter a numeric value.')
+                elif field.kind in {'list', 'metrics'}:
                     raw = input(f'  Comma-separated values [Enter keeps {current}; - clears]: ').strip()
                     values[key] = current if not raw else ([] if raw == '-' else list(dict.fromkeys(x.strip() for x in raw.split(',') if x.strip())))
                 elif field.kind in {'mapping', 'rules', 'groups', 'summaries'}:
                     values[key] = _setup_table(field.kind, current)
                 else:
                     raw = input(f'  Value [Enter keeps {current}]: ').strip()
-                    values[key] = raw or current
+                    values[key] = '' if raw == '-' and field.optional else (raw or current)
             try:
                 session.save_step(step.id, values)
             except ValueError as exc:
@@ -373,7 +395,10 @@ def run_module_setup(profile: str, module: str, step_id: str | None = None) -> N
                 continue
             index += 1
         session.validate_required()
-        print('  Setup complete. Return to the menu and run when ready.')
+        print('\n  Review your setup:\n')
+        for line in session.review_summary():
+            print('  ' + line)
+        print('\n  Setup complete. Return to the menu and run when ready.')
         input('  Press Enter...')
     except KeyboardInterrupt:
         print('\n  Setup paused. Previously saved pages are retained.')
@@ -387,6 +412,8 @@ def _setup_table(kind, current):
     from copy import deepcopy
     result = deepcopy(current)
     print(f'  Existing rows: {len(result)}')
+    for name, value in ([(item['sheet_name'], ', '.join(item['entities'])) for item in result] if kind == 'summaries' else result.items()):
+        print(f'    {name}: {value}')
     print('  Enter a name to add/replace, -name to remove, or Enter to finish.')
     while True:
         name = input('  Name: ').strip()

@@ -26,7 +26,7 @@ def test_new_profile_reports_independent_module_progress(tmp_path, monkeypatch):
     assert partial[0].status == 'Partially configured'
     assert partial[0].reviewed == 1
     assert partial[0].pending_step == 'families'
-    assert partial[1].reviewed == 0
+    assert partial[1].reviewed == 1  # Unchanged shared labels do not need duplicate review.
 
 
 def test_existing_profile_reports_ready_without_enrolling_setup(tmp_path, monkeypatch):

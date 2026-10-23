@@ -237,3 +237,7 @@ Catalog column names describe shared output vocabulary. Stock `input.article_col
 ## Fractional quantities
 
 Stock numeric cleaning preserves decimal quantities, including store/deposit columns. For weighted or volume-based goods, set Stock `output.quantity_label` (for example `kg`) and `output.quantity_format` (`#,##0.###`). YoY has the same format option and a report-block `quantity_label` such as `Quantity (kg)`. This is display configuration; quantity arithmetic uses the supplied values and never converts units. Do not combine incompatible units in a single quantity total.
+
+## Conditional setup and shared reviews
+
+The shared setup catalog defines labels, explanations, typed choices, numeric values, optional fields, sample-file roles and conditional pages. Normal setup reviews essential pages; additional configuration includes cleanup, filters, matching preferences, output layout and summaries. Scanner counts do not show quantity-table mappings; wide stock does not show row-based mappings. Unchanged shared settings reviewed in another module can be reused by a module that has not reviewed them yet. A module that already accepted older shared values must review a later change. Setup completion is review metadata, not proof that every row in a selected workbook is valid.

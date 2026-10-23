@@ -46,7 +46,7 @@ def inspect_profile(profile: str) -> tuple[ModuleOverview, ...]:
             session = SetupSession(profile, module)
             steps = session.steps
             state = session.state()
-            fingerprints = session.reviewed()
+            fingerprints = session.effective_reviews()
             if fingerprints is None:
                 reviewed, pending, pending_step = None, (), None
             else:
