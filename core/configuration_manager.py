@@ -6,6 +6,7 @@ its own ``settings.json`` without filename collisions.
 """
 
 import json
+from core.json_documents import read_document
 from typing import Any, Dict, Type
 
 from pydantic import BaseModel
@@ -80,8 +81,7 @@ class ConfigurationManager:
             if logical_name not in self.logical_names:
                 continue
             try:
-                with json_file.open("r", encoding="utf-8") as handle:
-                    self._index[logical_name] = json.load(handle)
+                self._index[logical_name] = read_document(json_file)
                 loaded_files.append(logical_name)
             except json.JSONDecodeError as exc:
                 raise ConfigurationFileError(

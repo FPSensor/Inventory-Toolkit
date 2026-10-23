@@ -1,6 +1,6 @@
 """Shared, validated profile persistence; independent of either interface."""
 import json
-import tempfile
+from core.json_documents import read_document, write_documents
 from pathlib import Path
 
 from core.configuration_errors import ConfigurationFileError
@@ -26,8 +26,7 @@ def _validate_profile_document(path: Path, payload) -> None:
 
 def load_json(path: str):
     try:
-        with open(path, "r", encoding="utf-8") as f:
-            payload = json.load(f)
+        payload = read_document(path)
         _validate_profile_document(Path(path), payload)
         log_debug_event("json_loaded", path=path, payload_type=type(payload).__name__)
         return payload
@@ -47,22 +46,12 @@ def save_json(path: str, data) -> None:
     if target.exists() and "configs" in target.parts:
         load_json(str(target))  # Never replace a corrupt or future-version profile.
     _validate_profile_document(target, data)
-    temporary = None
     try:
-        with tempfile.NamedTemporaryFile(
-            mode="w", encoding="utf-8", dir=target.parent,
-            prefix=f".{target.name}.", suffix=".tmp", delete=False,
-        ) as handle:
-            temporary = Path(handle.name)
-            json.dump(data, handle, indent=4, ensure_ascii=False)
-            handle.write("\n")
-        temporary.replace(target)
+        write_documents({target: data})
         log_debug_event("json_saved", path=path, payload_type=type(data).__name__)
     except (OSError, TypeError, ValueError) as exc:
         raise ConfigurationFileError(target, f"could not be saved: {exc}") from exc
-    finally:
-        if temporary is not None:
-            temporary.unlink(missing_ok=True)
+
 
 def load_last_paths(profile: str) -> dict:
     """Load the saved file paths for *profile*. Returns {} if none saved yet."""

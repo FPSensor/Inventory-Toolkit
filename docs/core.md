@@ -129,3 +129,7 @@ Cross-platform/system helpers and safe workbook saving.
 - Non-interactive callers receive `OutputFileLockedError` and decide how to present recovery in their own interface.
 
 Infrastructure must not assume a terminal exists merely because the CLI was the first frontend.
+
+## Profile persistence guarantees
+
+`core.json_documents` rejects duplicate keys and non-finite values instead of accepting silent data loss. Writes serialize every document first, stage sibling temporary files, flush them and atomically replace targets. If a replacement fails, previous files are restored before the error is reported. Setup configuration and review metadata use the same operation. This protects normal single-process editing; it is not a multi-process database, and two applications must not edit the same profile simultaneously. The modular schema remains version 3 with additive typed fields; readers preserve earlier serialized variant keys until that document is explicitly saved.

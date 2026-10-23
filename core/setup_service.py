@@ -7,6 +7,7 @@ import os
 import tempfile
 
 from core import paths
+from core.json_documents import read_document, write_documents
 from core.configuration_manager import ConfigurationManager, _CONFIG_MODELS
 from core.profile_config import ensure_profile_config
 from core.setup_catalog import STEPS, get_value, set_value
@@ -21,23 +22,11 @@ class SetupState(IntEnum):
 
 
 def write_json(path, value):
-    path.parent.mkdir(parents=True, exist_ok=True)
-    fd, name = tempfile.mkstemp(dir=path.parent, prefix='.setup-', suffix='.tmp')
-    try:
-        with os.fdopen(fd, 'w', encoding='utf-8', newline='\n') as handle:
-            json.dump(value, handle, indent=4, ensure_ascii=False)
-            handle.write('\n')
-        os.replace(name, path)
-    finally:
-        if os.path.exists(name):
-            os.unlink(name)
+    write_documents({path: value})
 
 
 def _read(path):
-    try:
-        return json.loads(path.read_text(encoding='utf-8'))
-    except (ValueError, OSError) as exc:
-        raise WorkflowError(ErrorCode.CONFIG_INVALID, f'Could not read configuration: {path.name}') from exc
+    return read_document(path)
 
 
 def initialize_setup(profile):
@@ -209,13 +198,13 @@ class SetupSession:
             _CONFIG_MODELS[step.logical].model_validate(raw)
         except ValueError as exc:
             raise WorkflowError(ErrorCode.CONFIG_INVALID, f'Review {step.title}: {exc}', module=self.module, step=step.id) from exc
-        write_json(self.root / f'{step.logical}.json', raw)
         metadata = self.metadata()
         setup = metadata.setdefault('setup', {'version': 1, 'modules': {module: {'legacy': True, 'reviewed': {}} for module in STEPS}})
         reviewed = setup['modules'].setdefault(self.module, {'reviewed': {}})['reviewed']
         setup['modules'][self.module].pop('legacy', None)
-        reviewed[step.id] = self.fingerprint(step)
-        write_json(paths.profile_root(self.profile) / 'profile.json', metadata)
+        field_values = [get_value(raw, field.path) for field in step.fields]
+        reviewed[step.id] = hashlib.sha256(json.dumps(field_values, sort_keys=True).encode()).hexdigest()
+        write_documents({self.root / f'{step.logical}.json': raw, paths.profile_root(self.profile) / 'profile.json': metadata})
 
     def first_pending(self):
         reviewed = self.effective_reviews() or {}

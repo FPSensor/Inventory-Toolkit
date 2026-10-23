@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 from core.configuration_errors import ConfigurationError
+from core.json_documents import read_document
 
 RESOURCE_ROOT = Path(__file__).resolve().parent / "resources"
 
@@ -11,7 +12,7 @@ RESOURCE_ROOT = Path(__file__).resolve().parent / "resources"
 def load_resource(name: str) -> dict:
     path = RESOURCE_ROOT / name
     try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
+        payload = read_document(path)
         if not isinstance(payload, dict):
             raise ValueError("expected a JSON object")
         return payload

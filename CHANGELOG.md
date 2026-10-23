@@ -42,6 +42,8 @@ Development changes after `v1.4.1`. The released application version remains `1.
 
 ### Changed
 
+- **core: json:** Reject duplicate keys and non-finite JSON values, centralize profile persistence, and save setup documents plus review metadata as one staged operation with rollback on replacement failure. Validation still precedes writes; concurrent profile editing is not supported.
+
 - **setup: flow:** Replace storage-oriented pages with conditional, module-specific questions and human-readable choices. Separate essential review from additional configuration, cover independent price lists and new stock/count layouts, reuse unchanged shared reviews for untouched modules, and print a final setup summary.
 
 - **stock: quantities:** Preserve fractional stock quantities instead of truncating them to integers, including mapped store/deposit columns. Stock and YoY quantity labels and Excel formats are configurable, and final statistics retain fractional values. Existing report formats remain the default.

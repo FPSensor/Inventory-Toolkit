@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any, Dict, Tuple
 
 from core.configuration_errors import ConfigurationFileError
+from core.json_documents import read_document, write_documents
 
 from core.resource_config import load_resource
 
@@ -33,8 +34,7 @@ def _read(path: Path, default: Any = None) -> Any:
     configuration were absent.
     """
     try:
-        with path.open("r", encoding="utf-8") as handle:
-            return json.load(handle)
+        return read_document(path)
     except FileNotFoundError:
         return deepcopy(default)
     except json.JSONDecodeError as exc:
@@ -47,11 +47,7 @@ def _read(path: Path, default: Any = None) -> Any:
 
 
 def _write(path: Path, data: Any) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("w", encoding="utf-8", newline="\n") as handle:
-        json.dump(data, handle, indent=4, ensure_ascii=False)
-        handle.write("\n")
-
+    write_documents({path: data})
 
 def initialize_profile_config(configs_dir: Path) -> None:
     """Create missing current-schema files without overwriting user values."""
