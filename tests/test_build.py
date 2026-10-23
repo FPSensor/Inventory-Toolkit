@@ -70,3 +70,21 @@ def test_release_source_tree_imports_without_excluded_packages(tmp_path, interfa
     assert result.returncode == 0, result.stderr
     result = subprocess.run([sys.executable, '-m', 'inventory_toolkit', '--version'], cwd=tmp_path, capture_output=True, text=True, timeout=30)
     assert result.returncode == 0 and result.stdout.strip() == BUILD.version
+    import json
+    result = subprocess.run([sys.executable, '-m', 'inventory_toolkit', 'doctor', '--profile', 'demo', '--json'],
+        cwd=tmp_path, capture_output=True, text=True, timeout=30)
+    assert result.returncode == 0, result.stderr + result.stdout
+    assert json.loads(result.stdout)['healthy'] is True
+
+
+def test_source_distribution_never_collects_local_profile_history(tmp_path, monkeypatch):
+    from tools import BuildDistribution as builder
+    from core.build import BUILD
+    config = tmp_path / 'profiles/demo/configs/general/catalog.json'
+    history = tmp_path / 'profiles/demo/.history/local.json'
+    for path in (config, history):
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text('{}')
+    monkeypatch.setattr(builder, 'ROOT', tmp_path)
+    selected = set(builder.distribution_files(BUILD))
+    assert config in selected and history not in selected

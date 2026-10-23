@@ -8,6 +8,8 @@ Development changes after `v1.4.1`. The released application version remains `1.
 
 ### Added
 
+- **tests: maintenance:** Verify headless diagnostics in isolated CLI-only/GUI-only release trees, exclude local checkpoint data from distributions and reject unsupported checkpoint schemas even when their checksums are valid.
+
 - **gui: recovery:** Embed profile diagnostics and checkpoint management in Overview. Run file operations in workers, show actionable configuration destinations, require inline restore confirmation, retain a pre-restore point and lock profile/navigation until maintenance finishes. Exercise real Tk/CustomTkinter save/restore flows.
 
 - **cli: recovery:** Add profile checks and configuration history to Configuration → H. Show checkpoint labels/times, create manual points and restore by list number with explicit confirmation, using the same services as headless maintenance.

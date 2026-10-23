@@ -100,3 +100,23 @@ def test_restore_retains_absent_metadata_for_existing_unenrolled_profiles(profil
     write_documents({metadata: {'name': 'Enrolled later'}})
     history.restore_checkpoint(profile, checkpoint)
     assert not metadata.exists()
+
+
+def test_valid_checksum_does_not_bypass_schema_validation(profile):
+    import base64, hashlib
+    from core.configuration_errors import ConfigurationFileError
+    root = paths.profile_root(profile)
+    identifier = history.create_checkpoint(profile)
+    snapshot = root / '.history' / f'{identifier}.json'
+    document = read_document(snapshot)
+    name = 'configs/cross_check/settings.json'
+    changed = json.loads(base64.b64decode(document['documents'][name]['content']))
+    changed['version'] = 999
+    raw = json.dumps(changed).encode('utf-8')
+    document['documents'][name] = {'content': base64.b64encode(raw).decode('ascii'), 'sha256': hashlib.sha256(raw).hexdigest()}
+    write_documents({snapshot: document})
+    before = (root / name).read_bytes()
+    with pytest.raises(ConfigurationFileError, match='newer than supported'):
+        history.restore_checkpoint(profile, identifier)
+    assert (root / name).read_bytes() == before
+    assert len(history.list_checkpoints(profile)) == 1
