@@ -53,10 +53,11 @@ def split_members(value):
 
 
 class SetupWizard(BaseFrame):
-    def __init__(self, parent, profile, module, on_exit, step_id=None, *, edit_mode=False):
+    def __init__(self, parent, profile, module, on_exit, step_id=None, *, edit_mode=False, single_page=False):
         super().__init__(parent)
         self.session = SetupSession(profile, module, include_advanced=edit_mode or bool(step_id and any(step.id == step_id and step.advanced for step in STEPS[module])))
         self.on_exit = on_exit
+        self.single_page = single_page
         self.index = next((i for i, step in enumerate(self.session.steps) if step.id == (step_id or self.session.first_pending())), 0)
         self._closed = False
         self._loading = False
@@ -98,7 +99,7 @@ class SetupWizard(BaseFrame):
         if self.index == 0:
             self._back_button.configure(state='disabled')
         _btn(footer, 'Leave setup', self._leave).pack(side='left', padx=4)
-        self._next_button = _btn(footer, 'Save & finish' if self.index == len(self.session.steps) - 1 else 'Save & next', self._next)
+        self._next_button = _btn(footer, 'Save changes' if self.single_page else ('Review setup' if self.index == len(self.session.steps) - 1 else 'Save & next'), self._next)
         self._next_button.pack(side='right', padx=4)
 
     def _render_field(self, field, value):
@@ -232,6 +233,10 @@ class SetupWizard(BaseFrame):
 
     def _next(self):
         if not self._save():
+            return
+        if self.single_page:
+            self._closed = True
+            self.on_exit('Settings saved. Other setup pages keep their review state.')
             return
         if self.index < len(self.session.steps) - 1:
             self.index += 1

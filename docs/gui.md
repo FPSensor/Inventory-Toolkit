@@ -122,3 +122,7 @@ Save & next commits and reviews the page. Back also saves a valid page. Leave se
 Advanced Configuration Hub editing remains available for experienced users. Native file choosers and operator decisions (such as a missing-column default fallback) may still open dialogs. Main workflow progress, completion and configuration recovery use inline feedback.
 
 The design uses labeled settings with nearby explanations and validation at page boundaries, informed by the [VS Code Settings editor](https://code.visualstudio.com/docs/configure/settings) and [Qt wizard page validation](https://doc.qt.io/qt-6/qwizardpage.html). These are design references; the implementation remains Tk/CustomTkinter.
+
+## Integrated configuration
+
+Configuration is an embedded workspace, not a separate window or JSON-file list. Search human field names/help text and filter by enabled workflow. Shared sections appear once. Edit settings opens the same typed assistant used for setup, saves one section, and returns to the settings workspace. Run inputs remain intact. Workflow activation is managed through Profile overview.

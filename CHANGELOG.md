@@ -44,6 +44,8 @@ Development changes after `v1.4.1`. The released application version remains `1.
 
 ### Changed
 
+- **gui: configuration:** Replace the separate configuration window and duplicated editors with an embedded, searchable settings workspace. Search friendly field names, filter by workflow, edit one section through the same assistant, and return to the settings workspace without losing run inputs.
+
 - **cli: configuration:** Replace duplicate JSON-oriented editors with searchable module settings backed by the same typed assistant. Add single-section editing, back/pause navigation, reusable input samples, and workflow activation without configuring unused modules.
 
 - **core: json:** Reject duplicate keys and non-finite JSON values, centralize profile persistence, and save setup documents plus review metadata as one staged operation with rollback on replacement failure. Validation still precedes writes; concurrent profile editing is not supported.

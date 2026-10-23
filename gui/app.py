@@ -48,7 +48,7 @@ from core.workflow_errors import WorkflowError
 from gui.setup_wizard import SetupWizard
 
 
-from gui.config_hub import ConfigHubWindow
+from gui.config_hub import ConfigurationWorkspace
 from gui.profile_dialog import NewProfileModal
 
 class InventoryToolkitGUI(BaseWindow):
@@ -123,7 +123,7 @@ class InventoryToolkitGUI(BaseWindow):
             _btn(bar, label, lambda name=module: self._show_module(name)).pack(fill="x", padx=12, pady=5)
         _btn(bar, "Set up this module", self._open_wizard).pack(fill="x", padx=12, pady=(24, 5))
         _btn(bar, "New profile", self._open_new_profile).pack(fill="x", padx=12, pady=5)
-        _btn(bar, "Advanced configuration", self._open_config_hub).pack(fill="x", padx=12, pady=5)
+        _btn(bar, "Configuration", self._open_config_hub).pack(fill="x", padx=12, pady=5)
         _lbl(bar, text="Text size").pack(anchor="w", padx=16, pady=(20, 2))
         self._scale_choice = tk.StringVar(value="100%")
         if USE_CTK:
@@ -179,6 +179,12 @@ class InventoryToolkitGUI(BaseWindow):
             return
         self._selected_module = module
         if hasattr(self, "_pages"):
+            if module == "settings":
+                self._render_settings()
+                self._pages[module].tkraise()
+                self._page_title.configure(text="Configuration")
+                self._notify("info", "Configuration", "Search by what you want to change. Settings use the same guided forms as setup.")
+                return
             if module == "overview":
                 self._render_overview()
                 self._pages[module].tkraise()
@@ -207,7 +213,7 @@ class InventoryToolkitGUI(BaseWindow):
             self._notify("info", "Profile Ready", f"Active profile set to [{new_id}].", parent=self)
         NewProfileModal(self, on_done)
 
-    def _open_wizard(self, module=None, step=None):
+    def _open_wizard(self, module=None, step=None, *, edit_mode=False, single_page=False, return_to_settings=False):
         if not self._require_idle():
             return
         if any(isinstance(child, tk.Toplevel) for child in self.winfo_children()):
@@ -224,10 +230,10 @@ class InventoryToolkitGUI(BaseWindow):
             panel.destroy()
             self._profile_menu.configure(state="normal" if USE_CTK else "readonly")
             self._render_overview()
-            self._show_module(module)
-            self._notify("info", "Guided setup", message)
+            self._show_module("settings" if return_to_settings else module)
+            self._notify("info", "Configuration" if edit_mode else "Guided setup", message)
         try:
-            self._setup_panel = SetupWizard(self._page_host, profile, module, finish, step)
+            self._setup_panel = SetupWizard(self._page_host, profile, module, finish, step, edit_mode=edit_mode, single_page=single_page)
             self._setup_panel.grid(row=0, column=0, sticky="nsew")
             self._setup_panel.tkraise()
             self._profile_menu.configure(state="disabled")
@@ -266,13 +272,17 @@ class InventoryToolkitGUI(BaseWindow):
         self._notify("error", f"Operation stopped{code}", str(exc), actions)
 
     def _open_config_hub(self):
-        if not self._require_idle():
-            return
-        try:
-            ConfigurationManager(self.active_profile.get())
-            ConfigHubWindow(self, self.active_profile.get())
-        except Exception as exc:
-            self._notify("error", "Configuration Error", str(exc), parent=self)
+        if self._require_idle():
+            self._show_module("settings")
+
+    def _render_settings(self):
+        page = self._pages['settings']
+        for child in page.winfo_children():
+            child.destroy()
+        workspace = ConfigurationWorkspace(page, self.active_profile.get(),
+            lambda module, step: self._open_wizard(module, step, edit_mode=True, single_page=True, return_to_settings=True),
+            lambda: self._show_module('overview'))
+        workspace.pack(fill='both', expand=True)
 
     def _select_columns(self, file_path, configured, defaults):
         def confirm(field, wanted, default):
@@ -287,7 +297,7 @@ class InventoryToolkitGUI(BaseWindow):
     # ── Tabs ──────────────────────────────────────────────────────────────────
 
     def _build_tabs(self):
-        self._pages = {module: BaseScrollable(self._page_host) for module in ("overview", *MODULE_LABELS)}
+        self._pages = {module: BaseScrollable(self._page_host) for module in ("overview", "settings", *MODULE_LABELS)}
         for page in self._pages.values():
             page.grid(row=0, column=0, sticky="nsew")
         self.tab_overview = self._pages["overview"]
@@ -359,6 +369,8 @@ class InventoryToolkitGUI(BaseWindow):
             self._apply_yoy_profile_defaults()
         if getattr(self, "_selected_module", None) == "overview" and hasattr(self, "tab_overview"):
             self._render_overview()
+        elif getattr(self, "_selected_module", None) == "settings":
+            self._render_settings()
 
     def _apply_yoy_profile_defaults(self):
         """Restore YoY file paths and profile-owned defaults for the active profile."""
