@@ -16,9 +16,6 @@ from core.profile_config import DEFAULTS, config_path, ensure_profile_config, pr
 from core.resource_config import load_resource
 from core.configuration_errors import ConfigurationError
 from core.system_utils import InvalidExcelOutputPathError, normalize_xlsx_output_path
-# BEGIN LEGACY_COMPATIBILITY
-from core.legacy_profile_migration import migrate_legacy_config
-# END LEGACY_COMPATIBILITY
 
 try:
     import pandas as pd
@@ -285,9 +282,6 @@ def _setup_yoy(configs: Path) -> None:
 
 def run_setup_wizard(profile_dir: str, profile_name: str = "") -> None:
     configs = Path(profile_dir) / "configs"
-    # BEGIN LEGACY_COMPATIBILITY
-    migrate_legacy_config(configs, remove_legacy=False)
-    # END LEGACY_COMPATIBILITY
     ensure_profile_config(configs)
     while True:
         clear_screen(); _dashboard(configs, profile_name)

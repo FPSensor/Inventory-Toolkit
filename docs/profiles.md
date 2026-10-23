@@ -161,23 +161,6 @@ A new profile's missing current-schema files are initialized from defaults witho
 
 `last_paths.json` remembers previously selected files for convenience. It is local runtime state, not business configuration, and should not be treated as part of the schema-v3 contract.
 
-<!-- BEGIN LEGACY_COMPATIBILITY -->
-## Legacy profile migration
-
-Supported pre-v3 storage is converted by the compatibility layer before strict current-schema validation.
-
-Inventory Toolkit temporarily recognizes pre-v3 storage and old serialized Spanish keys.
-
-Configuration Hub exposes a migration/archive path. Legacy JSON is converted to the current modular schema and archived under:
-
-```text
-configs/_legacy_v1_backup/
-```
-
-Current built-in engines use native schema-v3 accessors after migration.
-
-Debug level 2/3 reports compatibility usage so maintainers can identify remaining callers/profiles. See [legacy_compatibility.md](legacy_compatibility.md).
-<!-- END LEGACY_COMPATIBILITY -->
 
 ## Versioning rule
 

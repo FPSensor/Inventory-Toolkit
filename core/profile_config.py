@@ -86,11 +86,6 @@ def validate_config_header(path: Path, data: Any) -> None:
 
 def ensure_profile_config(configs_dir: Path) -> None:
     """Ensure a profile can be consumed through the current schema."""
-    # BEGIN LEGACY_COMPATIBILITY
-    from core.legacy_profile_migration import prepare_profile_compatibility
-
-    prepare_profile_compatibility(configs_dir)
-    # END LEGACY_COMPATIBILITY
     initialize_profile_config(configs_dir)
     for logical_name in DEFAULTS:
         path = config_path(configs_dir, logical_name)

@@ -66,68 +66,6 @@ def _confirm_reference_update() -> bool:
     return confirmation == "UPDATE REFERENCES"
 
 
-# BEGIN LEGACY_COMPATIBILITY
-def _legacy_compatibility_menu() -> None:
-    """Audit or permanently retire the temporary compatibility layer."""
-    retirement_tool = TOOLS_ROOT / "RetireLegacyCompatibility.py"
-    if not retirement_tool.exists():
-        print("\n  Legacy compatibility has already been retired.")
-        input("  Press Enter to continue...")
-        return
-
-    while retirement_tool.exists():
-        clear_screen()
-        print("\n  LEGACY COMPATIBILITY LIFECYCLE\n")
-        print("    1  ›  Read-only retirement audit")
-        print("    2  ›  Retire compatibility and validate (leave uncommitted)")
-        print("    3  ›  Retire compatibility, validate, and create Git commit")
-        print("    0  ›  Back\n")
-        print("  Retirement is intentionally guarded. The tool refuses to run")
-        print("  while profiles, callers, or the Git worktree are not ready.\n")
-
-        option = input("  Choose an option: ").strip().upper()
-        if option == "0":
-            return
-        if option == "1":
-            _pause(
-                _run_command(
-                    [sys.executable, str(retirement_tool.relative_to(ROOT))],
-                    label="legacy compatibility audit",
-                ),
-                label="Compatibility audit",
-            )
-            continue
-        if option not in {"2", "3"}:
-            continue
-
-        clear_screen()
-        print("\n  PERMANENT COMPATIBILITY RETIREMENT\n")
-        print("  This removes pre-v3 migration/API compatibility from the repository.")
-        print("  It does NOT delete archived _legacy_v1_backup data.")
-        print("  Validation must pass before changes are kept.\n")
-        confirmation = input("  Type RETIRE COMPATIBILITY to continue: ").strip()
-        if confirmation != "RETIRE COMPATIBILITY":
-            print("\n  Retirement cancelled.")
-            input("  Press Enter to continue...")
-            continue
-
-        command = [
-            sys.executable,
-            str(retirement_tool.relative_to(ROOT)),
-            "--apply",
-        ]
-        if option == "3":
-            command.append("--commit")
-        result = _run_command(command, label="legacy compatibility retirement")
-        _pause(result, label="Compatibility retirement")
-
-        # The retirement tool removes itself and strips this menu block from the
-        # source tree. Checking the path also hides the option immediately from
-        # this already-running Python process after a successful retirement.
-        if result == 0 and not retirement_tool.exists():
-            log.info("Legacy compatibility retired; its developer menu entry is now unavailable.")
-            return
-# END LEGACY_COMPATIBILITY
 
 
 def developer_tools_menu() -> None:
@@ -141,11 +79,6 @@ def developer_tools_menu() -> None:
         print("    4  ›  Full release certification (golden masters)")
         print("    5  ›  Update golden-master references")
         print("    6  ›  Show current session log tail")
-        # BEGIN LEGACY_COMPATIBILITY
-        retirement_available = (TOOLS_ROOT / "RetireLegacyCompatibility.py").exists()
-        if retirement_available:
-            print("    7  ›  Legacy compatibility lifecycle")
-        # END LEGACY_COMPATIBILITY
         print("    0  ›  Back\n")
 
         option = input("  Choose an option: ").strip().upper()
@@ -171,7 +104,3 @@ def developer_tools_menu() -> None:
             )
         elif option == "6":
             _show_session_log_tail()
-        # BEGIN LEGACY_COMPATIBILITY
-        elif option == "7" and retirement_available:
-            _legacy_compatibility_menu()
-        # END LEGACY_COMPATIBILITY

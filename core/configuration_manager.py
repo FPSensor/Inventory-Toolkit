@@ -19,10 +19,6 @@ from core.config_schemas import (
     YoYReportsConfig,
 )
 from core.configuration_errors import ConfigurationError, ConfigurationFileError
-# BEGIN LEGACY_COMPATIBILITY
-from core.compatibility import warn_legacy_api
-from core.legacy_config import build_legacy_view
-# END LEGACY_COMPATIBILITY
 from core.logger import log_debug_event
 from core.paths import profile_configs_root
 from core.profile_config import DEFAULTS, ensure_profile_config, validate_config_header
@@ -122,12 +118,6 @@ class ConfigurationManager:
             )
             return self._index[logical_name]
 
-        # BEGIN LEGACY_COMPATIBILITY
-        legacy_view = build_legacy_view(self, logical_name)
-        if legacy_view is not None:
-            warn_legacy_api(self.profile, logical_name)
-            return legacy_view
-        # END LEGACY_COMPATIBILITY
         return default if default is not None else {}
 
     def _validated(self, logical_name: str, model: Type[BaseModel]) -> dict:

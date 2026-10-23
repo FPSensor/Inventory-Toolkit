@@ -190,64 +190,6 @@ def test_yoy_default_output_path_rejects_legacy_xls():
     with pytest.raises(ValidationError, match="must use the .xlsx format"):
         YoYOutputConfig.model_validate({"default_path": "report.xls"})
 
-# BEGIN LEGACY_COMPATIBILITY
-def _fixture(name):
-    return json.loads((Path(__file__).parent / "fixtures" / name).read_text(encoding="utf-8"))
-
-
-def test_legacy_profile_migrates_without_changing_business_contract(tmp_path, monkeypatch):
-    base = tmp_path / "profiles" / "legacy" / "configs"
-    legacy_files = _fixture("legacy_configuration.json")
-    for relative_path, payload in legacy_files.items():
-        path = base / relative_path
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps(payload), encoding="utf-8")
-
-    monkeypatch.setattr(app_paths, "PROFILES_ROOT", tmp_path / "profiles")
-    config = ConfigurationManager("legacy")
-
-    assert config.get_catalog()["columns"]["article"] == "SKU"
-    assert config.get_family_rules() == {"Shirts": ["01", "001"]}
-    assert config.get_stock_database_columns() == {"A": "DB_A"}
-    assert config.get_stock_cleaning()["drop_columns"] == ["Noise"]
-    assert config.get_stock_pricing()["columns"] == {
-        "article": "SKU",
-        "database": "Origin",
-        "price": "Price",
-    }
-    assert config.get_cross_check_config()["price_lists"]["sales"]["price_column"] == "Retail"
-    assert config.get_stock_output()["raw_data_sheet"] == "Raw"
-    assert config.get_yoy_reports_config()["input"]["date_column"] == "Date"
-    assert (base / "general/catalog.json").exists()
-    assert (base / "stock_processing/settings.json").exists()
-    assert (base / "yoy_reports/settings.json").exists()
-
-
-def test_v2_modular_profile_upgrades_internal_keys_to_english(tmp_path):
-    configs = tmp_path / "configs"
-    stock_path = configs / "stock_processing" / "settings.json"
-    yoy_path = configs / "yoy_reports" / "settings.json"
-    stock_path.parent.mkdir(parents=True)
-    yoy_path.parent.mkdir(parents=True)
-
-    source = _fixture("modular_v2_configuration.json")
-    stock_path.write_text(json.dumps(source["stock"]), encoding="utf-8")
-    yoy_path.write_text(json.dumps(source["yoy"]), encoding="utf-8")
-
-    ensure_profile_config(configs)
-    stock = json.loads(stock_path.read_text(encoding="utf-8"))
-    yoy = json.loads(yoy_path.read_text(encoding="utf-8"))
-
-    assert stock["version"] == CONFIG_VERSION
-    assert stock["output"]["summaries"] == [{
-        "sheet_name": "Summary",
-        "entities": ["A"],
-        "titles": ["Familias"],
-    }]
-    assert yoy["version"] == CONFIG_VERSION
-    assert yoy["input"]["sales_column"] == "Monto"
-    assert yoy["output"]["metrics"] == ["units", "sales"]
-# END LEGACY_COMPATIBILITY
 
 
 def test_yoy_setup_uses_bundled_defaults_and_detection_hints(tmp_path, monkeypatch):

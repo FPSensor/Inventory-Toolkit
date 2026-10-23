@@ -148,9 +148,3 @@ During development, `--cross-system PATH` can point release/demo execution at an
 ## Reference directory
 
 See [`../tests/release_reference/README.md`](../tests/release_reference/README.md) for the local golden-master contract.
-
-<!-- BEGIN LEGACY_COMPATIBILITY -->
-## Compatibility verification
-
-While compatibility exists, tests cover profile migration and deprecated API behavior. The quick release gate also runs the read-only retirement audit. See [legacy_compatibility.md](legacy_compatibility.md).
-<!-- END LEGACY_COMPATIBILITY -->

@@ -41,9 +41,6 @@ Responsibilities:
   - `get_cross_check_config()`;
   - `get_yoy_reports_config()`.
 
-<!-- BEGIN LEGACY_COMPATIBILITY -->
-Old short-name projections are compatibility-only and should not be used by new built-in code.
-<!-- END LEGACY_COMPATIBILITY -->
 
 ## `profile_config.py`
 
@@ -58,19 +55,6 @@ Defines:
 
 Configuration ownership is described in [profiles.md](profiles.md).
 
-<!-- BEGIN LEGACY_COMPATIBILITY -->
-## `compatibility.py`, `legacy_config.py`, `legacy_profile_migration.py`
-
-Temporary transition boundary for older Inventory Toolkit profiles/callers. Supported legacy names are converted explicitly before current-schema validation.
-
-- `compatibility.py` emits deduplicated deprecation diagnostics when debug level 2/3 is enabled.
-- `legacy_profile_migration.py` recognizes/migrates pre-v3 storage.
-- `legacy_config.py` isolates old serialized key projections.
-
-Built-in current modules should not depend on these contracts.
-
-See [legacy_compatibility.md](legacy_compatibility.md) before modifying or removing them.
-<!-- END LEGACY_COMPATIBILITY -->
 
 ## `resource_config.py` and `resources/`
 

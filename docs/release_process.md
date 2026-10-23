@@ -81,18 +81,6 @@ again.
 
 Updating references is equivalent to declaring the new output correct.
 
-<!-- BEGIN LEGACY_COMPATIBILITY -->
-## 8. Compatibility check
-
-While the legacy layer exists:
-
-```bash
-python tools/RetireLegacyCompatibility.py
-```
-
-A release does **not** require compatibility retirement. The audit exists to tell you whether retirement is safe when you deliberately decide the migration window is over.
-
-<!-- END LEGACY_COMPATIBILITY -->
 
 ## Manual surface checks
 

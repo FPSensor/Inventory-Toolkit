@@ -106,11 +106,6 @@ def _select_debug_level(current_level: int) -> int:
 def _apply_debug_level(level: int, *, reset_session_log: bool = False) -> int:
     """Apply the runtime debug level without restarting."""
     active_level = set_debug_level(level, reset_session_log=reset_session_log)
-    # BEGIN LEGACY_COMPATIBILITY
-    from core.compatibility import configure_compatibility_diagnostics
-
-    configure_compatibility_diagnostics(active_level > 1)
-    # END LEGACY_COMPATIBILITY
     return active_level
 
 def _show_easter_egg() -> None:

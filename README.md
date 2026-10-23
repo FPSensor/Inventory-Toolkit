@@ -80,9 +80,6 @@ The strict pre-release gate executes all three demo workflows and compares their
 - Runtime-selectable debug levels and a hidden level-3 Developer Console.
 - Forensic session logging to `logs/session.log`.
 - Pytest, IntegrityCheck, stress/diagnostic tooling, demo smoke tests, and semantic golden-master certification.
-<!-- BEGIN LEGACY_COMPATIBILITY -->
-- Guarded legacy-configuration migration and a one-shot compatibility-retirement tool, also accessible from the level-3 Developer Console. Compatibility remains active until deliberately retired.
-<!-- END LEGACY_COMPATIBILITY -->
 - Alpha Pre-Beta Tkinter/CustomTkinter desktop GUI.
 - Windows launcher/setup helpers plus Linux/macOS shell launcher.
 
@@ -331,9 +328,6 @@ Inventory-Toolkit/
 │   ├── telemetry.py
 │   ├── data_sanitizer.py
 │   ├── system_utils.py
-<!-- BEGIN LEGACY_COMPATIBILITY -->
-│   └── legacy_*                  # temporary compatibility boundary
-<!-- END LEGACY_COMPATIBILITY -->
 ├── engine/                        # business processing
 │   ├── inventory_cross_check/
 │   ├── stock_processing/
@@ -353,9 +347,6 @@ Inventory-Toolkit/
 │   ├── StressTests.py
 │   ├── ReleaseCheck.py
 │   ├── release_reference.py
-<!-- BEGIN LEGACY_COMPATIBILITY -->
-│   └── RetireLegacyCompatibility.py
-<!-- END LEGACY_COMPATIBILITY -->
 ├── docs/
 ├── requirements.txt
 ├── pytest.ini
@@ -385,9 +376,6 @@ Start at **[docs/index.md](docs/index.md)**.
 | [Profiles](docs/profiles.md) | schema-v3 configuration and Guided Setup |
 | [Testing & Examples](docs/testing_and_examples.md) | pytest, demo fixture, golden masters |
 | [Release Process](docs/release_process.md) | repeatable pre-release procedure |
-<!-- BEGIN LEGACY_COMPATIBILITY -->
-| [Legacy Compatibility](docs/legacy_compatibility.md) | migration warnings and retirement lifecycle |
-<!-- END LEGACY_COMPATIBILITY -->
 | [Troubleshooting](docs/troubleshooting.md) | common installation/runtime/test failures |
 | [Developer Notes](docs/dev_notes.md) | extension rules and engineering conventions |
 
@@ -438,9 +426,6 @@ Target: make the desktop GUI a credible beta from the Alpha Pre-Beta foundation.
 
 Target: reduce deployment complexity.
 
-<!-- BEGIN LEGACY_COMPATIBILITY -->
-- Retire the legacy configuration compatibility layer **only if** the retirement audit remains clean for active profiles and external consumers.
-<!-- END LEGACY_COMPATIBILITY -->
 - Move toward standard Python packaging (`pyproject.toml`, stable entry points, reproducible release artifacts).
 - Produce a clean portable release bundle with explicit version metadata.
 - Document supported Python/platform combinations from tested release environments rather than assumptions.

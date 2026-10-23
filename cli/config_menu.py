@@ -16,9 +16,6 @@ from core.configuration_errors import ConfigurationError
 from core.configuration_manager import ConfigurationManager
 from core.paths import profile_configs_root
 from core.profile_config import DEFAULTS, config_path, ensure_profile_config, profile_readiness
-# BEGIN LEGACY_COMPATIBILITY
-from core.legacy_profile_migration import migrate_legacy_config
-# END LEGACY_COMPATIBILITY
 
 
 
@@ -235,9 +232,6 @@ def _validate(profile: str):
 def configuration_menu(current_profile: str) -> None:
     configs = profile_configs_root(current_profile)
     try:
-        # BEGIN LEGACY_COMPATIBILITY
-        migrate_legacy_config(configs, remove_legacy=False)
-        # END LEGACY_COMPATIBILITY
         ensure_profile_config(configs)
     except ConfigurationError as exc:
         clear_screen(); _header("Configuration Error", current_profile)
@@ -258,9 +252,6 @@ def configuration_menu(current_profile: str) -> None:
         for n,(key,label) in enumerate((("catalog","Catalog & families"),("stores","Stores & network"),("stock","Stock Processing"),("cross_check","Cross Check"),("yoy","YoY Reports")),1):
             ok,detail=ready[key]; print(f"  [{n}] {'✅' if ok else '⚠️ '} {label:<22} {detail}")
         print("\n  [W] Guided Setup   [V] Validate profile   [0] Back")
-        # BEGIN LEGACY_COMPATIBILITY
-        print("  [M] Migrate/archive legacy config (deprecated compatibility)")
-        # END LEGACY_COMPATIBILITY
         cmd=input("\n  Select a module: ").strip().upper()
         if cmd=="0": return
         try:
@@ -271,13 +262,6 @@ def configuration_menu(current_profile: str) -> None:
             elif cmd=="5": _yoy_menu(configs,current_profile)
             elif cmd=="W": run_setup_wizard(str(configs.parent),current_profile)
             elif cmd=="V": _validate(current_profile)
-            # BEGIN LEGACY_COMPATIBILITY
-            elif cmd=="M":
-                migrated = migrate_legacy_config(configs, remove_legacy=True)
-                print("  ✅ Legacy configuration migrated and archived in configs/_legacy_v1_backup/." if migrated
-                      else "  ℹ️  No legacy v1 files were found.")
-                _pause()
-            # END LEGACY_COMPATIBILITY
         except ConfigurationError as exc:
             print(f"  ❌ Configuration was not changed: {exc}")
             _pause()
