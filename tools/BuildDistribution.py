@@ -4,22 +4,32 @@
 from pathlib import Path
 from zipfile import ZipFile, ZIP_DEFLATED
 import argparse
+import sys
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SOURCE_DIRS = ("inventory_toolkit", "cli", "core", "engine", "gui", "tools", "tests", "docs")
+sys.path.insert(0, str(ROOT))
+from core.build import BUILD
+
+SOURCE_DIRS = ("inventory_toolkit", "cli", "core", "engine", "gui", "debug_tools", "tools", "tests", "docs")
 ROOT_FILES = (
     "build.prop", "cli.py", "requirements.txt", "pytest.ini", "README.md", "CHANGELOG.md",
     "LICENSE", "Inventory Toolkit.sh", "Inventory Toolkit.bat", "Setup Environment.bat",
 )
 
 
-def distribution_files():
+def distribution_files(build=BUILD):
     for name in ROOT_FILES:
+        if name == "cli.py" and not build.supports("cli"):
+            continue
         path = ROOT / name
         if path.is_file():
             yield path
     for name in SOURCE_DIRS:
+        if name in {"cli", "gui"} and not build.supports(name):
+            continue
+        if build.type == "release" and name in {"debug_tools", "tools", "tests"}:
+            continue
         for path in sorted((ROOT / name).rglob("*")):
             if path.is_file() and path.suffix in {".py", ".md", ".json", ".xlsx"}:
                 yield path

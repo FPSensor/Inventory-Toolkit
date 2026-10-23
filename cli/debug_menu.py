@@ -1,106 +1,13 @@
-"""Hidden developer, diagnostics, and release tools for debug level 3."""
-
-from __future__ import annotations
-
-import subprocess
+"""Source-checkout entry point for debug_tools.console."""
+from pathlib import Path
+import importlib
 import sys
 
-from cli.utils import clear_screen
-from core.logger import get_session_log_path, log, log_debug_event
-from core.paths import APPLICATION_ROOT, TOOLS_ROOT
-
-ROOT = APPLICATION_ROOT
-
-
-def _run_command(command: list[str], *, label: str) -> int:
-    log_debug_event("developer_tool_start", label=label, command=command, cwd=str(ROOT))
-    print("\n  Running:", " ".join(command), "\n")
-    result = subprocess.run(command, cwd=ROOT, check=False).returncode
-    log_debug_event("developer_tool_finish", label=label, returncode=result)
-    return result
-
-
-def _run_release_check(*arguments: str) -> int:
-    return _run_command(
-        [sys.executable, "tools/ReleaseCheck.py", *arguments],
-        label=f"ReleaseCheck {' '.join(arguments) or 'quick'}",
-    )
-
-
-def _run_pytest() -> int:
-    return _run_command(
-        [sys.executable, "-m", "pytest", "-q"],
-        label="pytest",
-    )
-
-
-def _pause(result: int, *, label: str = "Developer tool") -> None:
-    status = "PASSED" if result == 0 else "FAILED"
-    print(f"\n  {label} finished: {status}")
-    input("  Press Enter to continue...")
-
-
-
-def _show_session_log_tail(lines: int = 80) -> None:
-    clear_screen()
-    path = get_session_log_path()
-    print(f"\n  SESSION LOG — last {lines} lines")
-    print(f"  {path}\n")
-    if not path.exists():
-        print("  No session log has been created yet.")
-    else:
-        content = path.read_text(encoding="utf-8", errors="replace").splitlines()
-        for line in content[-lines:]:
-            print("  " + line)
-    input("\n  Press Enter to return...")
-
-
-def _confirm_reference_update() -> bool:
-    clear_screen()
-    print("\n  GOLDEN MASTER UPDATE\n")
-    print("  This action replaces the approved release-reference workbooks.")
-    print("  Use it only after deliberately changing business behavior, the")
-    print("  demo fixture, or the demo profile and reviewing the new output.\n")
-    print("  A normal failing release test is NOT a reason to update references.\n")
-    confirmation = input("  Type UPDATE REFERENCES to continue: ").strip()
-    return confirmation == "UPDATE REFERENCES"
-
-
-
-
-def developer_tools_menu() -> None:
-    """Show the hidden developer console exposed only at debug level 3."""
-    while True:
-        clear_screen()
-        print("\n  INVENTORY TOOLKIT — DEVELOPER CONSOLE (DEBUG LEVEL 3)\n")
-        print("    1  ›  Run pytest")
-        print("    2  ›  Quick repository verification")
-        print("    3  ›  Demo workflow smoke test")
-        print("    4  ›  Full release certification (golden masters)")
-        print("    5  ›  Update golden-master references")
-        print("    6  ›  Show current session log tail")
-        print("    0  ›  Back\n")
-
-        option = input("  Choose an option: ").strip().upper()
-        log_debug_event("developer_console_choice", option=option)
-        if option == "0":
-            return
-        if option == "1":
-            _pause(_run_pytest(), label="Pytest")
-        elif option == "2":
-            _pause(_run_release_check(), label="Quick verification")
-        elif option == "3":
-            _pause(_run_release_check("--demo"), label="Demo smoke test")
-        elif option == "4":
-            _pause(_run_release_check("--release"), label="Release certification")
-        elif option == "5":
-            if not _confirm_reference_update():
-                print("\n  Reference update cancelled.")
-                input("  Press Enter to continue...")
-                continue
-            _pause(
-                _run_release_check("--update-reference", "--yes"),
-                label="Golden-master update",
-            )
-        elif option == "6":
-            _show_session_log_tail()
+root = str(Path(__file__).resolve().parents[1])
+if root not in sys.path:
+    sys.path.insert(0, root)
+module = importlib.import_module("debug_tools.console")
+if __name__ == "__main__":
+    raise SystemExit(module.main())
+else:
+    sys.modules[__name__] = module

@@ -10,7 +10,7 @@ from cli.yoy_reports_launcher import launch_yoy_reports
 from cli.wizard import PANDAS_AVAILABLE
 from cli.workflow_setup import launch_configured
 from cli.profile_overview import show_profile_overview
-from cli.debug_menu import developer_tools_menu
+from core.optional_debug import debug_available, open_debug_console
 from core.logger import log, log_debug_event, set_debug_level
 
 try:
@@ -75,7 +75,7 @@ def _draw_menu(current_profile: str, debug_level: int = 1) -> None:
     print(_row("    K  ›  Configuration"))
     print(_row("    H  ›  Profile Overview"))
     print(_row("    P  ›  Change Profile"))
-    if debug_level == 3:
+    if debug_level == 3 and debug_available():
         print(_row("    D  ›  Developer / Release Tools"))
     print(_row("    E  ›  Exit"))
     print(_rule("╚", "╝"))
@@ -132,7 +132,7 @@ def main():
         print(f"  ⚠️  Warning: Could not load engine modules ({_import_error}).")
         input("  Press Enter to continue in degraded mode...")
 
-    debug_level = _apply_debug_level(args.debug_level, reset_session_log=True)
+    debug_level = _apply_debug_level(args.debug_level if BUILD.type == "debug" else 1, reset_session_log=True)
     log_debug_event(
         "cli_start",
         version=_VERSION,
@@ -165,13 +165,13 @@ def main():
             elif option == "P":
                 current_profile = select_profile(current_profile)
                 log_debug_event("profile_selected", profile=current_profile, startup=False)
-            elif option == "DEBUG":
+            elif option == "DEBUG" and debug_available():
                 requested_level = _select_debug_level(debug_level)
                 if requested_level != debug_level:
                     debug_level = _apply_debug_level(requested_level)
                     log.info("Runtime debug level is now %s.", debug_level)
-            elif option == "D" and debug_level == 3:
-                developer_tools_menu()
+            elif option == "D" and debug_level == 3 and debug_available():
+                open_debug_console()
             elif option == "42":
                 _show_easter_egg()
             elif option == "E":
