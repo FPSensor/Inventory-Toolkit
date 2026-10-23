@@ -26,3 +26,12 @@ def test_store_cleaning_and_excel_preserve_fractional_quantities(tmp_path):
     metric = resolve_metric_specs({"input": {"quantity_column": "Weight"}, "output": {
         "metrics": ["units"], "quantity_label": "Quantity (kg)", "quantity_format": "#,##0.###"}})[0]
     assert metric.label == "Quantity (kg)" and metric.number_format == "#,##0.###"
+
+
+def test_whole_columns_remain_integral_without_truncating_mixed_measurements():
+    from engine.stock_processing.data_processor import _normalize_numeric
+    whole = _normalize_numeric(pd.Series(['1.0', '2', None]))
+    assert whole.tolist() == [1, 2, 0]
+    assert pd.api.types.is_integer_dtype(whole)
+    mixed = _normalize_numeric(pd.Series(['1.25', '2', None]))
+    assert mixed.tolist() == [1.25, 2, 0]

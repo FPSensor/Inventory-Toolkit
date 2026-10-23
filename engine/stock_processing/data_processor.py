@@ -23,7 +23,12 @@ def _normalize_text(series: pd.Series) -> pd.Series:
 
 def _normalize_numeric(series: pd.Series) -> pd.Series:
     normalized = series.astype(str).str.replace(",", ".", regex=False).str.strip()
-    return pd.to_numeric(normalized, errors="coerce").fillna(0)
+    numeric = pd.to_numeric(normalized, errors="coerce").fillna(0)
+    # Keep exact whole quantities integral without truncating measured quantities.
+    bounds = np.iinfo(np.int64)
+    if np.isfinite(numeric).all() and numeric.between(bounds.min, bounds.max).all() and numeric.mod(1).eq(0).all():
+        return numeric.astype(np.int64)
+    return numeric
 
 
 def adapt_stock_headers(raw_frame, plan, source_article):
