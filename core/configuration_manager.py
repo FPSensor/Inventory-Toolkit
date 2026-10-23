@@ -22,6 +22,7 @@ from core.configuration_errors import ConfigurationError, ConfigurationFileError
 from core.logger import log_debug_event
 from core.paths import profile_configs_root
 from core.profile_config import DEFAULTS, ensure_profile_config, validate_config_header
+from core.module_preferences import enabled_modules, require_enabled
 
 
 _CONFIG_MODELS: Dict[str, Type[BaseModel]] = {
@@ -35,8 +36,13 @@ _CONFIG_MODELS: Dict[str, Type[BaseModel]] = {
 
 
 class ConfigurationManager:
-    def __init__(self, profile: str = "demo"):
+    def __init__(self, profile: str = "demo", *, module: str | None = None):
         self.profile = profile
+        if module is not None:
+            require_enabled(profile, module)
+        self.modules = (module,) if module else enabled_modules(profile)
+        self.logical_names = {"general/catalog", "general/families", "general/network"} | {
+            f"{name}/settings" for name in self.modules}
         self.base_dir = profile_configs_root(profile)
         log_debug_event(
             "config_manager_init",
@@ -44,7 +50,7 @@ class ConfigurationManager:
             base_dir=str(self.base_dir),
         )
         try:
-            ensure_profile_config(self.base_dir)
+            ensure_profile_config(self.base_dir, logical_names=self.logical_names)
             self._index: Dict[str, Any] = {}
             self.reload()
             self.validate_all()
@@ -71,6 +77,8 @@ class ConfigurationManager:
             if relative.parts and relative.parts[0] == "_legacy_v1_backup":
                 continue
             logical_name = relative.with_suffix("").as_posix()
+            if logical_name not in self.logical_names:
+                continue
             try:
                 with json_file.open("r", encoding="utf-8") as handle:
                     self._index[logical_name] = json.load(handle)
@@ -96,6 +104,8 @@ class ConfigurationManager:
     def validate_all(self) -> None:
         """Validate the complete current profile before any workflow can use it."""
         for logical_name, model in _CONFIG_MODELS.items():
+            if logical_name not in self.logical_names:
+                continue
             self._validated(logical_name, model)
         log_debug_event(
             "config_profile_validation_ok",

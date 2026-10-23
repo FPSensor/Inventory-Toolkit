@@ -84,10 +84,12 @@ def validate_config_header(path: Path, data: Any) -> None:
         )
 
 
-def ensure_profile_config(configs_dir: Path) -> None:
+def ensure_profile_config(configs_dir: Path, *, logical_names=None) -> None:
     """Ensure a profile can be consumed through the current schema."""
     initialize_profile_config(configs_dir)
     for logical_name in DEFAULTS:
+        if logical_names is not None and logical_name not in logical_names:
+            continue
         path = config_path(configs_dir, logical_name)
         validate_config_header(path, _read(path))
 

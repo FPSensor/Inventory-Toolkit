@@ -64,7 +64,7 @@ def run_cross_check(args):
             log.error("File not found: '%s'", file_path)
             return None
 
-    config = ConfigurationManager(profile=args.cross_check_profile)
+    config = ConfigurationManager(profile=args.cross_check_profile, module="cross_check")
     family_rules = build_family_rules(config.get_family_rules())
     catalog_columns = config.get_catalog_columns()
     article_column = catalog_columns["article"]

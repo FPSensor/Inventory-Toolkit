@@ -11,6 +11,7 @@ from core.configuration_manager import ConfigurationManager, _CONFIG_MODELS
 from core.profile_config import ensure_profile_config
 from core.setup_catalog import STEPS, get_value, set_value
 from core.workflow_errors import ErrorCode, WorkflowError
+from core.module_preferences import require_enabled
 
 
 class SetupState(IntEnum):
@@ -50,10 +51,11 @@ class SetupSession:
     def __init__(self, profile, module):
         if module not in STEPS:
             raise ValueError(f'Unknown workflow: {module}')
+        require_enabled(profile, module)
         self.profile, self.module = profile, module
         self.steps = STEPS[module]
         self.root = paths.profile_configs_root(profile)
-        ensure_profile_config(self.root)
+        ensure_profile_config(self.root, logical_names={step.logical for step in self.steps})
 
     def data(self, step):
         return _CONFIG_MODELS[step.logical].model_validate(_read(self.root / f'{step.logical}.json')).model_dump()
@@ -89,7 +91,7 @@ class SetupSession:
     def state(self):
         reviewed = self.reviewed()
         if reviewed is None:
-            ConfigurationManager(self.profile)
+            ConfigurationManager(self.profile, module=self.module)
             return SetupState.COMPLETE
         if not reviewed:
             return SetupState.NOT_CONFIGURED

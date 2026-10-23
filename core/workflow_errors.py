@@ -4,6 +4,7 @@ from core.configuration_errors import ConfigurationError
 
 
 class ErrorCode(str, Enum):
+    MODULE_DISABLED = 'MODULE_DISABLED'
     CONFIG_REQUIRED_FIELD = 'CONFIG_REQUIRED_FIELD'
     CONFIG_INVALID = 'CONFIG_INVALID'
     INPUT_COLUMN_MISSING = 'INPUT_COLUMN_MISSING'

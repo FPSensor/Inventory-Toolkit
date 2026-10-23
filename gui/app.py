@@ -2,6 +2,7 @@
 
 import os
 from core.build import BUILD
+from core.module_preferences import enabled_modules, set_enabled_modules
 import sys
 import json
 import queue
@@ -172,6 +173,9 @@ class InventoryToolkitGUI(BaseWindow):
         if self._setup_panel is not None:
             self._notify("info", "Setup in progress", "Leave or finish the current setup before switching modules.")
             return
+        if module in MODULE_LABELS and module not in enabled_modules(self.active_profile.get()):
+            self._notify("info", "Workflow disabled", "Enable this workflow in Profile overview before opening it.")
+            return
         self._selected_module = module
         if hasattr(self, "_pages"):
             if module == "overview":
@@ -299,8 +303,27 @@ class InventoryToolkitGUI(BaseWindow):
         for child in page.winfo_children():
             child.destroy()
         entries = inspect_profile(self.active_profile.get())
+        selected = enabled_modules(self.active_profile.get())
+        chooser = BaseFrame(page)
+        chooser.pack(fill="x", padx=18, pady=12)
+        _lbl(chooser, text="Use only the workflows you need", font=("Arial", 15, "bold")).pack(anchor="w", padx=12, pady=8)
+        choices = {}
+        for name, label in MODULE_LABELS.items():
+            choices[name] = tk.BooleanVar(value=name in selected)
+            cls = ctk.CTkCheckBox if USE_CTK else ttk.Checkbutton
+            cls(chooser, text=label, variable=choices[name]).pack(anchor="w", padx=12, pady=4)
+        def apply_modules():
+            if not self._require_idle():
+                return
+            try:
+                set_enabled_modules(self.active_profile.get(), [name for name, variable in choices.items() if variable.get()])
+                self._render_overview()
+                self._notify("info", "Workflows updated", "Disabled workflows keep their settings for later.")
+            except ValueError as exc:
+                self._notify("error", "Choose workflows", str(exc))
+        _btn(chooser, "Apply workflow selection", apply_modules).pack(anchor="w", padx=12, pady=10)
         ready = sum(entry.state == SetupState.COMPLETE for entry in entries)
-        _lbl(page, text=f"{ready} of {len(entries)} workflows ready", font=("Arial", 17, "bold")
+        _lbl(page, text=f"{ready} of {len(selected)} enabled workflows ready", font=("Arial", 17, "bold")
             ).pack(anchor="w", padx=20, pady=(12, 5))
         _lbl(page, text="Review setup pages by workflow. 'Ready' reflects configuration review; input headers are checked when you select a file.",
             wraplength=650, justify="left").pack(anchor="w", padx=20, pady=(0, 10))
@@ -319,7 +342,7 @@ class InventoryToolkitGUI(BaseWindow):
             buttons.pack(anchor="w", padx=10, pady=(0, 10))
             _btn(buttons, "Open workflow", lambda name=entry.module: self._show_module(name)
                 ).pack(side="left", padx=3)
-            if not entry.issue:
+            if entry.enabled and not entry.issue:
                 _btn(buttons, "Review setup", lambda name=entry.module, step=entry.pending_step: self._open_wizard(name, step)
                     ).pack(side="left", padx=3)
 

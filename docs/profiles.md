@@ -225,3 +225,7 @@ The assistant can inspect a small Excel sample on each column-mapping page. It r
 ## Optional variants
 
 YoY `input.variant_column` identifies an optional product dimension, such as flavor, package weight or size. `output.include_variants` controls its default breakdown. The actual header is also used in report detail labels. A business with no variants leaves the breakdown off and does not need a variant column. Quantity remains a separate numeric measure: a presentation named "500 g" is a variant, while a sale of 1.25 kg is a quantity. Earlier `size_column` / `include_sizes` keys are accepted on read and become the generic names when saved.
+
+## Enabled workflows
+
+`profile.json` may contain `enabled_modules`, a nonempty list drawn from `cross_check`, `stock_processing` and `yoy_reports`. Missing selection means all workflows for existing profiles. Disabled workflows retain their configuration and setup progress; they do not need review before another workflow runs. Frontends and direct engine entry points reject disabled workflows. Configuration loading can target one module, so a malformed disabled module file does not block an enabled workflow. Shared catalog/family/network documents still belong to the profile.

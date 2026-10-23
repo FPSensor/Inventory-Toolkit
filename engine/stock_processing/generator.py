@@ -33,7 +33,7 @@ from engine.stock_processing.valuation import (
 
 
 def _load_plan(profile: str) -> StockProcessingPlan:
-    config = ConfigurationManager(profile)
+    config = ConfigurationManager(profile, module="stock_processing")
     return StockProcessingPlan.from_manager(config)
 
 

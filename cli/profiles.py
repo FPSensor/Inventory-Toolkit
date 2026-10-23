@@ -10,6 +10,8 @@ Linear new-profile flow:
 
 import os
 from core.build import BUILD
+from core.module_preferences import set_enabled_modules
+from core.setup_catalog import MODULE_LABELS
 import sys
 from cli.utils import clear_screen, load_json, save_json, ask_yes_no
 from cli.wizard import initialize_profile_files, run_setup_wizard
@@ -81,6 +83,17 @@ def _create_new_profile() -> str | None:
 
     print(f"\n  ✅ Profile '{display_name}' created at: {profile_path}\n")
 
+    print("  Choose the workflows you want to use (you can change this later).")
+    choices = list(MODULE_LABELS)
+    for i, name in enumerate(choices, 1):
+        print(f"    {i}. {MODULE_LABELS[name]}")
+    while True:
+        raw = input("  Numbers separated by commas [Enter=all]: ").strip()
+        parts = raw.split(",") if raw else [str(i) for i in range(1, 4)]
+        if all(part.strip() in {"1", "2", "3"} for part in parts):
+            set_enabled_modules(folder, [choices[int(part) - 1] for part in parts])
+            break
+        print("  Choose at least one number: 1, 2 or 3.")
     initialize_setup(folder)
     print("  Select a module from the main menu to configure only what you use.")
     print("  Setup progress is saved independently for each module.")

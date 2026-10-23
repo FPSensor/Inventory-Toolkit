@@ -4,6 +4,7 @@ from dataclasses import dataclass
 
 from core.setup_catalog import MODULE_LABELS
 from core.setup_service import SetupSession, SetupState
+from core.module_preferences import enabled_modules
 from core.workflow_errors import WorkflowError
 
 
@@ -17,9 +18,12 @@ class ModuleOverview:
     pending_step: str | None
     pending_titles: tuple[str, ...]
     issue: str | None = None
+    enabled: bool = True
 
     @property
     def status(self):
+        if not self.enabled:
+            return "Disabled"
         if self.issue:
             return "Needs attention"
         return {
@@ -32,7 +36,11 @@ class ModuleOverview:
 def inspect_profile(profile: str) -> tuple[ModuleOverview, ...]:
     """Explain setup state without treating operator review as file validation."""
     results = []
+    enabled = enabled_modules(profile)
     for module, label in MODULE_LABELS.items():
+        if module not in enabled:
+            results.append(ModuleOverview(module, label, None, None, 0, None, (), enabled=False))
+            continue
         steps = ()
         try:
             session = SetupSession(profile, module)

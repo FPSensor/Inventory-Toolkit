@@ -58,7 +58,10 @@ def show_profile_overview(profile):
             continue
         if choice.isdigit() and 1 <= int(choice) <= len(entries):
             entry = entries[int(choice) - 1]
-            if entry.issue:
+            if not entry.enabled:
+                print("  Enable this workflow in Configuration first.")
+                input("  Press Enter to return...")
+            elif entry.issue:
                 print("  Fix the profile configuration before opening guided setup.")
                 input("  Press Enter to return...")
             else:

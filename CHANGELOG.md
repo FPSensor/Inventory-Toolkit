@@ -8,6 +8,8 @@ Development changes after `v1.4.1`. The released application version remains `1.
 
 ### Added
 
+- **core: modules:** Add profile-owned workflow selection during CLI/GUI profile creation and in the desktop overview. Disabled workflows retain settings but cannot run or force configuration/validation of their files. Existing profiles continue with all workflows enabled.
+
 - **core: build:** Centralize runtime version, debug/release capabilities and permitted interfaces in `build.prop`. CLI, GUI and new profile metadata now read the same manifest; a lazy application launcher supports CLI-only, GUI-only or both interfaces.
 
 - Added optional pre-run workbook inspection in the GUI and CLI profile overview. It samples only five rows per selected file, checks the headers actually required by each module and the chosen YoY options, handles headerless scanner readings correctly, and reports missing/ambiguous columns without generating a report or changing profile settings.

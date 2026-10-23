@@ -59,7 +59,7 @@ def generate_sales_report(
     family_rules = None
     if not yoy_has_families:
         log.info("Loading family rules to dynamically generate groupings...")
-        config = ConfigurationManager(profile)
+        config = ConfigurationManager(profile, module="yoy_reports")
         family_rules = build_family_rules(config.get_family_rules())
         default_family = config.get_default_family()
         log_debug_event(

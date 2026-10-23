@@ -22,6 +22,8 @@ Config Hub window:
 
 import os
 from core.build import BUILD
+from core.module_preferences import set_enabled_modules
+from core.setup_catalog import MODULE_LABELS
 import sys
 import json
 import queue
@@ -66,7 +68,7 @@ class NewProfileModal(BaseToplevel):
         super().__init__(parent)
         self.callback = on_created
         self.title("Create New Profile")
-        self.geometry("520x300")
+        self.geometry("580x500")
         self.attributes("-topmost", True)
 
         self.prof_id   = tk.StringVar()
@@ -82,12 +84,22 @@ class NewProfileModal(BaseToplevel):
         _lbl(self, text="Description (optional):").pack(anchor="w", padx=20, pady=(10, 2))
         _entry(self, textvariable=self.prof_desc).pack(fill="x", padx=20, pady=2)
 
+        self.modules = {name: tk.BooleanVar(value=True) for name in MODULE_LABELS}
+        _lbl(self, text="Choose your workflows — configure only what you use").pack(anchor="w", padx=20, pady=(16, 4))
+        for name, variable in self.modules.items():
+            cls = ctk.CTkCheckBox if USE_CTK else ttk.Checkbutton
+            cls(self, text=MODULE_LABELS[name], variable=variable).pack(anchor="w", padx=20, pady=4)
+
         btn_box = BaseFrame(self)
         btn_box.pack(fill="x", padx=20, pady=20)
         _btn(btn_box, "Cancel",         self.destroy).pack(side="right", padx=5)
         _btn(btn_box, "Create Profile", self._submit).pack(side="right", padx=5)
 
     def _submit(self):
+        selected = [name for name, variable in self.modules.items() if variable.get()]
+        if not selected:
+            messagebox.showerror("Choose workflows", "Select at least one workflow.", parent=self)
+            return
         raw_id = self.prof_id.get().strip().lower().replace(" ", "_")
         if not raw_id or raw_id in {".", ".."} or "/" in raw_id or "\\" in raw_id:
             messagebox.showerror("Validation Error", "Profile ID is required.", parent=self)
@@ -105,6 +117,7 @@ class NewProfileModal(BaseToplevel):
             "version":     BUILD.version,
         })
         initialize_profile_files(configs_path)
+        set_enabled_modules(raw_id, selected)
         initialize_setup(raw_id)
         self.callback(raw_id)
         self.destroy()

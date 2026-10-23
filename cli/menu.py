@@ -1,5 +1,6 @@
 import sys
 from core.build import BUILD
+from core.module_preferences import enabled_modules
 import argparse
 from cli.utils import clear_screen
 from cli.profiles import select_profile
@@ -67,9 +68,10 @@ def _draw_menu(current_profile: str, debug_level: int = 1) -> None:
         print(_row(f"   Debug diagnostics: [LEVEL {debug_level}]"))
     print(_rule())
     print(_row())
-    print(_row("    C  ›  Inventory Cross Check"))
-    print(_row("    S  ›  Stock Processing"))
-    print(_row("    R  ›  YoY Sales Report"))
+    enabled = enabled_modules(current_profile)
+    for module, key, label in [("cross_check", "C", "Inventory Cross Check"), ("stock_processing", "S", "Stock Processing"), ("yoy_reports", "R", "YoY Sales Report")]:
+        if module in enabled:
+            print(_row(f"    {key}  ›  {label}"))
     print(_row())
     print(_rule())
     print(_row("    K  ›  Configuration"))
