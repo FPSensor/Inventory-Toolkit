@@ -1,129 +1,75 @@
-"""
-app.py — Inventory Toolkit Desktop GUI
-
-Fully cross-platform (Linux / macOS / Windows) — no Windows-only APIs.
-Built on tkinter + customtkinter (falls back to plain ttk when CTk is absent).
-
-Layout:
-  Top bar   — profile selector, [New Profile], [Setup Wizard], [Config Hub], [Exit]
-  Tab row   — Cross Check | Stock Processing | YoY Sales Reports
-  Status bar — async task progress
-
-Config Hub window:
-  Left sidebar  — config file list
-  Right panel   — dynamic editor:
-    dict_list   → category list + item list with Add / Import / Delete
-    key_value   → field grid with Save button
-    stores      → active stores + regional groups, fully interactive
-    stock_output → structured editor (raw sheet, base columns, summaries)
-    yoy_reports  → structured editor (input, output, groups)
-    pricing      → structured editor (column mapping + aliases)
-"""
-
-import os
-from core.build import BUILD
-from core.module_preferences import set_enabled_modules
-from core.setup_catalog import MODULE_LABELS
-import sys
-import json
-import queue
-import threading
-import subprocess
-from pathlib import Path
-import time
-from copy import deepcopy
-from argparse import Namespace
-
+"""Embedded profile onboarding: a name and only the workflows you need."""
 import tkinter as tk
-from tkinter import filedialog, messagebox, simpledialog
 
-from gui.widgets import (ctk, ttk, USE_CTK, BaseWindow, BaseToplevel, BaseFrame,
-    BaseButton, BaseLabel, BaseEntry, BaseTextbox, BaseScrollable,
-    _btn, _lbl, _entry, _pack_btn, apply_dark_theme)
-
-try:
-    import pandas as pd
-    PANDAS_AVAILABLE = True
-except ImportError:
-    PANDAS_AVAILABLE = False
-
-from core.business_schema import ARTICLE_COLUMN, DATABASE_ORIGIN_COLUMN, DEFAULT_FAMILY, FAMILY_COLUMN, PRICE_COLUMN, RAW_DATA_SHEET, VARIANT_COLUMN
-from core.configuration_manager import ConfigurationManager
-from core.input_columns import choose_input_columns
-from core.profile_config import DEFAULTS
-from core.logger import log
-from core import paths as app_paths
-from core.system_utils import InvalidExcelOutputPathError, normalize_xlsx_output_path
-from core.profile_config import ensure_profile_config as initialize_profile_files
-from core.setup_service import initialize_setup
-from core.profile_store import save_json, load_json, load_last_paths, save_last_paths
-from engine.inventory_cross_check.generator import run_cross_check
-from engine.stock_processing.generator import run_stock_processing
-from engine.yoy_reports.generator import generate_sales_report
-from engine.yoy_reports.metrics import select_run_metrics
+from core.profile_creation import create_profile, profile_slug
+from core.setup_catalog import MODULE_LABELS
+from gui.widgets import BaseFrame, BaseScrollable, USE_CTK, ctk, ttk, _btn, _lbl, _entry, COLORS
 
 
-class NewProfileModal(BaseToplevel):
-    def __init__(self, parent, on_created):
+class NewProfilePanel(BaseFrame):
+    def __init__(self, parent, profile, on_created, on_cancel):
         super().__init__(parent)
-        self.callback = on_created
-        self.title("Create New Profile")
-        self.geometry("580x500")
-        self.attributes("-topmost", True)
-
-        self.prof_id   = tk.StringVar()
-        self.prof_name = tk.StringVar()
-        self.prof_desc = tk.StringVar(value="")
-
-        _lbl(self, text="Folder ID (lowercase, no spaces):").pack(anchor="w", padx=20, pady=(16, 2))
-        _entry(self, textvariable=self.prof_id).pack(fill="x", padx=20, pady=2)
-
-        _lbl(self, text="Display Name:").pack(anchor="w", padx=20, pady=(10, 2))
-        _entry(self, textvariable=self.prof_name).pack(fill="x", padx=20, pady=2)
-
-        _lbl(self, text="Description (optional):").pack(anchor="w", padx=20, pady=(10, 2))
-        _entry(self, textvariable=self.prof_desc).pack(fill="x", padx=20, pady=2)
-
+        self.profile = profile
+        self.on_created, self.on_cancel = on_created, on_cancel
+        self.name = tk.StringVar()
+        self.description = tk.StringVar()
         self.modules = {name: tk.BooleanVar(value=True) for name in MODULE_LABELS}
-        _lbl(self, text="Choose your workflows — configure only what you use").pack(anchor="w", padx=20, pady=(16, 4))
+        content = BaseScrollable(self)
+        content.pack(fill='both', expand=True, padx=24, pady=16)
+        _lbl(content, text='Make this workspace yours', font=('Arial', 25, 'bold')).pack(anchor='w', pady=(12, 8))
+        _lbl(content, text='Create a profile, choose your workflows, then configure each one with its own files. You can enable more workflows later.', wraplength=670, justify='left', style='Muted.TLabel').pack(anchor='w', pady=(0, 20))
+        _lbl(content, text='Profile name', font=('Arial', 14, 'bold')).pack(anchor='w', pady=(4, 6))
+        entry = _entry(content, textvariable=self.name)
+        entry.pack(fill='x', padx=(0, 16))
+        self.folder = _lbl(content, text='A portable folder name will be generated automatically.', style='Muted.TLabel')
+        self.folder.pack(anchor='w', pady=(6, 18))
+        _lbl(content, text='Description (optional)').pack(anchor='w', pady=(0, 6))
+        _entry(content, textvariable=self.description).pack(fill='x', padx=(0, 16), pady=(0, 20))
+        _lbl(content, text='What would you like to do?', font=('Arial', 16, 'bold')).pack(anchor='w', pady=(0, 8))
+        details = {'cross_check': 'Compare recorded stock with a physical count.',
+            'stock_processing': 'Clean quantities and value stock by location.',
+            'yoy_reports': 'Compare sales periods, quantities and optional revenue.'}
         for name, variable in self.modules.items():
+            row = BaseFrame(content)
+            row.pack(fill='x', pady=5, padx=(0, 16))
             cls = ctk.CTkCheckBox if USE_CTK else ttk.Checkbutton
-            cls(self, text=MODULE_LABELS[name], variable=variable).pack(anchor="w", padx=20, pady=4)
+            cls(row, text=MODULE_LABELS[name], variable=variable).pack(anchor='w', padx=12, pady=(10, 2))
+            _lbl(row, text=details[name], style='Muted.TLabel', wraplength=580).pack(anchor='w', padx=16, pady=(0, 12))
+        self.notice = _lbl(self, text='Only enabled workflows will ask for setup.', wraplength=680, justify='left', style='Muted.TLabel')
+        self.notice.pack(fill='x', padx=24, pady=8)
+        self.actions = BaseFrame(self)
+        self.actions.pack(fill='x', padx=24, pady=16)
+        _btn(self.actions, 'Cancel', self._leave, variant='ghost').pack(side='left')
+        self.create_button = _btn(self.actions, 'Create profile', self._submit, variant='primary')
+        self.create_button.pack(side='right')
+        self.name.trace_add('write', self._update)
+        for variable in self.modules.values():
+            variable.trace_add('write', self._update)
+        self._update()
+        entry.focus_set()
 
-        btn_box = BaseFrame(self)
-        btn_box.pack(fill="x", padx=20, pady=20)
-        _btn(btn_box, "Cancel",         self.destroy).pack(side="right", padx=5)
-        _btn(btn_box, "Create Profile", self._submit).pack(side="right", padx=5)
+    def _update(self, *_args):
+        try:
+            slug = profile_slug(self.name.get())
+            self.folder.configure(text=f'Profile folder: {slug}')
+            valid = any(variable.get() for variable in self.modules.values())
+        except ValueError:
+            valid = False
+            self.folder.configure(text='Enter a name to generate the profile folder.')
+        self.create_button.configure(state='normal' if valid else 'disabled')
 
     def _submit(self):
-        selected = [name for name, variable in self.modules.items() if variable.get()]
-        if not selected:
-            messagebox.showerror("Choose workflows", "Select at least one workflow.", parent=self)
+        try:
+            profile = create_profile(self.name.get(), self.description.get(),
+                [name for name, variable in self.modules.items() if variable.get()])
+        except (ValueError, OSError) as exc:
+            self.notice.configure(text=f'Could not create profile: {exc}', **({'text_color': COLORS['error']} if USE_CTK else {'foreground': COLORS['error']}))
             return
-        raw_id = self.prof_id.get().strip().lower().replace(" ", "_")
-        if not raw_id or raw_id in {".", ".."} or "/" in raw_id or "\\" in raw_id:
-            messagebox.showerror("Validation Error", "Profile ID is required.", parent=self)
-            return
-        target_dir = app_paths.profile_root(raw_id)
-        if os.path.exists(target_dir):
-            messagebox.showerror("Error", f"Profile '{raw_id}' already exists.", parent=self)
-            return
+        self.on_created(profile)
 
-        configs_path = target_dir / "configs"
-        configs_path.mkdir(parents=True, exist_ok=True)
-        save_json(str(target_dir / "profile.json"), {
-            "name":        self.prof_name.get().strip() or raw_id,
-            "description": self.prof_desc.get().strip(),
-            "version":     BUILD.version,
-        })
-        initialize_profile_files(configs_path)
-        set_enabled_modules(raw_id, selected)
-        initialize_setup(raw_id)
-        self.callback(raw_id)
-        self.destroy()
-
-
-# ═════════════════════════════════════════════════════════════════════════════
-# 3. MAIN DESKTOP APPLICATION
-# ═════════════════════════════════════════════════════════════════════════════
-
+    def _leave(self):
+        if self.name.get().strip() or self.description.get().strip():
+            self.notice.configure(text='This profile has not been created. Discard this draft or continue editing.')
+            _btn(self.actions, 'Discard draft', self.on_cancel, variant='danger').pack(side='left', padx=8)
+        else:
+            self.on_cancel()

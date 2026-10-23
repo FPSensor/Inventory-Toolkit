@@ -49,7 +49,7 @@ from gui.setup_wizard import SetupWizard
 
 
 from gui.config_hub import ConfigurationWorkspace
-from gui.profile_dialog import NewProfileModal
+from gui.profile_dialog import NewProfilePanel
 
 class InventoryToolkitGUI(BaseWindow):
 
@@ -216,15 +216,25 @@ class InventoryToolkitGUI(BaseWindow):
     def _open_new_profile(self):
         if not self._require_idle():
             return
+        def close_panel():
+            panel = self._setup_panel
+            self._setup_panel = None
+            panel.destroy()
+            self._profile_menu.configure(state='normal' if USE_CTK else 'readonly')
         def on_done(new_id):
+            close_panel()
             self._refresh_profiles()
-            if USE_CTK:
-                self._profile_menu.configure(values=self._profiles)
-            else:
-                self._profile_menu["values"] = self._profiles
+            self._profile_menu.configure(values=self._profiles)
             self.active_profile.set(new_id)
-            self._notify("info", "Profile Ready", f"Active profile set to [{new_id}].", parent=self)
-        NewProfileModal(self, on_done)
+            self._show_module('overview')
+            self._notify('success', 'Profile created', 'Choose an enabled workflow to set it up with your files.')
+        def cancel():
+            close_panel()
+            self._show_module('overview')
+        self._setup_panel = NewProfilePanel(self._page_host, self.active_profile.get(), on_done, cancel)
+        self._setup_panel.grid(row=0, column=0, sticky='nsew')
+        self._setup_panel.tkraise()
+        self._profile_menu.configure(state='disabled')
 
     def _open_wizard(self, module=None, step=None, *, edit_mode=False, single_page=False, return_to_settings=False):
         if not self._require_idle():
@@ -372,7 +382,9 @@ class InventoryToolkitGUI(BaseWindow):
 
     def _on_profile_changed(self, *_args):
         if getattr(self, "_setup_panel", None) is not None:
-            self.active_profile.set(self._setup_panel.session.profile) if self.active_profile.get() != self._setup_panel.session.profile else None
+            guarded_profile = getattr(self._setup_panel, "profile", None) or self._setup_panel.session.profile
+            if self.active_profile.get() != guarded_profile:
+                self.active_profile.set(guarded_profile)
             return
         if self._busy:
             if self.active_profile.get() != self._running_profile:

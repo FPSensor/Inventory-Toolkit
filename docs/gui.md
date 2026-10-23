@@ -134,3 +134,5 @@ The desktop remains dark by default on both CustomTkinter and native ttk, with s
 ## Guided setup workspace
 
 The assistant has a step navigator, progress indicator, contextual explanations and a final review. Show additional settings expands the same catalog used by Configuration. Choosing an Excel sample offers matching headers and examples; samples are shared only across pages for that input role, and explicitly selected sample paths are remembered for later runs. Pausing with an unsaved draft presents Save & leave, Discard draft and Stay here inside the workspace. Finishing setup never starts a report automatically.
+
+Profile creation is also embedded. Enter a display name and select workflows; the folder ID is generated automatically. Errors remain beside the form, and leaving an uncreated draft requires an explicit discard action. Profile initialization uses the same neutral resource-backed service as the CLI.
