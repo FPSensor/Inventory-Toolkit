@@ -214,7 +214,7 @@ class SetupSession:
         reviewed[step.id] = hashlib.sha256(json.dumps(field_values, sort_keys=True).encode()).hexdigest()
         target = self.root / f'{step.logical}.json'
         metadata_path = paths.profile_root(self.profile) / 'profile.json'
-        if _read(target) == raw and _read(metadata_path) == metadata:
+        if _read(target) == raw and self.metadata() == metadata:
             return
         from core.profile_history import create_checkpoint
         create_checkpoint(self.profile, f'Before editing {step.title}')

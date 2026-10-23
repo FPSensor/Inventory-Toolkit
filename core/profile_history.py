@@ -50,7 +50,7 @@ def create_checkpoint(profile, label='Manual checkpoint', *, allow_missing=False
         try:
             content = (root / name).read_bytes()
         except FileNotFoundError:
-            if not allow_missing:
+            if not allow_missing and name != 'profile.json':
                 raise
             documents[name] = {'sha256': None, 'content': None}
             continue
@@ -79,6 +79,9 @@ def _load_checkpoint(profile, identifier):
         if not isinstance(entry, dict):
             raise ValueError('Invalid checkpoint document.')
         try:
+            if entry.get('content') is None and entry.get('sha256') is None:
+                raw[name] = None
+                continue
             content = base64.b64decode(entry['content'], validate=True)
             if hashlib.sha256(content).hexdigest() != entry['sha256']:
                 raise ValueError('Checksum does not match.')
@@ -86,11 +89,13 @@ def _load_checkpoint(profile, identifier):
             raw[name] = content
         except (KeyError, TypeError, ValueError) as exc:
             raise ValueError(f'Checkpoint document {name!r} is damaged: {exc}') from exc
-    metadata = validate_metadata(decode_document(raw['profile.json'], 'profile.json'))
+    metadata = validate_metadata({} if raw['profile.json'] is None else decode_document(raw['profile.json'], 'profile.json'))
     modules = metadata.get('enabled_modules', list(MODULE_LABELS))
     for logical, model in _CONFIG_MODELS.items():
         name = f'configs/{logical}.json'
         if logical.startswith('general/') or logical.split('/')[0] in modules:
+            if raw[name] is None:
+                raise ValueError(f'Checkpoint is missing required configuration {name!r}.')
             data = decode_document(raw[name], name)
             validate_config_header(Path(name), data)
             model.model_validate(data)

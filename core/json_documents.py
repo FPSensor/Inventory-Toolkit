@@ -48,10 +48,10 @@ def write_documents(documents):
 
 
 def write_payloads(encoded):
-    """Apply already-encoded document bytes with the same rollback contract."""
+    """Apply encoded bytes or explicit deletions (None) with rollback."""
     encoded = {Path(path): payload for path, payload in encoded.items()}
-    if any(not isinstance(payload, bytes) for payload in encoded.values()):
-        raise TypeError('Document payloads must be bytes.')
+    if any(payload is not None and not isinstance(payload, bytes) for payload in encoded.values()):
+        raise TypeError('Document payloads must be bytes or None for deletion.')
     staged, original, replaced = {}, {}, []
     try:
         for path, payload in encoded.items():
@@ -60,11 +60,14 @@ def write_payloads(encoded):
             fd, name = tempfile.mkstemp(dir=path.parent, prefix=".profile-", suffix=".tmp")
             staged[path] = Path(name)
             with os.fdopen(fd, "wb") as handle:
-                handle.write(payload)
+                handle.write(payload if payload is not None else b'')
                 handle.flush()
                 os.fsync(handle.fileno())
         for path, temporary in staged.items():
-            os.replace(temporary, path)
+            if encoded[path] is None:
+                path.unlink(missing_ok=True)
+            else:
+                os.replace(temporary, path)
             replaced.append(path)
     except OSError:
         for path in reversed(replaced):

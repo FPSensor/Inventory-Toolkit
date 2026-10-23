@@ -119,6 +119,8 @@ Development changes after `v1.4.1`. The released application version remains `1.
 
 ### Fixed
 
+- **setup: checkpoints:** Preserve the supported lifecycle of existing profiles without metadata. Their first reviewed edit can be checkpointed, and restoring the earlier point removes metadata that did not originally exist. Explicit document deletions share the rollback contract.
+
 - **core: profiles:** Validate profile metadata and remembered-path shapes before using them. Damaged objects or non-string workflow selections now produce actionable configuration errors instead of attribute/hash failures, without rewriting user documents.
 
 - **debug: integrity:** Supply the resolved input contract in the synthetic Stock integrity fixture after introducing module-owned mappings. Keep the diagnostic executable under the full release gate.

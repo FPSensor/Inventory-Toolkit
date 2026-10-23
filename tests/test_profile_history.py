@@ -91,3 +91,12 @@ def test_setup_creates_checkpoint_only_when_a_saved_page_changes(profile):
     assert history.list_checkpoints(profile) == first
     history.restore_checkpoint(profile, first[0])
     assert session.reviewed() == {}
+
+
+def test_restore_retains_absent_metadata_for_existing_unenrolled_profiles(profile):
+    metadata = paths.profile_root(profile) / 'profile.json'
+    metadata.unlink()
+    checkpoint = history.create_checkpoint(profile)
+    write_documents({metadata: {'name': 'Enrolled later'}})
+    history.restore_checkpoint(profile, checkpoint)
+    assert not metadata.exists()

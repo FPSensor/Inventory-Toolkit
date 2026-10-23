@@ -38,3 +38,19 @@ def test_windows_utf8_bom_is_accepted_with_strict_json_rules(tmp_path):
     path.write_bytes(b'\xef\xbb\xbf{"version": 3, "version": 4}')
     with pytest.raises(ConfigurationFileError, match='duplicate JSON key'):
         json_documents.read_document(path)
+
+
+def test_deletion_rolls_back_when_a_later_replacement_fails(tmp_path, monkeypatch):
+    first, second = tmp_path / 'first.json', tmp_path / 'second.json'
+    first.write_bytes(b'old first'); second.write_bytes(b'old second')
+    replace = json_documents.os.replace
+    calls = []
+    def fail_once(source, target):
+        calls.append(target)
+        if len(calls) == 1:
+            raise OSError('replacement failed')
+        return replace(source, target)
+    monkeypatch.setattr(json_documents.os, 'replace', fail_once)
+    with pytest.raises(OSError):
+        json_documents.write_payloads({first: None, second: b'new second'})
+    assert first.read_bytes() == b'old first' and second.read_bytes() == b'old second'
