@@ -7,3 +7,5 @@ Creating a checkpoint requires the known profile documents to exist. Restoring v
 A restore first saves the current state, then replaces the saved documents using the rollback-safe document writer. This supports undoing a restoration and recovering a missing live document. A safety copy of an already incomplete or damaged current state may require manual repair before it can itself be restored. Restore preserves the checkpoint's original bytes, including CRLF and UTF-8 BOM. Other files are not replaced.
 
 Checkpoints are local convenience recovery, not an off-machine backup. Copy the profile folder to another location for a separate backup. Concurrent writers to the same profile remain unsupported; close the other application instance before editing or restoring.
+
+Setup automatically checkpoints the current profile before saving a changed page. Changing enabled workflows also checkpoints an existing profile. Saving identical values and review state does not generate another checkpoint; initial profile creation starts with empty history. A failed checkpoint prevents the corresponding configuration edit from proceeding.

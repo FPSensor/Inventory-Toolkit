@@ -32,7 +32,7 @@ def create_profile(name, description, modules, *, profile_id=None):
         documents = {target / 'configs' / f'{logical}.json': _CONFIG_MODELS[logical].model_validate(value).model_dump() for logical, value in data.items()}
         documents[target / 'profile.json'] = {'name': name.strip(), 'description': description.strip(), 'version': BUILD.version}
         write_documents(documents)
-        set_enabled_modules(profile, modules)
+        set_enabled_modules(profile, modules, checkpoint=False)
         initialize_setup(profile)
         return profile
     except Exception:

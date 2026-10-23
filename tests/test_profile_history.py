@@ -75,3 +75,19 @@ def test_restore_preserves_disabled_invalid_settings(profile):
     target.write_bytes(b'other disabled data')
     history.restore_checkpoint(profile, checkpoint)
     assert target.read_bytes() == b'not JSON'
+
+
+def test_setup_creates_checkpoint_only_when_a_saved_page_changes(profile):
+    from core.setup_service import SetupSession
+    from core.setup_catalog import get_value
+    assert history.list_checkpoints(profile) == ()
+    session = SetupSession(profile, 'cross_check')
+    step = session.steps[0]
+    values = {'.'.join(field.path): get_value(session.data(step), field.path) for field in step.fields}
+    session.save_step(step.id, values)
+    first = history.list_checkpoints(profile)
+    assert len(first) == 1
+    session.save_step(step.id, values)
+    assert history.list_checkpoints(profile) == first
+    history.restore_checkpoint(profile, first[0])
+    assert session.reviewed() == {}

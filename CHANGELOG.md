@@ -8,6 +8,8 @@ Development changes after `v1.4.1`. The released application version remains `1.
 
 ### Added
 
+- **setup: recovery:** Create a local configuration checkpoint before saving a changed setup page or workflow selection. Identical saves avoid redundant writes/checkpoints, and new-profile initialization does not create a misleading pre-creation restore point.
+
 - **core: history:** Add bounded local configuration checkpoints with checksums, exact-byte restoration and a pre-restore safety copy. Validate enabled settings before restoring, preserve disabled settings verbatim, recover missing live documents and exclude history from Git/source distributions. UTF-8 BOM JSON is accepted consistently.
 
 - **core: diagnostics:** Add read-only profile checks with stable issue codes and setup destinations. Detect missing/invalid enabled documents, colliding source columns, required cleanup removals, invalid or repeated Excel sheet names, unavailable summary/group locations and ambiguous category prefixes. Inspection never initializes missing profiles or reviews setup pages.

@@ -212,7 +212,13 @@ class SetupSession:
         setup['modules'][self.module].pop('legacy', None)
         field_values = [get_value(raw, field.path) for field in step.fields]
         reviewed[step.id] = hashlib.sha256(json.dumps(field_values, sort_keys=True).encode()).hexdigest()
-        write_documents({self.root / f'{step.logical}.json': raw, paths.profile_root(self.profile) / 'profile.json': metadata})
+        target = self.root / f'{step.logical}.json'
+        metadata_path = paths.profile_root(self.profile) / 'profile.json'
+        if _read(target) == raw and _read(metadata_path) == metadata:
+            return
+        from core.profile_history import create_checkpoint
+        create_checkpoint(self.profile, f'Before editing {step.title}')
+        write_documents({target: raw, metadata_path: metadata})
 
     def first_pending(self):
         reviewed = self.effective_reviews() or {}

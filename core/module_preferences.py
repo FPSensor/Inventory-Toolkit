@@ -12,7 +12,7 @@ def enabled_modules(profile):
     return tuple(name for name in MODULE_LABELS if name in selected)
 
 
-def set_enabled_modules(profile, modules):
+def set_enabled_modules(profile, modules, *, checkpoint=True):
     if not isinstance(modules, (list, tuple)) or not modules or any(not isinstance(name, str) or name not in MODULE_LABELS for name in modules):
         raise ValueError("Choose at least one workflow.")
     selected = list(dict.fromkeys(modules))
@@ -20,6 +20,11 @@ def set_enabled_modules(profile, modules):
         raise ValueError("Choose at least one workflow.")
     path = paths.profile_root(profile) / "profile.json"
     metadata = read_metadata(profile)
+    if metadata.get("enabled_modules") == selected:
+        return
+    if checkpoint and path.is_file():
+        from core.profile_history import create_checkpoint
+        create_checkpoint(profile, 'Before changing enabled workflows')
     metadata["enabled_modules"] = selected
     save_json(str(path), metadata)
 
