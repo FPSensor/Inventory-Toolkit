@@ -40,7 +40,7 @@ def launch_stock_processing(active_profile: str) -> None:
         return
 
     try:
-        config = ConfigurationManager(active_profile)
+        config = ConfigurationManager(active_profile, module="stock_processing")
         stock_columns = config.get_stock_pricing()["columns"]
         default_stock = DEFAULTS["stock_processing/settings"]["pricing"]["columns"]
         overrides = {

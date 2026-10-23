@@ -35,7 +35,7 @@ def workbook(tmp_path, name, data, *, header=True):
 
 
 def test_cross_check_inspects_scanner_as_headerless_and_reports_missing_prices(tmp_path, monkeypatch):
-    monkeypatch.setattr(input_doctor, 'ConfigurationManager', lambda _profile: Config())
+    monkeypatch.setattr(input_doctor, 'ConfigurationManager', lambda _profile, **_kwargs: Config())
     system = workbook(tmp_path, 'system.xlsx', {'Item': ['A'], 'Count': [1]})
     scanner = workbook(tmp_path, 'scanner.xlsx', [['A'], ['B']], header=False)
     cost = workbook(tmp_path, 'cost.xlsx', {'Item': ['A'], 'Price': [10]})
@@ -50,7 +50,7 @@ def test_cross_check_inspects_scanner_as_headerless_and_reports_missing_prices(t
 
 
 def test_yoy_only_checks_columns_used_by_selected_options(tmp_path, monkeypatch):
-    monkeypatch.setattr(input_doctor, 'ConfigurationManager', lambda _profile: Config())
+    monkeypatch.setattr(input_doctor, 'ConfigurationManager', lambda _profile, **_kwargs: Config())
     path = workbook(tmp_path, 'sales.xlsx', {'Date': ['2026-01-01'], 'Units': [2],
         'Branch': ['A'], 'Item': ['SKU']})
     files = {'file': path}
@@ -63,10 +63,22 @@ def test_yoy_only_checks_columns_used_by_selected_options(tmp_path, monkeypatch)
 
 
 def test_stock_detects_missing_configured_store_and_deposit(tmp_path, monkeypatch):
-    monkeypatch.setattr(input_doctor, 'ConfigurationManager', lambda _profile: Config())
+    monkeypatch.setattr(input_doctor, 'ConfigurationManager', lambda _profile, **_kwargs: Config())
     stock = workbook(tmp_path, 'stock.xlsx', {'Item': ['A']})
     prices = workbook(tmp_path, 'prices.xlsx', {'Item': ['A'], 'Origin': ['A'], 'Price': [1]})
     report = input_doctor.inspect_workflow_inputs('example', 'stock_processing',
         {'stock': stock, 'cost': prices, 'sales': prices})
     assert not report.ready
     assert 'Store A' in report.render() and 'Deposit A' in report.render()
+
+
+def test_inspection_does_not_load_another_enabled_broken_workflow(tmp_path, monkeypatch):
+    from core import paths
+    from core.profile_creation import create_profile
+    monkeypatch.setattr(paths, 'PROFILES_ROOT', tmp_path)
+    profile = create_profile('Independent inspection', '', ['cross_check', 'yoy_reports'])
+    (paths.profile_configs_root(profile) / 'yoy_reports/settings.json').write_text('bad JSON')
+    report = input_doctor.inspect_workflow_inputs(profile, 'cross_check', {})
+    assert len(report.files) == 4
+    assert not report.ready
+    assert all(item.issue.startswith('File is not selected') for item in report.files)

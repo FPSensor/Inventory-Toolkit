@@ -26,7 +26,7 @@ def launch_yoy_reports(active_profile: str) -> None:
     log_debug_event("yoy_cli_open", profile=active_profile)
 
     profile = active_profile or "demo"
-    config = ConfigurationManager(profile=profile)
+    config = ConfigurationManager(profile=profile, module="yoy_reports")
     yoy_config = config.get_yoy_reports_config()
     yoy_config = deepcopy(yoy_config)
 

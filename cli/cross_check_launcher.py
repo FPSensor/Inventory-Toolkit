@@ -41,7 +41,7 @@ def launch_cross_check(active_profile: str) -> None:
         return
 
     try:
-        config = ConfigurationManager(active_profile)
+        config = ConfigurationManager(active_profile, module="cross_check")
         cross_config = config.get_cross_check_config()
         mappings = cross_config["price_lists"]
         defaults = DEFAULTS["cross_check/settings"]["price_lists"]

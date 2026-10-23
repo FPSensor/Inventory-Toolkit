@@ -207,7 +207,7 @@ def test_cli_full_report_comparison_is_opt_in_and_reuses_last_paths(tmp_path, mo
     config = _config(metrics=["units"], annual_comparison=True)
     monkeypatch.setattr(
         "cli.yoy_reports_launcher.ConfigurationManager",
-        lambda profile: type("Manager", (), {"get_yoy_reports_config": lambda self: config})(),
+        lambda profile, **_kwargs: type("Manager", (), {"get_yoy_reports_config": lambda self: config})(),
     )
     monkeypatch.setattr(
         "cli.yoy_reports_launcher.pd.read_excel",

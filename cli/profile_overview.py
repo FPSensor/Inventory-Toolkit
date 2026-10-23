@@ -42,7 +42,7 @@ def show_profile_overview(profile):
                     for name, example in examples.items()}
                 options = {}
                 if entry.module == "yoy_reports":
-                    variant_default = bool(ConfigurationManager(profile)
+                    variant_default = bool(ConfigurationManager(profile, module="yoy_reports")
                         .get_yoy_reports_config()["output"]["include_variants"])
                     group = input("  Inspect Family (F) or Item (I) grouping? [I]: ").strip().lower()
                     options["grouping"] = "family" if group == "f" else "item"

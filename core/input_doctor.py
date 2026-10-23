@@ -115,7 +115,7 @@ def _requirements(config, module, *, include_sales, include_variants, grouping, 
 def inspect_workflow_inputs(profile, module, files, *, include_sales=False,
                             include_variants=False, grouping="family", has_families=True):
     """Read at most five rows per input; never apply fallbacks or write config."""
-    specs = _requirements(ConfigurationManager(profile), module,
+    specs = _requirements(ConfigurationManager(profile, module=module), module,
         include_sales=include_sales, include_variants=include_variants,
         grouping=grouping, has_families=has_families)
     results = []

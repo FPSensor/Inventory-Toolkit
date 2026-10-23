@@ -14,3 +14,5 @@ python -m inventory_toolkit doctor --profile demo --json
 ```
 
 Exit status is 0 for no errors (warnings may remain), 1 for profile errors and 2 for command/dependency failures. Commands are available in CLI-only and GUI-only builds and do not import either frontend. Run module commands from the application directory, or make it available on Python's module path.
+
+Workbook input inspection and CLI preflight load only the selected workflow, alongside shared documents. A damaged different enabled module is reported when checking that module, rather than blocking an unrelated run. Profile-wide diagnostics intentionally inspect every enabled workflow; metric requirements follow each saved metric selection.

@@ -180,7 +180,9 @@ def inspect_configuration(profile):
     if yoy:
         module = 'yoy_reports'
         source = yoy['input']
-        mapping = {key: source[key] for key in ('date_column', 'quantity_column', 'branch_column', 'item_column')}
+        mapping = {key: source[key] for key in ('date_column', 'branch_column', 'item_column')}
+        if 'units' in yoy['output']['metrics']:
+            mapping['quantity_column'] = source['quantity_column']
         if 'sales' in yoy['output']['metrics']:
             mapping['sales_column'] = source['sales_column']
         if yoy['output']['include_variants']:

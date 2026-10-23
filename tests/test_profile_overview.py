@@ -47,7 +47,7 @@ def test_console_inspection_uses_selected_yoy_options(monkeypatch):
     monkeypatch.setattr(cli, 'clear_screen', lambda: None)
     monkeypatch.setattr(cli, 'load_last_paths', lambda _profile: {})
     monkeypatch.setattr(cli, 'input_default', lambda _profile, _saved, filename: filename)
-    monkeypatch.setattr(cli, 'ConfigurationManager', lambda _profile: SimpleNamespace(
+    monkeypatch.setattr(cli, 'ConfigurationManager', lambda _profile, **_kwargs: SimpleNamespace(
         get_yoy_reports_config=lambda: {'output': {'include_variants': False}}))
     received = []
     monkeypatch.setattr(cli, 'inspect_workflow_inputs', lambda *args, **kwargs: (

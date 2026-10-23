@@ -75,3 +75,14 @@ def test_diagnostics_do_not_create_missing_profiles(tmp_path, monkeypatch):
     assert not inspect_configuration('missing').healthy
     assert not (tmp_path / 'missing').exists()
     assert not inspect_configuration('../outside').healthy
+
+
+def test_revenue_only_diagnostics_do_not_require_unused_quantity_header(tmp_path, monkeypatch):
+    profile = _profile(tmp_path, monkeypatch, ('yoy_reports',))
+    path = paths.profile_configs_root(profile) / 'yoy_reports/settings.json'
+    data = read_document(path)
+    data['groups'] = {'Comparison': ['Main']}
+    data['output']['metrics'] = ['sales']
+    data['input']['quantity_column'] = ''
+    write_documents({path: data})
+    assert inspect_configuration(profile).healthy
