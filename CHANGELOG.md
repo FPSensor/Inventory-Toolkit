@@ -123,6 +123,8 @@ Development changes after `v1.4.1`. The released application version remains `1.
 
 ### Fixed
 
+- **core: checkpoints:** Reject incomplete checkpoint document entries instead of interpreting missing content/checksum fields as an intentionally absent file. Damaged snapshot metadata cannot silently remove live profile metadata.
+
 - **core: isolation:** Scope CLI preflight and workbook inspection to the selected workflow, so another enabled module with damaged settings does not block it. Keep profile diagnostics aligned with enabled metrics, including revenue-only YoY configurations that do not consume quantity.
 
 - **setup: checkpoints:** Preserve the supported lifecycle of existing profiles without metadata. Their first reviewed edit can be checkpointed, and restoring the earlier point removes metadata that did not originally exist. Explicit document deletions share the rollback contract.

@@ -120,3 +120,16 @@ def test_valid_checksum_does_not_bypass_schema_validation(profile):
         history.restore_checkpoint(profile, identifier)
     assert (root / name).read_bytes() == before
     assert len(history.list_checkpoints(profile)) == 1
+
+
+def test_missing_checkpoint_entry_fields_are_not_treated_as_an_absent_file(profile):
+    root = paths.profile_root(profile)
+    identifier = history.create_checkpoint(profile)
+    snapshot = root / '.history' / f'{identifier}.json'
+    data = read_document(snapshot)
+    data['documents']['profile.json'] = {}
+    write_documents({snapshot: data})
+    before = (root / 'profile.json').read_bytes()
+    with pytest.raises(ValueError, match='structure'):
+        history.restore_checkpoint(profile, identifier)
+    assert (root / 'profile.json').read_bytes() == before

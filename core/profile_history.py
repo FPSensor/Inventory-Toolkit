@@ -76,8 +76,8 @@ def _load_checkpoint(profile, identifier):
         raise ValueError('Checkpoint has an unsupported format or document set.')
     raw = {}
     for name, entry in payload['documents'].items():
-        if not isinstance(entry, dict):
-            raise ValueError('Invalid checkpoint document.')
+        if not isinstance(entry, dict) or set(entry) != {'content', 'sha256'}:
+            raise ValueError('Invalid checkpoint document structure.')
         try:
             if entry.get('content') is None and entry.get('sha256') is None:
                 raw[name] = None
