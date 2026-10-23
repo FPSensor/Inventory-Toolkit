@@ -25,6 +25,8 @@
     "stock_processing/settings": {
         "version": 3,
         "input": {
+            "family_mode": "none",
+            "family_column": "Category",
             "article_column": "SKU",
             "format": "wide",
             "quantity_columns": {},
@@ -77,6 +79,8 @@
             "article_tokenization": "whole"
         },
         "input": {
+            "family_mode": "none",
+            "family_column": "Category",
             "article_column": "SKU",
             "count_mode": "scans",
             "count_article_column": "",

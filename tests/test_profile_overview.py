@@ -25,7 +25,7 @@ def test_new_profile_reports_independent_module_progress(tmp_path, monkeypatch):
     partial = inspect_profile('example')
     assert partial[0].status == 'Partially configured'
     assert partial[0].reviewed == 1
-    assert partial[0].pending_step == 'families'
+    assert partial[0].pending_step == 'classification'
     assert partial[1].reviewed == 1  # Unchanged shared labels do not need duplicate review.
 
 

@@ -51,6 +51,10 @@ class SetupSession:
     def steps(self):
         result = []
         for step in self.all_steps:
+            if step.id == 'families' and self.module in {'stock_processing', 'cross_check'} and not self.include_advanced:
+                settings = _CONFIG_MODELS[f'{self.module}/settings'].model_validate(_read(self.root / f'{self.module}/settings.json')).model_dump()
+                if settings['input']['family_mode'] != 'rules':
+                    continue
             if step.advanced and not self.include_advanced:
                 continue
             if step.condition and get_value(self.data(step), tuple(step.condition[0].split('.'))) != step.condition[1]:
@@ -178,6 +182,10 @@ class SetupSession:
         if self.module == 'yoy_reports' and not any(raw.get('groups', {}).values()):
             raise WorkflowError(ErrorCode.CONFIG_REQUIRED_FIELD, 'Add at least one report group with a store.', module=self.module, step='yoy_groups', field='groups')
 
+        if self.module in {'stock_processing', 'cross_check'}:
+            classification = self.data(next(s for s in self.steps if s.id == 'classification'))['input']
+            if classification['family_mode'] == 'column' and not classification['family_column']:
+                raise WorkflowError(ErrorCode.CONFIG_REQUIRED_FIELD, 'Choose the category column for this file.', module=self.module, step='classification', field='input.family_column')
         if self.module == 'stock_processing':
             stock = self.data(next(s for s in self.steps if s.id == 'stock_layout'))
             if any(not stock['pricing'][f'{side}_columns']['database'] for side in ('cost', 'sales')) and not stock['pricing']['default_store']:

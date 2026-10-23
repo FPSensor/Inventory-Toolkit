@@ -28,7 +28,7 @@ except ImportError:
 
 from core.business_schema import ARTICLE_COLUMN, DATABASE_ORIGIN_COLUMN, DEFAULT_FAMILY, FAMILY_COLUMN, PRICE_COLUMN, RAW_DATA_SHEET, VARIANT_COLUMN
 from core.configuration_manager import ConfigurationManager
-from core.workflow_contracts import stock_input, stock_price_columns, cross_article_column
+from core.workflow_contracts import stock_input, stock_price_columns, cross_article_column, category_source_columns
 from core.input_columns import choose_input_columns
 from core.profile_config import DEFAULTS
 from core.logger import log
@@ -539,16 +539,16 @@ class InventoryToolkitGUI(BaseWindow):
                 overrides = {
                     "system": self._select_columns(self.cc_sys.get(),
                         { "article": cross_article_column(cm),
-                          "quantity": cross_config["input"]["quantity_column"]},
+                          "quantity": cross_config["input"]["quantity_column"], **category_source_columns(cm, "cross_check")},
                         {"article": DEFAULTS["general/catalog"]["columns"]["article"],
-                         "quantity": DEFAULTS["cross_check/settings"]["input"]["quantity_column"]}),
+                         "quantity": DEFAULTS["cross_check/settings"]["input"]["quantity_column"], "family": DEFAULTS["general/catalog"]["columns"]["family"]}),
                     "cost": self._select_columns(self.cc_cost.get(), mappings["cost"], defaults["cost"]),
                     "sales": self._select_columns(self.cc_sales.get(), mappings["sales"], defaults["sales"]),
                 }
                 if cross_config["input"]["count_mode"] == "quantities":
                     overrides["count"] = self._select_columns(self.cc_count.get(),
                         {"article": cross_config["input"]["count_article_column"], "quantity": cross_config["input"]["count_quantity_column"]},
-                        {"article": DEFAULTS["general/catalog"]["columns"]["article"], "quantity": cross_config["input"]["quantity_column"]})
+                        {"article": DEFAULTS["general/catalog"]["columns"]["article"], "quantity": cross_config["input"]["quantity_column"], **category_source_columns(cm, "cross_check")})
             except Exception as exc:
                 self._notify("error",
                     "Cross Check Preflight Error",
@@ -625,8 +625,8 @@ class InventoryToolkitGUI(BaseWindow):
             defaults = DEFAULTS["stock_processing/settings"]["pricing"]["columns"]
             overrides = {
                 "stock": self._select_columns(self.sp_raw.get(),
-                    {"article": stock_input(cm)["article_column"]},
-                    {"article": DEFAULTS["general/catalog"]["columns"]["article"]}),
+                    {"article": stock_input(cm)["article_column"], **category_source_columns(cm, "stock_processing")},
+                    {"article": DEFAULTS["general/catalog"]["columns"]["article"], "family": DEFAULTS["general/catalog"]["columns"]["family"]}),
                 "cost": self._select_columns(self.sp_cost.get(), stock_price_columns(cm, "cost", required_only=True), defaults),
                 "sales": self._select_columns(self.sp_sales.get(), stock_price_columns(cm, "sales", required_only=True), defaults),
             }

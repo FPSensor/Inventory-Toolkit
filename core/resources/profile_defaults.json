@@ -25,6 +25,8 @@
     "stock_processing/settings": {
         "version": 3,
         "input": {
+            "family_mode": "rules",
+            "family_column": "",
             "article_column": "",
             "format": "wide",
             "quantity_columns": {},
@@ -71,6 +73,8 @@
             "article_tokenization": "first_token"
         },
         "input": {
+            "family_mode": "rules",
+            "family_column": "",
             "article_column": "",
             "count_mode": "scans",
             "count_article_column": "",
@@ -79,7 +83,7 @@
             "quantity_column": "Cantidad"
         },
         "reconciliation": {
-            "quantity_tolerance": 0,
+            "quantity_tolerance": 0.0,
             "ignore_negative_system_stock_when_counted": true
         },
         "filters": {

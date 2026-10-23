@@ -77,6 +77,8 @@ def run_cross_check(args):
     input_quantity_column = overrides.get("system", {}).get(
         "quantity", cross_check_config["input"]["quantity_column"]
     )
+    family_mode = cross_check_config["input"]["family_mode"]
+    source_family = overrides.get("system", {}).get("family", cross_check_config["input"]["family_column"])
 
     filters = cross_check_config["filters"]
     ignored_articles = filters.get("ignored_articles", [])
@@ -106,7 +108,7 @@ def run_cross_check(args):
     with execution_timer("Read and Validate Spreadsheets"):
         system_frame = pd.read_excel(args.cross_check_system, dtype={input_article_column: str})
         missing_system_columns = [
-            column for column in (input_article_column, input_quantity_column)
+            column for column in (input_article_column, input_quantity_column, *([source_family] if family_mode == "column" else []))
             if column not in system_frame.columns
         ]
         if missing_system_columns:
@@ -150,6 +152,16 @@ def run_cross_check(args):
         master_articles = [article for article in raw_master_articles if article]
         master_set = {str(article).upper().strip() for article in master_articles}
         master_lookup = {str(article).upper().strip(): article for article in master_articles}
+        source_families = {}
+        if family_mode == "column":
+            if source_family in {input_article_column, input_quantity_column}:
+                raise ValueError("System product, quantity and category columns must be distinct.")
+            categories = system_frame[[ARTICLE_COLUMN, source_family]].copy()
+            categories[source_family] = categories[source_family].fillna(default_family).astype(str).str.strip().replace("", default_family)
+            conflicts = categories.groupby(ARTICLE_COLUMN)[source_family].nunique()
+            if conflicts.gt(1).any():
+                raise ValueError("System stock assigns different categories to the same product. Resolve those source categories before reconciliation.")
+            source_families = categories.drop_duplicates(ARTICLE_COLUMN).set_index(ARTICLE_COLUMN)[source_family].to_dict()
         log_debug_event(
             "cross_check_master_catalog",
             system_rows=len(system_frame),
@@ -268,11 +280,13 @@ def run_cross_check(args):
                 reconciliation[PHYSICAL_COUNT_COLUMN],
             )
         ]
-        reconciliation[FAMILY_COLUMN] = assign_families(
-            reconciliation[ARTICLE_COLUMN],
-            family_rules,
-            default_family=default_family,
-        )
+        if family_mode == "column":
+            reconciliation[FAMILY_COLUMN] = reconciliation[ARTICLE_COLUMN].map(source_families).fillna(default_family)
+        elif family_mode == "none":
+            reconciliation[FAMILY_COLUMN] = default_family
+        else:
+            reconciliation[FAMILY_COLUMN] = assign_families(
+                reconciliation[ARTICLE_COLUMN], family_rules, default_family=default_family)
 
         result = reconciliation.merge(
             cost_consolidated,

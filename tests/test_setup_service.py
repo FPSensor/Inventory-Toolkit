@@ -34,7 +34,7 @@ def test_new_profiles_save_and_resume_each_module_independently(profile):
     assert session.state() == SetupState.NOT_CONFIGURED
     session.save_step('catalog', values(session, session.steps[0]))
     assert SetupSession(profile, 'cross_check').state() == SetupState.PARTIAL
-    assert session.first_pending() == 'families'
+    assert session.first_pending() == 'classification'
     assert SetupSession(profile, 'stock_processing').state() == SetupState.NOT_CONFIGURED
     for step in session.steps[1:]:
         session.save_step(step.id, values(session, step))

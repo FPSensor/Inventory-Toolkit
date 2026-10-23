@@ -93,6 +93,8 @@ class PricingConfig(_StrictConfigModel):
 
 
 class StockInputConfig(_StrictConfigModel):
+    family_mode: Literal["rules", "column", "none"] = "rules"
+    family_column: str = ""
     article_column: str = ""
     format: Literal["wide", "long"] = "wide"
     quantity_columns: Dict[str, str] = Field(default_factory=dict)
@@ -139,6 +141,8 @@ class CrossCheckPriceLists(_StrictConfigModel):
 
 
 class CrossCheckInput(_StrictConfigModel):
+    family_mode: Literal["rules", "column", "none"] = "rules"
+    family_column: str = ""
     article_column: str = ""
     count_mode: Literal["scans", "quantities"] = "scans"
     count_article_column: str = ""

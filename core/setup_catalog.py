@@ -51,6 +51,13 @@ NETWORK_GROUPS = SetupStep('network_groups', 'Location groups', 'general/network
 MATCHING = (("Keep the full product code", "whole"), ("Use only the first word", "first_token"))
 
 
+def classification_step(module):
+    return SetupStep('classification', 'Where do your categories come from?', f'{module}/settings', (
+        field('input.family_mode', 'Product categories', 'Use an existing category column, classify codes by prefix, or keep one default category.', 'choice', choices=(("Use a category column in this file", "column"), ("Classify product codes by prefix", "rules"), ("Do not classify products", "none"))),
+        field('input.family_column', 'Category column (when used)', 'The exact category header in this module’s stock file. It does not change the sales-history mapping.', hint_key='family_hints', optional=True),
+    ), sample='stock' if module == 'stock_processing' else 'system')
+
+
 def price_step(side):
     return SetupStep(f'stock_{side}', f'{side.title()} price columns', 'stock_processing/settings', (
         field(f'pricing.{side}_columns.article', 'Product code', ARTICLE_HELP, hint_key='article_hints'),
@@ -60,7 +67,7 @@ def price_step(side):
 
 
 STEPS = {
-    'cross_check': (CATALOG, FAMILIES,
+    'cross_check': (CATALOG, classification_step('cross_check'), FAMILIES,
         SetupStep('cross_input', 'System stock columns', 'cross_check/settings', (
             field('input.article_column', 'Product code', ARTICLE_HELP, hint_key='article_hints'),
             field('input.quantity_column', 'Recorded quantity', 'Quantity currently recorded for each product.', hint_key='qty_hints')), sample='system'),
@@ -84,7 +91,7 @@ STEPS = {
         SetupStep('cross_filters', 'Products to exclude', 'cross_check/settings', (
             field('filters.ignored_articles', 'Exact product codes to ignore', 'Leave empty to keep every product.', 'list'),
             field('filters.ignored_terms', 'Text to exclude', 'Any product code containing these terms is excluded. Use this only for known export totals or placeholders.', 'list')), advanced=True)),
-    'stock_processing': (CATALOG, FAMILIES, NETWORK,
+    'stock_processing': (CATALOG, classification_step('stock_processing'), FAMILIES, NETWORK,
         SetupStep('stock_layout', 'How is stock arranged?', 'stock_processing/settings', (
             field('input.format', 'Stock layout', 'Wide: one quantity column per location. Row-based: one quantity and an optional location per row.', 'choice', choices=(("One quantity column per location", "wide"), ("One product/location per row", "long"))),
             field('input.article_column', 'Stock product code', ARTICLE_HELP, hint_key='article_hints')), sample='stock'),

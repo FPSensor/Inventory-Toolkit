@@ -8,6 +8,8 @@ Development changes after `v1.4.1`. The released application version remains `1.
 
 ### Added
 
+- **core: categories:** Choose categories independently in Stock and Cross Check: use a source column, longest-prefix rules, or one default category. New neutral profiles begin without prefix assumptions. Setup skips irrelevant prefix pages; source columns participate in input inspection and explicit fallback selection. Conflicting Cross Check categories for one SKU are rejected.
+
 - **core: profiles:** Create new profiles through a shared service with neutral SKU/category/location vocabulary, exact product matching and independent input defaults. Generate portable profile IDs from display names, select workflows before setup, and remove an incomplete new profile if creation fails. Existing profiles are unchanged.
 
 - **stock: inputs:** Accept row-based stock with an explicit location column or one configured location, preserving source rows and fractional values. Single-location price lists no longer need an invented origin column; price-origin aliases now resolve configured location names. Product identifiers are read as text to preserve leading zeroes.

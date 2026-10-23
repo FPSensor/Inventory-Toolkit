@@ -14,7 +14,7 @@ from cli.utils import (
     load_last_paths, save_last_paths,
     confirm_default_column, input_default,
 )
-from core.workflow_contracts import stock_input, stock_price_columns, cross_article_column
+from core.workflow_contracts import stock_input, stock_price_columns, cross_article_column, category_source_columns
 from core.input_columns import choose_input_columns
 from core.configuration_manager import ConfigurationManager
 from core.profile_config import DEFAULTS
@@ -49,9 +49,9 @@ def launch_cross_check(active_profile: str) -> None:
             "system": choose_input_columns(
                 system_file,
                 {"article": cross_article_column(config),
-                 "quantity": cross_config["input"]["quantity_column"]},
+                 "quantity": cross_config["input"]["quantity_column"], **category_source_columns(config, "cross_check")},
                 {"article": DEFAULTS["general/catalog"]["columns"]["article"],
-                 "quantity": DEFAULTS["cross_check/settings"]["input"]["quantity_column"]},
+                 "quantity": DEFAULTS["cross_check/settings"]["input"]["quantity_column"], "family": DEFAULTS["general/catalog"]["columns"]["family"]},
                 confirm_default_column,
             ),
             "cost": choose_input_columns(cost_file, mappings["cost"], defaults["cost"], confirm_default_column),
@@ -60,7 +60,7 @@ def launch_cross_check(active_profile: str) -> None:
         if cross_config["input"]["count_mode"] == "quantities":
             overrides["count"] = choose_input_columns(count_file,
                 {"article": cross_config["input"]["count_article_column"], "quantity": cross_config["input"]["count_quantity_column"]},
-                {"article": DEFAULTS["general/catalog"]["columns"]["article"], "quantity": cross_config["input"]["quantity_column"]}, confirm_default_column)
+                {"article": DEFAULTS["general/catalog"]["columns"]["article"], "quantity": cross_config["input"]["quantity_column"], **category_source_columns(config, "cross_check")}, confirm_default_column)
     except Exception as exc:
         print(f"\n  ❌ Input column validation: {exc}")
         input("  Press Enter to return...")

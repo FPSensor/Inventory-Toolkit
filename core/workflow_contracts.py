@@ -20,3 +20,11 @@ def stock_price_columns(config, side, *, required_only=False):
 
 def cross_article_column(config):
     return config.get_cross_check_config()["input"]["article_column"] or config.get_catalog_columns()["article"]
+
+
+def category_source_columns(config, module):
+    """Include a source category header only when the workflow uses it."""
+    settings = (config.get_stock_processing_config() if module == "stock_processing"
+                else config.get_cross_check_config())
+    source = settings["input"]
+    return {"family": source["family_column"]} if source["family_mode"] == "column" else {}

@@ -8,7 +8,7 @@ from engine.yoy_reports.metrics import resolve_metric_specs
 
 
 def test_store_cleaning_and_excel_preserve_fractional_quantities(tmp_path):
-    plan = SimpleNamespace(article_column="SKU", drop_columns=(), text_columns=(),
+    plan = SimpleNamespace(input={}, article_column="SKU", drop_columns=(), text_columns=(),
         numeric_columns=(), active_stores=("Counter",), stock_database_columns={})
     frame = prepare_stock_frame(pd.DataFrame({"SKU": ["A"], "Counter": ["1,25"]}), plan)
     assert frame["Counter"].sum() == 1.25

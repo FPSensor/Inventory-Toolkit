@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+from dataclasses import replace
 
 import pandas as pd
 
@@ -108,6 +109,8 @@ def run_stock_processing(args):
     log.info("Loading configurations for profile: %s...", args.stock_processing_profile)
     plan = _load_plan(args.stock_processing_profile)
     overrides = getattr(args, "column_overrides", {})
+    if "family" in overrides.get("stock", {}):
+        plan = replace(plan, input={**plan.input, "family_column": overrides["stock"]["family"]})
     family_rules = build_family_rules(plan.family_rules)
     _log_plan(plan)
 
@@ -159,6 +162,8 @@ def run_stock_processing(args):
             stock_frame,
             family_rules,
             default_family=plan.default_family,
+            source_column=plan.input["family_column"] if plan.input["family_mode"] == "column" else None,
+            use_rules=plan.input["family_mode"] == "rules",
         )
     report_progress(progress, 2, 4, "Stores and families ready. Reading prices and valuing stock...")
 

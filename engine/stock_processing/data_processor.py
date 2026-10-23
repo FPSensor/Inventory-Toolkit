@@ -75,6 +75,10 @@ def prepare_stock_frame(raw_frame: pd.DataFrame, plan: StockProcessingPlan) -> p
         raise ValueError(
             f"Stock cleaning cannot drop the configured article column '{plan.article_column}'."
         )
+    if plan.input.get("family_mode", "rules") == "column":
+        source = plan.input["family_column"]
+        if not source or source not in raw_frame.columns or source in plan.drop_columns:
+            raise ValueError("Choose an existing category column and keep it in stock cleaning.")
     if INTERNAL_ARTICLE_COLUMN in raw_frame.columns or INTERNAL_FAMILY_COLUMN in raw_frame.columns:
         raise ValueError(
             "Stock input contains a reserved Inventory Toolkit internal column name."
@@ -180,14 +184,18 @@ def classify_stock_families(
     family_rules,
     *,
     default_family: str,
+    source_column=None,
+    use_rules=True,
 ) -> pd.DataFrame:
     """Attach the private family key using the shared longest-prefix classifier."""
     result = frame.copy()
-    result[INTERNAL_FAMILY_COLUMN] = assign_families(
-        result[INTERNAL_ARTICLE_COLUMN],
-        family_rules,
-        default_family=default_family,
-    )
+    if source_column:
+        result[INTERNAL_FAMILY_COLUMN] = result[source_column].fillna(default_family).astype(str).str.strip().replace("", default_family)
+    elif use_rules:
+        result[INTERNAL_FAMILY_COLUMN] = assign_families(
+            result[INTERNAL_ARTICLE_COLUMN], family_rules, default_family=default_family)
+    else:
+        result[INTERNAL_FAMILY_COLUMN] = default_family
     family_counts = result[INTERNAL_FAMILY_COLUMN].value_counts(dropna=False)
     log_debug_event(
         "stock_processing_family_assignment",

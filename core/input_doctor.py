@@ -64,9 +64,10 @@ def _requirements(config, module, *, include_sales, include_variants, grouping, 
     article = ("Article / SKU", catalog["article"], "article_hints")
     if module == "cross_check":
         settings = config.get_cross_check_config()
+        source_category = (("Category", settings["input"]["family_column"], "family_hints"),) if settings["input"].get("family_mode") == "column" else ()
         return {
             "system": ("System stock", (("Article / SKU", cross_article_column(config), "article_hints"),
-                ("System quantity", settings["input"]["quantity_column"], "qty_hints"))),
+                ("System quantity", settings["input"]["quantity_column"], "qty_hints"), *source_category)),
             "count": ("Physical count", (("Count article", settings["input"]["count_article_column"], "article_hints"), ("Count quantity", settings["input"]["count_quantity_column"], "qty_hints")) if settings["input"].get("count_mode") == "quantities" else None),
             "cost": ("Cost list", (("Cost article", settings["price_lists"]["cost"]["article_column"], "article_hints"),
                 ("Cost price", settings["price_lists"]["cost"]["price_column"], "price_hints"))),
@@ -77,6 +78,8 @@ def _requirements(config, module, *, include_sales, include_variants, grouping, 
         network = config.get_network_config()
         source = stock_input(config)
         stock_columns = [("Article / SKU", source["article_column"], "article_hints")]
+        if source.get("family_mode") == "column":
+            stock_columns.append(("Category", source["family_column"], "family_hints"))
         if source.get("format") == "long":
             stock_columns.append(("Quantity", source["quantity_column"], "qty_hints"))
             if source["branch_column"]:
