@@ -1,6 +1,7 @@
 """One module-oriented configuration menu using the same guided editors."""
 from cli.utils import clear_screen
 from cli.wizard import run_module_setup
+from cli.profile_recovery import profile_recovery_menu
 from core.configuration_manager import ConfigurationManager
 from core.module_preferences import enabled_modules, set_enabled_modules
 from core.profile_overview import inspect_profile
@@ -70,12 +71,15 @@ def configuration_menu(current_profile):
             if entry.issue:
                 print(f"     {entry.issue}")
         print("\n  M. Choose enabled workflows")
+        print("  H. Profile checks and configuration history")
         print("  0. Back")
         choice = input("\n  Choose a workflow: ").strip().upper()
         if choice == '0':
             return
         try:
-            if choice == 'M':
+            if choice == 'H':
+                profile_recovery_menu(current_profile)
+            elif choice == 'M':
                 select_workflows(current_profile)
             elif choice.isdigit() and 1 <= int(choice) <= len(enabled):
                 _module_settings(current_profile, enabled[int(choice) - 1].module)

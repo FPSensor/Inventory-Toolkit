@@ -8,6 +8,8 @@ Development changes after `v1.4.1`. The released application version remains `1.
 
 ### Added
 
+- **cli: recovery:** Add profile checks and configuration history to Configuration → H. Show checkpoint labels/times, create manual points and restore by list number with explicit confirmation, using the same services as headless maintenance.
+
 - **core: maintenance:** Expose headless `doctor` and configuration-history commands through the application launcher in every build. Support machine-readable diagnostics, meaningful exit statuses and explicit confirmation for non-interactive restores without loading CLI or GUI packages.
 
 - **setup: recovery:** Create a local configuration checkpoint before saving a changed setup page or workflow selection. Identical saves avoid redundant writes/checkpoints, and new-profile initialization does not create a misleading pre-creation restore point.

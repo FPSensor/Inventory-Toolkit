@@ -19,3 +19,5 @@ python -m inventory_toolkit history restore --profile demo --checkpoint IDENTIFI
 ```
 
 Copy an identifier from the list. Interactive restore asks for `RESTORE`; automation requires an explicit `--yes`. Close other Inventory Toolkit instances before restoring. Headless maintenance is available even when a build contains only the GUI.
+
+The console provides the same actions under **Configuration → H**. Checkpoints display a human label and timestamp; interactive restoration selects a list number rather than requiring an identifier to be typed.

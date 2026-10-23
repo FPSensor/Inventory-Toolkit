@@ -182,3 +182,7 @@ From this overview, enter **I1**, **I2** or **I3** to inspect remembered input f
 ## Module settings workspace
 
 Configuration lists enabled workflows and a workflow-selection action. Inside a workflow, choose Guided setup for essential questions, Validate for typed configuration checks, or search by a setting label/help text. Selecting a section edits only that section; it does not force a complete wizard traversal. Columns can be selected by number from a real input sample; `-` clears optional fields. Sample headers are reused only for the same input role. Back and pause are available between pages, and previously saved pages remain available.
+
+## Profile checks and recovery
+
+Open **K → H** for configuration diagnostics and local checkpoints. **D** checks the profile, **C** saves a named checkpoint, and **R** selects a point by number. Restoring asks for `RESTORE` and first saves the current state. History affects configuration/review state, not input workbooks or remembered paths. See [profile_history.md](profile_history.md).

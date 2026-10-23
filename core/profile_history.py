@@ -31,6 +31,16 @@ def list_checkpoints(profile):
                          if _ID.fullmatch(path.stem)), reverse=True))
 
 
+def checkpoint_info(profile, identifier):
+    if not isinstance(identifier, str) or not _ID.fullmatch(identifier):
+        raise ValueError('Choose a checkpoint from this profile history.')
+    payload = read_document(_history(profile) / f'{identifier}.json')
+    if not isinstance(payload, dict) or payload.get('profile') != profile:
+        raise ValueError('Checkpoint metadata is invalid.')
+    return {'id': identifier, 'created': str(payload.get('created', 'Unknown time')),
+            'label': str(payload.get('label', 'Configuration checkpoint'))}
+
+
 def create_checkpoint(profile, label='Manual checkpoint', *, allow_missing=False):
     root = profile_directory(profile)
     if not root.is_dir():
