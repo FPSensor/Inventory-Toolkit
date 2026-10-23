@@ -1,0 +1,916 @@
+[
+  {
+    "name": "Kiosco",
+    "unit": "units",
+    "configuration": {
+      "general/catalog": {
+        "columns": {
+          "article": "SKU",
+          "family": "Category"
+        },
+        "default_family": "Other"
+      },
+      "general/families": {
+        "rules": {}
+      },
+      "general/network": {
+        "active": [
+          "Counter"
+        ],
+        "regional_groups": {},
+        "stock_database_columns": {}
+      },
+      "stock_processing/settings": {
+        "input": {
+          "family_mode": "column",
+          "family_column": "Section",
+          "article_column": "Stock code",
+          "format": "wide",
+          "quantity_columns": {
+            "Counter": "Available Counter"
+          },
+          "deposit_columns": {},
+          "quantity_column": "On hand",
+          "branch_column": "",
+          "default_store": "Counter"
+        },
+        "cleaning": {
+          "text_columns": [],
+          "drop_columns": [],
+          "numeric_columns": []
+        },
+        "pricing": {
+          "default_store": "Counter",
+          "article_tokenization": "whole",
+          "cost_columns": {
+            "article": "Price code",
+            "price": "Purchase",
+            "database": ""
+          },
+          "sales_columns": {
+            "article": "Price code",
+            "price": "Retail",
+            "database": ""
+          },
+          "aliases": {}
+        },
+        "output": {
+          "base_columns": [
+            "SKU",
+            "Category",
+            "Flavor"
+          ],
+          "raw_data_sheet": "Stock",
+          "quantity_label": "units",
+          "quantity_format": "#,##0",
+          "summaries": [
+            {
+              "sheet_name": "Summary",
+              "entities": [
+                "Counter"
+              ],
+              "titles": []
+            }
+          ]
+        }
+      },
+      "cross_check/settings": {
+        "input": {
+          "family_mode": "column",
+          "family_column": "Department",
+          "article_column": "Product code",
+          "quantity_column": "System quantity",
+          "count_mode": "quantities",
+          "count_article_column": "Count code",
+          "count_quantity_column": "Counted",
+          "matching": "exact"
+        },
+        "reconciliation": {
+          "ignore_negative_system_stock_when_counted": false,
+          "quantity_tolerance": 0
+        },
+        "filters": {
+          "ignored_articles": [],
+          "ignored_terms": []
+        },
+        "pricing": {
+          "article_tokenization": "whole"
+        },
+        "price_lists": {
+          "cost": {
+            "article_column": "Price code",
+            "price_column": "Purchase"
+          },
+          "sales": {
+            "article_column": "Price code",
+            "price_column": "Retail"
+          }
+        }
+      },
+      "yoy_reports/settings": {
+        "input": {
+          "date_column": "Sold on",
+          "quantity_column": "Sold quantity",
+          "sales_column": "Line total",
+          "item_column": "Sale code",
+          "grouping_column": "Sale category",
+          "branch_column": "Shop",
+          "variant_column": "Flavor"
+        },
+        "output": {
+          "metrics": [
+            "units",
+            "sales"
+          ],
+          "include_variants": false,
+          "annual_comparison": true,
+          "quantity_label": "Quantity (units)",
+          "quantity_format": "#,##0"
+        },
+        "groups": {
+          "Business": [
+            "Counter"
+          ]
+        }
+      }
+    },
+    "workbooks": {
+      "stock": [
+        {
+          "Stock code": "0001",
+          "Section": "Bebidas",
+          "Flavor": "Standard",
+          "Available Counter": 10
+        },
+        {
+          "Stock code": "0002",
+          "Section": "Golosinas",
+          "Flavor": "Large",
+          "Available Counter": 6
+        }
+      ],
+      "prices": [
+        {
+          "Price code": "0001",
+          "Purchase": 2,
+          "Retail": 5
+        },
+        {
+          "Price code": "0002",
+          "Purchase": 3,
+          "Retail": 7
+        }
+      ],
+      "system": [
+        {
+          "Product code": "0001",
+          "Department": "Bebidas",
+          "System quantity": 10
+        },
+        {
+          "Product code": "0002",
+          "Department": "Golosinas",
+          "System quantity": 6
+        }
+      ],
+      "count": [
+        {
+          "Count code": "0001",
+          "Counted": 8
+        },
+        {
+          "Count code": "0002",
+          "Counted": 7
+        }
+      ],
+      "sales": [
+        {
+          "Sold on": "2025-01-05",
+          "Sale code": "0001",
+          "Sale category": "Bebidas",
+          "Shop": "Counter",
+          "Flavor": "Standard",
+          "Sold quantity": 8,
+          "Line total": 40
+        },
+        {
+          "Sold on": "2025-02-05",
+          "Sale code": "0001",
+          "Sale category": "Bebidas",
+          "Shop": "Counter",
+          "Flavor": "Standard",
+          "Sold quantity": 8,
+          "Line total": 40
+        },
+        {
+          "Sold on": "2026-01-05",
+          "Sale code": "0001",
+          "Sale category": "Bebidas",
+          "Shop": "Counter",
+          "Flavor": "Standard",
+          "Sold quantity": 10,
+          "Line total": 50
+        },
+        {
+          "Sold on": "2026-02-05",
+          "Sale code": "0001",
+          "Sale category": "Bebidas",
+          "Shop": "Counter",
+          "Flavor": "Standard",
+          "Sold quantity": 10,
+          "Line total": 50
+        },
+        {
+          "Sold on": "2025-01-05",
+          "Sale code": "0002",
+          "Sale category": "Golosinas",
+          "Shop": "Counter",
+          "Flavor": "Large",
+          "Sold quantity": 7,
+          "Line total": 49
+        },
+        {
+          "Sold on": "2025-02-05",
+          "Sale code": "0002",
+          "Sale category": "Golosinas",
+          "Shop": "Counter",
+          "Flavor": "Large",
+          "Sold quantity": 7,
+          "Line total": 49
+        },
+        {
+          "Sold on": "2026-01-05",
+          "Sale code": "0002",
+          "Sale category": "Golosinas",
+          "Shop": "Counter",
+          "Flavor": "Large",
+          "Sold quantity": 6,
+          "Line total": 42
+        },
+        {
+          "Sold on": "2026-02-05",
+          "Sale code": "0002",
+          "Sale category": "Golosinas",
+          "Shop": "Counter",
+          "Flavor": "Large",
+          "Sold quantity": 6,
+          "Line total": 42
+        }
+      ]
+    },
+    "expected": {
+      "stock_per_location": 16,
+      "cost_per_location": 38,
+      "sales_per_location": 92,
+      "differences": [
+        -2,
+        1
+      ],
+      "current_units_per_month": 16,
+      "previous_units_per_month": 15,
+      "current_sales_per_month": 92,
+      "difference_cost": -1,
+      "difference_sale": -3
+    }
+  },
+  {
+    "name": "Verduleria",
+    "unit": "kg",
+    "configuration": {
+      "general/catalog": {
+        "columns": {
+          "article": "SKU",
+          "family": "Category"
+        },
+        "default_family": "Other"
+      },
+      "general/families": {
+        "rules": {}
+      },
+      "general/network": {
+        "active": [
+          "Counter"
+        ],
+        "regional_groups": {},
+        "stock_database_columns": {}
+      },
+      "stock_processing/settings": {
+        "input": {
+          "family_mode": "column",
+          "family_column": "Section",
+          "article_column": "Stock code",
+          "format": "long",
+          "quantity_columns": {
+            "Counter": "Available Counter"
+          },
+          "deposit_columns": {},
+          "quantity_column": "On hand",
+          "branch_column": "",
+          "default_store": "Counter"
+        },
+        "cleaning": {
+          "text_columns": [],
+          "drop_columns": [],
+          "numeric_columns": []
+        },
+        "pricing": {
+          "default_store": "Counter",
+          "article_tokenization": "whole",
+          "cost_columns": {
+            "article": "Price code",
+            "price": "Purchase",
+            "database": ""
+          },
+          "sales_columns": {
+            "article": "Price code",
+            "price": "Retail",
+            "database": ""
+          },
+          "aliases": {}
+        },
+        "output": {
+          "base_columns": [
+            "SKU",
+            "Category",
+            "Presentation"
+          ],
+          "raw_data_sheet": "Stock",
+          "quantity_label": "kg",
+          "quantity_format": "#,##0.###",
+          "summaries": [
+            {
+              "sheet_name": "Summary",
+              "entities": [
+                "Counter"
+              ],
+              "titles": []
+            }
+          ]
+        }
+      },
+      "cross_check/settings": {
+        "input": {
+          "family_mode": "column",
+          "family_column": "Department",
+          "article_column": "Product code",
+          "quantity_column": "System quantity",
+          "count_mode": "quantities",
+          "count_article_column": "Count code",
+          "count_quantity_column": "Counted",
+          "matching": "exact"
+        },
+        "reconciliation": {
+          "ignore_negative_system_stock_when_counted": false,
+          "quantity_tolerance": 0
+        },
+        "filters": {
+          "ignored_articles": [],
+          "ignored_terms": []
+        },
+        "pricing": {
+          "article_tokenization": "whole"
+        },
+        "price_lists": {
+          "cost": {
+            "article_column": "Price code",
+            "price_column": "Purchase"
+          },
+          "sales": {
+            "article_column": "Price code",
+            "price_column": "Retail"
+          }
+        }
+      },
+      "yoy_reports/settings": {
+        "input": {
+          "date_column": "Sold on",
+          "quantity_column": "Sold quantity",
+          "sales_column": "Line total",
+          "item_column": "Sale code",
+          "grouping_column": "Sale category",
+          "branch_column": "Shop",
+          "variant_column": "Presentation"
+        },
+        "output": {
+          "metrics": [
+            "units",
+            "sales"
+          ],
+          "include_variants": false,
+          "annual_comparison": true,
+          "quantity_label": "Quantity (kg)",
+          "quantity_format": "#,##0.###"
+        },
+        "groups": {
+          "Business": [
+            "Counter"
+          ]
+        }
+      }
+    },
+    "workbooks": {
+      "stock": [
+        {
+          "Stock code": "0001",
+          "Section": "Frutas",
+          "Presentation": "Standard",
+          "On hand": 10.5
+        },
+        {
+          "Stock code": "0002",
+          "Section": "Verduras",
+          "Presentation": "Large",
+          "On hand": 6.25
+        }
+      ],
+      "prices": [
+        {
+          "Price code": "0001",
+          "Purchase": 2,
+          "Retail": 5
+        },
+        {
+          "Price code": "0002",
+          "Purchase": 3,
+          "Retail": 7
+        }
+      ],
+      "system": [
+        {
+          "Product code": "0001",
+          "Department": "Frutas",
+          "System quantity": 10.5
+        },
+        {
+          "Product code": "0002",
+          "Department": "Verduras",
+          "System quantity": 6.25
+        }
+      ],
+      "count": [
+        {
+          "Count code": "0001",
+          "Counted": 8.25
+        },
+        {
+          "Count code": "0002",
+          "Counted": 7.5
+        }
+      ],
+      "sales": [
+        {
+          "Sold on": "2025-01-05",
+          "Sale code": "0001",
+          "Sale category": "Frutas",
+          "Shop": "Counter",
+          "Presentation": "Standard",
+          "Sold quantity": 8.25,
+          "Line total": 41.25
+        },
+        {
+          "Sold on": "2025-02-05",
+          "Sale code": "0001",
+          "Sale category": "Frutas",
+          "Shop": "Counter",
+          "Presentation": "Standard",
+          "Sold quantity": 8.25,
+          "Line total": 41.25
+        },
+        {
+          "Sold on": "2026-01-05",
+          "Sale code": "0001",
+          "Sale category": "Frutas",
+          "Shop": "Counter",
+          "Presentation": "Standard",
+          "Sold quantity": 10.5,
+          "Line total": 52.5
+        },
+        {
+          "Sold on": "2026-02-05",
+          "Sale code": "0001",
+          "Sale category": "Frutas",
+          "Shop": "Counter",
+          "Presentation": "Standard",
+          "Sold quantity": 10.5,
+          "Line total": 52.5
+        },
+        {
+          "Sold on": "2025-01-05",
+          "Sale code": "0002",
+          "Sale category": "Verduras",
+          "Shop": "Counter",
+          "Presentation": "Large",
+          "Sold quantity": 7.5,
+          "Line total": 52.5
+        },
+        {
+          "Sold on": "2025-02-05",
+          "Sale code": "0002",
+          "Sale category": "Verduras",
+          "Shop": "Counter",
+          "Presentation": "Large",
+          "Sold quantity": 7.5,
+          "Line total": 52.5
+        },
+        {
+          "Sold on": "2026-01-05",
+          "Sale code": "0002",
+          "Sale category": "Verduras",
+          "Shop": "Counter",
+          "Presentation": "Large",
+          "Sold quantity": 6.25,
+          "Line total": 43.75
+        },
+        {
+          "Sold on": "2026-02-05",
+          "Sale code": "0002",
+          "Sale category": "Verduras",
+          "Shop": "Counter",
+          "Presentation": "Large",
+          "Sold quantity": 6.25,
+          "Line total": 43.75
+        }
+      ]
+    },
+    "expected": {
+      "stock_per_location": 16.75,
+      "cost_per_location": 39.75,
+      "sales_per_location": 96.25,
+      "differences": [
+        -2.25,
+        1.25
+      ],
+      "current_units_per_month": 16.75,
+      "previous_units_per_month": 15.75,
+      "current_sales_per_month": 96.25,
+      "difference_cost": -0.75,
+      "difference_sale": -2.5
+    }
+  },
+  {
+    "name": "Almacen",
+    "unit": "units",
+    "configuration": {
+      "general/catalog": {
+        "columns": {
+          "article": "SKU",
+          "family": "Category"
+        },
+        "default_family": "Other"
+      },
+      "general/families": {
+        "rules": {}
+      },
+      "general/network": {
+        "active": [
+          "Counter",
+          "Storage"
+        ],
+        "regional_groups": {},
+        "stock_database_columns": {}
+      },
+      "stock_processing/settings": {
+        "input": {
+          "family_mode": "column",
+          "family_column": "Section",
+          "article_column": "Stock code",
+          "format": "wide",
+          "quantity_columns": {
+            "Counter": "Available Counter",
+            "Storage": "Available Storage"
+          },
+          "deposit_columns": {},
+          "quantity_column": "On hand",
+          "branch_column": "",
+          "default_store": "Counter"
+        },
+        "cleaning": {
+          "text_columns": [],
+          "drop_columns": [],
+          "numeric_columns": []
+        },
+        "pricing": {
+          "default_store": "Counter",
+          "article_tokenization": "whole",
+          "cost_columns": {
+            "article": "Price code",
+            "price": "Purchase",
+            "database": "Location"
+          },
+          "sales_columns": {
+            "article": "Price code",
+            "price": "Retail",
+            "database": "Location"
+          },
+          "aliases": {}
+        },
+        "output": {
+          "base_columns": [
+            "SKU",
+            "Category",
+            "Package"
+          ],
+          "raw_data_sheet": "Stock",
+          "quantity_label": "units",
+          "quantity_format": "#,##0",
+          "summaries": [
+            {
+              "sheet_name": "Summary",
+              "entities": [
+                "Counter",
+                "Storage"
+              ],
+              "titles": []
+            }
+          ]
+        }
+      },
+      "cross_check/settings": {
+        "input": {
+          "family_mode": "column",
+          "family_column": "Department",
+          "article_column": "Product code",
+          "quantity_column": "System quantity",
+          "count_mode": "quantities",
+          "count_article_column": "Count code",
+          "count_quantity_column": "Counted",
+          "matching": "exact"
+        },
+        "reconciliation": {
+          "ignore_negative_system_stock_when_counted": false,
+          "quantity_tolerance": 0
+        },
+        "filters": {
+          "ignored_articles": [],
+          "ignored_terms": []
+        },
+        "pricing": {
+          "article_tokenization": "whole"
+        },
+        "price_lists": {
+          "cost": {
+            "article_column": "Price code",
+            "price_column": "Purchase"
+          },
+          "sales": {
+            "article_column": "Price code",
+            "price_column": "Retail"
+          }
+        }
+      },
+      "yoy_reports/settings": {
+        "input": {
+          "date_column": "Sold on",
+          "quantity_column": "Sold quantity",
+          "sales_column": "Line total",
+          "item_column": "Sale code",
+          "grouping_column": "Sale category",
+          "branch_column": "Shop",
+          "variant_column": "Package"
+        },
+        "output": {
+          "metrics": [
+            "units",
+            "sales"
+          ],
+          "include_variants": false,
+          "annual_comparison": true,
+          "quantity_label": "Quantity (units)",
+          "quantity_format": "#,##0"
+        },
+        "groups": {
+          "Business": [
+            "Counter",
+            "Storage"
+          ]
+        }
+      }
+    },
+    "workbooks": {
+      "stock": [
+        {
+          "Stock code": "0001",
+          "Section": "Secos",
+          "Package": "Standard",
+          "Available Counter": 20,
+          "Available Storage": 20
+        },
+        {
+          "Stock code": "0002",
+          "Section": "Conservas",
+          "Package": "Large",
+          "Available Counter": 12,
+          "Available Storage": 12
+        }
+      ],
+      "prices": [
+        {
+          "Price code": "0001",
+          "Purchase": 2,
+          "Retail": 5,
+          "Location": "Counter"
+        },
+        {
+          "Price code": "0001",
+          "Purchase": 2,
+          "Retail": 5,
+          "Location": "Storage"
+        },
+        {
+          "Price code": "0002",
+          "Purchase": 3,
+          "Retail": 7,
+          "Location": "Counter"
+        },
+        {
+          "Price code": "0002",
+          "Purchase": 3,
+          "Retail": 7,
+          "Location": "Storage"
+        }
+      ],
+      "system": [
+        {
+          "Product code": "0001",
+          "Department": "Secos",
+          "System quantity": 20
+        },
+        {
+          "Product code": "0002",
+          "Department": "Conservas",
+          "System quantity": 12
+        }
+      ],
+      "count": [
+        {
+          "Count code": "0001",
+          "Counted": 18
+        },
+        {
+          "Count code": "0002",
+          "Counted": 14
+        }
+      ],
+      "sales": [
+        {
+          "Sold on": "2025-01-05",
+          "Sale code": "0001",
+          "Sale category": "Secos",
+          "Shop": "Counter",
+          "Package": "Standard",
+          "Sold quantity": 18,
+          "Line total": 90
+        },
+        {
+          "Sold on": "2025-02-05",
+          "Sale code": "0001",
+          "Sale category": "Secos",
+          "Shop": "Counter",
+          "Package": "Standard",
+          "Sold quantity": 18,
+          "Line total": 90
+        },
+        {
+          "Sold on": "2026-01-05",
+          "Sale code": "0001",
+          "Sale category": "Secos",
+          "Shop": "Counter",
+          "Package": "Standard",
+          "Sold quantity": 20,
+          "Line total": 100
+        },
+        {
+          "Sold on": "2026-02-05",
+          "Sale code": "0001",
+          "Sale category": "Secos",
+          "Shop": "Counter",
+          "Package": "Standard",
+          "Sold quantity": 20,
+          "Line total": 100
+        },
+        {
+          "Sold on": "2025-01-05",
+          "Sale code": "0001",
+          "Sale category": "Secos",
+          "Shop": "Storage",
+          "Package": "Standard",
+          "Sold quantity": 18,
+          "Line total": 90
+        },
+        {
+          "Sold on": "2025-02-05",
+          "Sale code": "0001",
+          "Sale category": "Secos",
+          "Shop": "Storage",
+          "Package": "Standard",
+          "Sold quantity": 18,
+          "Line total": 90
+        },
+        {
+          "Sold on": "2026-01-05",
+          "Sale code": "0001",
+          "Sale category": "Secos",
+          "Shop": "Storage",
+          "Package": "Standard",
+          "Sold quantity": 20,
+          "Line total": 100
+        },
+        {
+          "Sold on": "2026-02-05",
+          "Sale code": "0001",
+          "Sale category": "Secos",
+          "Shop": "Storage",
+          "Package": "Standard",
+          "Sold quantity": 20,
+          "Line total": 100
+        },
+        {
+          "Sold on": "2025-01-05",
+          "Sale code": "0002",
+          "Sale category": "Conservas",
+          "Shop": "Counter",
+          "Package": "Large",
+          "Sold quantity": 14,
+          "Line total": 98
+        },
+        {
+          "Sold on": "2025-02-05",
+          "Sale code": "0002",
+          "Sale category": "Conservas",
+          "Shop": "Counter",
+          "Package": "Large",
+          "Sold quantity": 14,
+          "Line total": 98
+        },
+        {
+          "Sold on": "2026-01-05",
+          "Sale code": "0002",
+          "Sale category": "Conservas",
+          "Shop": "Counter",
+          "Package": "Large",
+          "Sold quantity": 12,
+          "Line total": 84
+        },
+        {
+          "Sold on": "2026-02-05",
+          "Sale code": "0002",
+          "Sale category": "Conservas",
+          "Shop": "Counter",
+          "Package": "Large",
+          "Sold quantity": 12,
+          "Line total": 84
+        },
+        {
+          "Sold on": "2025-01-05",
+          "Sale code": "0002",
+          "Sale category": "Conservas",
+          "Shop": "Storage",
+          "Package": "Large",
+          "Sold quantity": 14,
+          "Line total": 98
+        },
+        {
+          "Sold on": "2025-02-05",
+          "Sale code": "0002",
+          "Sale category": "Conservas",
+          "Shop": "Storage",
+          "Package": "Large",
+          "Sold quantity": 14,
+          "Line total": 98
+        },
+        {
+          "Sold on": "2026-01-05",
+          "Sale code": "0002",
+          "Sale category": "Conservas",
+          "Shop": "Storage",
+          "Package": "Large",
+          "Sold quantity": 12,
+          "Line total": 84
+        },
+        {
+          "Sold on": "2026-02-05",
+          "Sale code": "0002",
+          "Sale category": "Conservas",
+          "Shop": "Storage",
+          "Package": "Large",
+          "Sold quantity": 12,
+          "Line total": 84
+        }
+      ]
+    },
+    "expected": {
+      "stock_per_location": 32,
+      "cost_per_location": 76,
+      "sales_per_location": 184,
+      "differences": [
+        -2,
+        2
+      ],
+      "current_units_per_month": 64,
+      "previous_units_per_month": 64,
+      "current_sales_per_month": 368,
+      "difference_cost": 2,
+      "difference_sale": 4
+    }
+  }
+]

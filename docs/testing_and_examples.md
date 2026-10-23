@@ -148,3 +148,7 @@ During development, `--cross-system PATH` can point release/demo execution at an
 ## Reference directory
 
 See [`../tests/release_reference/README.md`](../tests/release_reference/README.md) for the local golden-master contract.
+
+## Small-business setup scenarios
+
+See [the synthetic business scenarios](../examples/businesses/README.md) for module-independent mappings, fractional quantities, optional variants and a reproducible setup-service/engine option matrix. Run `python -m pytest -q tests/test_business_scenarios.py`; profiles and workbooks are created only in temporary test directories.

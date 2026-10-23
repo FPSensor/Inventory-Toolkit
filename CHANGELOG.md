@@ -8,6 +8,8 @@ Development changes after `v1.4.1`. The released application version remains `1.
 
 ### Added
 
+- **tests: businesses:** Add data-owned kiosk, greengrocer and grocery scenarios. Configure all three workflows through shared assistant pages and verify quantities, categories, valuations, four Cross Check option combinations and 64 YoY combinations per business. Include the synthetic scenario resource in source distributions.
+
 - **core: categories:** Choose categories independently in Stock and Cross Check: use a source column, longest-prefix rules, or one default category. New neutral profiles begin without prefix assumptions. Setup skips irrelevant prefix pages; source columns participate in input inspection and explicit fallback selection. Conflicting Cross Check categories for one SKU are rejected.
 
 - **core: profiles:** Create new profiles through a shared service with neutral SKU/category/location vocabulary, exact product matching and independent input defaults. Generate portable profile IDs from display names, select workflows before setup, and remove an incomplete new profile if creation fails. Existing profiles are unchanged.

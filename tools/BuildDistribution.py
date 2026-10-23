@@ -33,7 +33,7 @@ def distribution_files(build=BUILD):
         for path in sorted((ROOT / name).rglob("*")):
             if path.is_file() and path.suffix in {".py", ".md", ".json", ".xlsx"}:
                 yield path
-    for name in ("examples/demo", "profiles/demo"):
+    for name in ("examples/demo", "examples/businesses", "profiles/demo"):
         for path in sorted((ROOT / name).rglob("*")):
             if path.is_file() and path.suffix in {".json", ".xlsx", ".xls", ".md"}:
                 yield path
