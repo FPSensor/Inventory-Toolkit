@@ -32,8 +32,8 @@ from core.profile_config import DEFAULTS
 from core.logger import log
 from core import paths as app_paths
 from core.system_utils import InvalidExcelOutputPathError, normalize_xlsx_output_path
-from cli.wizard import initialize_profile_files, run_setup_wizard
-from cli.utils import save_json, load_json, load_last_paths, save_last_paths
+from core.profile_config import ensure_profile_config as initialize_profile_files
+from core.profile_store import save_json, load_json, load_last_paths, save_last_paths
 from engine.inventory_cross_check.generator import run_cross_check
 from engine.stock_processing.generator import run_stock_processing
 from engine.yoy_reports.generator import generate_sales_report

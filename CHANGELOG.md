@@ -34,6 +34,8 @@ Development changes after `v1.4.1`. The released application version remains `1.
 
 ### Changed
 
+- **core: profiles:** Move validated profile persistence into core and remove GUI imports of CLI helpers and its wizard. GUI-only distributions can now create/edit profiles without shipping the CLI package.
+
 - **debug: tools:** Package diagnostics behind `python -m debug_tools` and load the developer console only when a debug build includes the optional package. Source command wrappers remain available; release source archives exclude diagnostics/tests and interfaces excluded by the build manifest.
 
 - **core: compatibility:** Retired pre-v3 migrations and deprecated configuration projections using the audited retirement tool. Current-schema validation and archived backups are preserved; older active profiles must be migrated before upgrading.

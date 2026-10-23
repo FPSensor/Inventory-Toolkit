@@ -146,3 +146,5 @@ Before introducing a new abstraction, ask whether it creates a real boundary. Cr
 `build.prop` is the runtime source of version and distribution capabilities. `ver` controls runtime branding and new profile metadata; the README badge continues to identify the published release. `type` is `debug` or `release`. `control-type` is `cli`, `gui` or `both`; `default-control` must select an included interface. `gui-stage` describes the desktop maturity. Invalid or duplicate properties fail explicitly.
 
 Run `python -m inventory_toolkit --interface gui` (or `cli`). The selected interface loads lazily; core and engines never import a frontend. Direct `python -m cli` and `python -m gui` entry points also respect build capabilities. Changing the manifest does not change an existing profile or report.
+
+Profile JSON and remembered paths are persisted through `core.profile_store`; GUI and CLI are siblings and must not import one another. Setup state and schema validation belong to core. Interface packages own only their rendering and operator interactions.
