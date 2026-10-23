@@ -24,3 +24,13 @@ def test_disabled_module_is_not_required_or_loaded(tmp_path, monkeypatch):
     assert error.value.code == ErrorCode.MODULE_DISABLED
     with pytest.raises(ValueError, match="at least one"):
         set_enabled_modules("example", [])
+
+
+@pytest.mark.parametrize('payload', [[], False, {'enabled_modules': [[]]}, {'enabled_modules': [1]}, {'enabled_modules': []}])
+def test_damaged_metadata_produces_a_configuration_error(tmp_path, monkeypatch, payload):
+    from core.json_documents import write_documents
+    from core.configuration_errors import ConfigurationFileError
+    monkeypatch.setattr(paths, 'PROFILES_ROOT', tmp_path)
+    write_documents({paths.profile_root('damaged') / 'profile.json': payload})
+    with pytest.raises(ConfigurationFileError):
+        enabled_modules('damaged')

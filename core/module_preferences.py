@@ -1,24 +1,25 @@
 """Profile-owned workflow selection, independent of setup completion."""
 from core import paths
-from core.profile_store import load_json, save_json
+from core.profile_store import save_json
+from core.profile_metadata import read_metadata
 from core.setup_catalog import MODULE_LABELS
 from core.workflow_errors import ErrorCode, WorkflowError
 
 
 def enabled_modules(profile):
-    metadata = load_json(str(paths.profile_root(profile) / "profile.json")) or {}
+    metadata = read_metadata(profile)
     selected = metadata.get("enabled_modules", list(MODULE_LABELS))
-    if not isinstance(selected, list) or not selected or any(name not in MODULE_LABELS for name in selected):
-        raise WorkflowError(ErrorCode.CONFIG_INVALID, "Select at least one known workflow in profile settings.")
     return tuple(name for name in MODULE_LABELS if name in selected)
 
 
 def set_enabled_modules(profile, modules):
+    if not isinstance(modules, (list, tuple)) or not modules or any(not isinstance(name, str) or name not in MODULE_LABELS for name in modules):
+        raise ValueError("Choose at least one workflow.")
     selected = list(dict.fromkeys(modules))
-    if not selected or any(name not in MODULE_LABELS for name in selected):
+    if not selected:
         raise ValueError("Choose at least one workflow.")
     path = paths.profile_root(profile) / "profile.json"
-    metadata = load_json(str(path)) or {}
+    metadata = read_metadata(profile)
     metadata["enabled_modules"] = selected
     save_json(str(path), metadata)
 

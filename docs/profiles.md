@@ -251,3 +251,5 @@ Both interfaces use `core.profile_creation.create_profile`. A display name gener
 See [Category sources](CATEGORY_SOURCES.md) for source-column, prefix-rule and unclassified modes in Stock and Cross Check. Sales mappings remain independent.
 
 JSON documents reject duplicate keys and non-finite numbers. Setup stages the configuration and review metadata together, replaces files atomically and restores the prior bytes if a later replacement fails. This prevents a failed save from keeping only one half of an edit; it is not a multi-process transaction or a guarantee against machine power loss between files. Keep one writer per profile.
+
+Profile metadata must be a JSON object. Enabled workflows are a nonempty list of known names; remembered paths contain workflow objects with string paths. Invalid documents raise a configuration error and are not overwritten or treated as empty defaults.

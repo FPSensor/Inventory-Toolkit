@@ -56,7 +56,12 @@ def save_json(path: str, data) -> None:
 def load_last_paths(profile: str) -> dict:
     """Load the saved file paths for *profile*. Returns {} if none saved yet."""
     path = profile_root(profile) / _LAST_PATHS_FILE
-    payload = load_json(str(path)) or {}
+    payload = load_json(str(path))
+    if payload is None:
+        payload = {}
+    if (not isinstance(payload, dict) or any(not isinstance(section, dict) or
+            any(not isinstance(value, str) for value in section.values()) for section in payload.values())):
+        raise ConfigurationFileError(path, "remembered paths must contain workflow objects with string paths")
     log_debug_event("last_paths_loaded", profile=profile, path=path, sections=sorted(payload.keys()))
     return payload
 

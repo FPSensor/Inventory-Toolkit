@@ -197,3 +197,16 @@ def test_cli_entrypoint_imports_cleanly_from_foreign_cwd(tmp_path):
     assert "Inventory Toolkit CLI" in result.stdout
     for app_dir in ("profiles", "logs", "examples", "tests", "tools"):
         assert not (tmp_path / app_dir).exists()
+
+
+def test_invalid_remembered_paths_are_reported_without_rewriting(tmp_path, monkeypatch):
+    import pytest
+    from core.configuration_errors import ConfigurationFileError
+    monkeypatch.setattr(app_paths, 'PROFILES_ROOT', tmp_path)
+    path = tmp_path / 'broken' / 'last_paths.json'
+    path.parent.mkdir()
+    path.write_text('{"stock_processing": []}')
+    before = path.read_bytes()
+    with pytest.raises(ConfigurationFileError, match='remembered paths'):
+        load_last_paths('broken')
+    assert path.read_bytes() == before

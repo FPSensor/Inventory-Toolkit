@@ -109,6 +109,8 @@ Development changes after `v1.4.1`. The released application version remains `1.
 
 ### Fixed
 
+- **core: profiles:** Validate profile metadata and remembered-path shapes before using them. Damaged objects or non-string workflow selections now produce actionable configuration errors instead of attribute/hash failures, without rewriting user documents.
+
 - **debug: integrity:** Supply the resolved input contract in the synthetic Stock integrity fixture after introducing module-owned mappings. Keep the diagnostic executable under the full release gate.
 
 - **stock: quantities:** Keep entirely whole-number input columns integral while preserving fractional measurements. This retains existing integer-report column widths without rounding measured stock.
