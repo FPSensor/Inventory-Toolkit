@@ -65,7 +65,7 @@ def test_gui_yoy_restores_saved_paths_for_each_profile(tmp_path, monkeypatch):
     save_last_paths("first", {"yoy_reports": {"file": "sales.xlsx", "out": "report.xlsx"}})
     monkeypatch.setattr(
         "gui.app.ConfigurationManager",
-        lambda _profile: SimpleNamespace(
+        lambda _profile, **_kwargs: SimpleNamespace(
             get_yoy_reports_config=lambda: {"output": {"default_path": "default.xlsx"}}
         ),
     )

@@ -50,6 +50,8 @@ Development changes after `v1.4.1`. The released application version remains `1.
 
 ### Changed
 
+- **tests: gui:** Keep saved-path regression fixtures compatible with module-scoped configuration loading, so the test continues exercising path restoration instead of intercepting an unsupported mock signature.
+
 - **tests: references:** Refresh only configuration fingerprints after renaming variant keys and adding optional profile fields. All three regenerated demo reports match the approved semantic references; no golden workbook is replaced.
 
 - **debug: comparison:** Stream hashes of semantic XLSX parts before allocating canonical XML trees. Identical report parts compare with bounded memory; serializer differences still use canonical/model checks. Cache styles in mismatch diagnostics as well.
