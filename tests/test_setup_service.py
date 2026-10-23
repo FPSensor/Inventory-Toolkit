@@ -100,3 +100,13 @@ def test_corrupt_progress_cannot_change_config(profile):
     with pytest.raises(WorkflowError):
         session.save_step(step.id, values(session, step))
     assert session.data(step) == before
+
+
+def test_numeric_normalization_does_not_make_saved_page_stale(profile):
+    initialize_setup(profile)
+    session = SetupSession(profile, 'cross_check', include_advanced=True)
+    step = next(step for step in session.steps if step.id == 'cross_policy')
+    data = values(session, step)
+    data['reconciliation.quantity_tolerance'] = 0
+    session.save_step(step.id, data)
+    assert session.effective_reviews()[step.id] == session.fingerprint(step)

@@ -203,7 +203,7 @@ class SetupSession:
                 raise WorkflowError(ErrorCode.CONFIG_REQUIRED_FIELD, f'{field.label} cannot be empty.', module=self.module, step=step.id, field='.'.join(field.path))
             set_value(raw, field.path, value)
         try:
-            _CONFIG_MODELS[step.logical].model_validate(raw)
+            raw = _CONFIG_MODELS[step.logical].model_validate(raw).model_dump()
         except ValueError as exc:
             raise WorkflowError(ErrorCode.CONFIG_INVALID, f'Review {step.title}: {exc}', module=self.module, step=step.id) from exc
         metadata = self.metadata()
