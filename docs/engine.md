@@ -172,3 +172,7 @@ The `sales` metric sums the configured `input.sales_column`, which must contain 
 Each branch/category comparison uses `(current_amount - previous_amount) / previous_amount`. Group Global and Totals comparisons apply the same formula to summed amounts, rather than averaging row or branch percentages. A zero prior-year amount produces `N/A`; a zero current amount with a positive prior amount produces -100%. Returns/negative amounts retain their signs. The monetary number format is decimal, without assuming a currency; both periods must use comparable currencies and accounting conventions.
 
 `select_run_metrics` selects units and optional sales amounts for interactive runs without mutating the stored profile. Direct engine callers continue to control `output.metrics` explicitly.
+
+## Physical count formats
+
+Cross Check `input.count_mode` defaults to `scans`: one headerless row means one physical unit. `quantities` reads a headered table using `count_article_column` and `count_quantity_column`; each row contributes its actual nonnegative, finite quantity. Invalid or unidentified nonzero counts stop with source Excel rows. `input.matching` can be `longest_prefix` (existing scanner behavior) or `exact` (no suffix inference). `reconciliation.quantity_tolerance` defaults to zero and may be increased deliberately for fractional measurement noise. Cost and sale valuations use the resulting quantity difference without integer truncation.

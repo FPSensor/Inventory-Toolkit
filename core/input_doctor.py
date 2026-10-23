@@ -67,7 +67,7 @@ def _requirements(config, module, *, include_sales, include_variants, grouping, 
         return {
             "system": ("System stock", (("Article / SKU", cross_article_column(config), "article_hints"),
                 ("System quantity", settings["input"]["quantity_column"], "qty_hints"))),
-            "count": ("Physical count (scanner)", None),
+            "count": ("Physical count", (("Count article", settings["input"]["count_article_column"], "article_hints"), ("Count quantity", settings["input"]["count_quantity_column"], "qty_hints")) if settings["input"].get("count_mode") == "quantities" else None),
             "cost": ("Cost list", (("Cost article", settings["price_lists"]["cost"]["article_column"], "article_hints"),
                 ("Cost price", settings["price_lists"]["cost"]["price_column"], "price_hints"))),
             "sales": ("Sales list", (("Sales article", settings["price_lists"]["sales"]["article_column"], "article_hints"),

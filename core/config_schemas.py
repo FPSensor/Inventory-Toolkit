@@ -140,6 +140,10 @@ class CrossCheckPriceLists(_StrictConfigModel):
 
 class CrossCheckInput(_StrictConfigModel):
     article_column: str = ""
+    count_mode: Literal["scans", "quantities"] = "scans"
+    count_article_column: str = ""
+    count_quantity_column: str = ""
+    matching: Literal["longest_prefix", "exact"] = "longest_prefix"
     quantity_column: str = DEFAULTS["cross_check/settings"]["input"]["quantity_column"]
 
     @field_validator("quantity_column")
@@ -152,6 +156,7 @@ class CrossCheckInput(_StrictConfigModel):
 
 
 class CrossCheckReconciliation(_StrictConfigModel):
+    quantity_tolerance: float = Field(default=0, ge=0, allow_inf_nan=False)
     ignore_negative_system_stock_when_counted: bool = DEFAULTS[
         "cross_check/settings"
     ]["reconciliation"]["ignore_negative_system_stock_when_counted"]

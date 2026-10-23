@@ -480,6 +480,10 @@ class InventoryToolkitGUI(BaseWindow):
                     "cost": self._select_columns(self.cc_cost.get(), mappings["cost"], defaults["cost"]),
                     "sales": self._select_columns(self.cc_sales.get(), mappings["sales"], defaults["sales"]),
                 }
+                if cross_config["input"]["count_mode"] == "quantities":
+                    overrides["count"] = self._select_columns(self.cc_count.get(),
+                        {"article": cross_config["input"]["count_article_column"], "quantity": cross_config["input"]["count_quantity_column"]},
+                        {"article": DEFAULTS["general/catalog"]["columns"]["article"], "quantity": cross_config["input"]["quantity_column"]})
             except Exception as exc:
                 self._notify("error",
                     "Cross Check Preflight Error",

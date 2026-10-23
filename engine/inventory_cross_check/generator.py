@@ -27,6 +27,7 @@ from core.telemetry import execution_timer
 from engine.inventory_cross_check.data_processor import (
     calculate_difference,
     normalize_article,
+    read_physical_counts,
 )
 from engine.inventory_cross_check.excel_renderer import apply_excel_formatting
 from engine.shared.families import assign_families, build_family_rules
@@ -103,7 +104,7 @@ def run_cross_check(args):
     )
 
     with execution_timer("Read and Validate Spreadsheets"):
-        system_frame = pd.read_excel(args.cross_check_system)
+        system_frame = pd.read_excel(args.cross_check_system, dtype={input_article_column: str})
         missing_system_columns = [
             column for column in (input_article_column, input_quantity_column)
             if column not in system_frame.columns
@@ -124,13 +125,9 @@ def run_cross_check(args):
                 return None
         system_frame = system_frame.rename(columns=system_renames)
 
-        count_frame = pd.read_excel(
-            args.cross_check_count,
-            header=None,
-            names=[_SCAN_READING_COLUMN],
-        )
-        cost_frame = pd.read_excel(args.shared_cost)
-        sales_frame = pd.read_excel(args.shared_sales)
+        count_frame = read_physical_counts(args.cross_check_count, cross_check_config["input"], overrides.get("count"))
+        cost_frame = pd.read_excel(args.shared_cost, dtype={cost_article_column: str})
+        sales_frame = pd.read_excel(args.shared_sales, dtype={sales_article_column: str})
         log_debug_event(
             "cross_check_inputs_loaded",
             system_shape=system_frame.shape,
@@ -152,6 +149,7 @@ def run_cross_check(args):
         raw_master_articles = system_frame[ARTICLE_COLUMN].unique().tolist()
         master_articles = [article for article in raw_master_articles if article]
         master_set = {str(article).upper().strip() for article in master_articles}
+        master_lookup = {str(article).upper().strip(): article for article in master_articles}
         log_debug_event(
             "cross_check_master_catalog",
             system_rows=len(system_frame),
@@ -189,9 +187,10 @@ def run_cross_check(args):
 
         count_frame = count_frame.dropna(subset=[_SCAN_READING_COLUMN]).copy()
         count_frame[_SCAN_READING_COLUMN] = clean_sku_series(count_frame[_SCAN_READING_COLUMN])
-        count_frame[_SCAN_COUNT_COLUMN] = 1
         count_frame[ARTICLE_COLUMN] = count_frame[_SCAN_READING_COLUMN].apply(
-            lambda reading: normalize_article(reading, master_articles, master_set)
+            lambda reading: master_lookup.get(str(reading).upper().strip(), f"{REVIEW_PREFIX}{reading}")
+            if cross_check_config["input"]["matching"] == "exact"
+            else normalize_article(reading, master_articles, master_set)
         )
         review_count = int(
             count_frame[ARTICLE_COLUMN].astype(str).str.startswith(REVIEW_PREFIX).sum()
@@ -287,7 +286,7 @@ def run_cross_check(args):
         result[COST_TOTAL_COLUMN] = result[DIFFERENCE_COLUMN] * result[COST_COLUMN].fillna(0)
         result[SALES_TOTAL_COLUMN] = result[DIFFERENCE_COLUMN] * result[PRICE_COLUMN].fillna(0)
 
-        result = result[result[DIFFERENCE_COLUMN] != 0].copy()
+        result = result[result[DIFFERENCE_COLUMN].abs() > cross_check_config["reconciliation"]["quantity_tolerance"]].copy()
         output_columns = [
             FAMILY_COLUMN,
             ARTICLE_COLUMN,

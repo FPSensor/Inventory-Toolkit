@@ -57,6 +57,10 @@ def launch_cross_check(active_profile: str) -> None:
             "cost": choose_input_columns(cost_file, mappings["cost"], defaults["cost"], confirm_default_column),
             "sales": choose_input_columns(sales_file, mappings["sales"], defaults["sales"], confirm_default_column),
         }
+        if cross_config["input"]["count_mode"] == "quantities":
+            overrides["count"] = choose_input_columns(count_file,
+                {"article": cross_config["input"]["count_article_column"], "quantity": cross_config["input"]["count_quantity_column"]},
+                {"article": DEFAULTS["general/catalog"]["columns"]["article"], "quantity": cross_config["input"]["quantity_column"]}, confirm_default_column)
     except Exception as exc:
         print(f"\n  ❌ Input column validation: {exc}")
         input("  Press Enter to return...")
