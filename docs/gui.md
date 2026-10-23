@@ -69,3 +69,9 @@ Native Windows/macOS rendering, keyboard/accessibility review and broader user t
 ## Frontend structure
 
 `gui/app.py` owns dispatch and session state. `config_hub.py` provides the searchable workspace, `setup_wizard.py` renders the shared catalog, `profile_dialog.py` provides embedded creation and `widgets.py` owns the dark design tokens and controls. Core owns profile persistence, typed configuration, setup state, input contracts and recovery codes. GUI code does not import the CLI package.
+
+## Profile checks and recovery
+
+Overview provides **Check profile / restore configuration**. The embedded panel checks enabled configuration, links recoverable issues to their setup page and lists saved configurations with labels/times. Save checkpoint creates a manual point. Restore first asks for inline confirmation and automatically checkpoints the current state. Workbooks and remembered paths are not restored.
+
+File I/O runs in worker threads; controls stay locked while an operation runs, and the Tk event loop owns all widget updates. The panel must be left before switching profile or starting a report. Restoring refreshes review/navigation state and clears prior partial-setup permission. See [profile_history.md](profile_history.md) and [diagnostics.md](diagnostics.md).

@@ -50,6 +50,7 @@ from gui.setup_wizard import SetupWizard
 
 from gui.config_hub import ConfigurationWorkspace
 from gui.profile_dialog import NewProfilePanel
+from gui.profile_recovery import ProfileRecoveryPanel
 
 class InventoryToolkitGUI(BaseWindow):
 
@@ -230,6 +231,27 @@ class InventoryToolkitGUI(BaseWindow):
             except Exception as exc:
                 self._notify("error", "Profile configuration", str(exc))
 
+    def _open_profile_recovery(self):
+        if not self._require_idle():
+            return
+        def close_panel():
+            panel = self._setup_panel
+            self._setup_panel = None
+            panel.destroy()
+            self._profile_menu.configure(state='normal' if USE_CTK else 'readonly')
+            self._partial_permission = None
+            self._apply_yoy_profile_defaults()
+            self._show_module('overview')
+        def configure(module, step):
+            close_panel()
+            self._open_wizard(module, step, edit_mode=True, single_page=True)
+        self._set_results_visible(False)
+        self._page_title.configure(text='Profile checks and recovery')
+        self._setup_panel = ProfileRecoveryPanel(self._page_host, self.active_profile.get(), close_panel, configure)
+        self._setup_panel.grid(row=0, column=0, sticky='nsew')
+        self._setup_panel.tkraise()
+        self._profile_menu.configure(state='disabled')
+
     def _open_new_profile(self):
         if not self._require_idle():
             return
@@ -382,6 +404,7 @@ class InventoryToolkitGUI(BaseWindow):
             _btn(chooser, "Apply workflow selection", apply_modules).pack(anchor="w", padx=12, pady=10)
         else:
             _btn(page, "Choose workflows", self._manage_workflows, variant="ghost").pack(anchor="w", padx=20, pady=12)
+        _btn(page, "Check profile / restore configuration", self._open_profile_recovery, variant="ghost").pack(anchor='w', padx=20, pady=(0, 8))
         ready = sum(entry.state == SetupState.COMPLETE for entry in entries)
         _lbl(page, text=f"{ready} of {len(selected)} enabled workflows ready", font=("Arial", 17, "bold")
             ).pack(anchor="w", padx=20, pady=(12, 5))

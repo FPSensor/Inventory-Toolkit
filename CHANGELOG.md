@@ -8,6 +8,8 @@ Development changes after `v1.4.1`. The released application version remains `1.
 
 ### Added
 
+- **gui: recovery:** Embed profile diagnostics and checkpoint management in Overview. Run file operations in workers, show actionable configuration destinations, require inline restore confirmation, retain a pre-restore point and lock profile/navigation until maintenance finishes. Exercise real Tk/CustomTkinter save/restore flows.
+
 - **cli: recovery:** Add profile checks and configuration history to Configuration → H. Show checkpoint labels/times, create manual points and restore by list number with explicit confirmation, using the same services as headless maintenance.
 
 - **core: maintenance:** Expose headless `doctor` and configuration-history commands through the application launcher in every build. Support machine-readable diagnostics, meaningful exit statuses and explicit confirmation for non-interactive restores without loading CLI or GUI packages.

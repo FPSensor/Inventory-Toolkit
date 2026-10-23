@@ -56,6 +56,32 @@ assert window._setup_panel is not None
 window._setup_panel._leave()
 draw()
 assert window._setup_panel is None
+window._open_profile_recovery()
+draw()
+panel = window._setup_panel
+def settle():
+    deadline = time.monotonic() + 10
+    while panel._busy and time.monotonic() < deadline:
+        draw()
+        time.sleep(.02)
+    assert not panel._busy
+settle()
+assert panel._report is not None
+from core.profile_history import create_checkpoint, list_checkpoints, restore_checkpoint
+panel._run(lambda: create_checkpoint(profile), panel._created)
+settle()
+identifier = list_checkpoints(profile)[0]
+panel._confirm_restore(identifier)
+draw()
+assert panel._confirmation == identifier
+panel._cancel_restore()
+assert panel._confirmation is None
+panel._run(lambda: restore_checkpoint(profile, identifier), panel._restored)
+settle()
+assert 'Configuration restored' in panel._message
+panel._leave()
+draw()
+assert window._setup_panel is None
 window._show_module('stock_processing')
 draw()
 assert len(window._split.panes()) == 2
