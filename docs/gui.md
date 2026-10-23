@@ -140,3 +140,7 @@ Profile creation is also embedded. Enter a display name and select workflows; th
 Real-widget validation covers both CustomTkinter and native ttk on a Linux virtual display. Empty containers do not reserve phantom space; the sidebar remains scrollable when text/window size reduces available room, and the workspace/results divider can be resized. Native Windows/macOS visual review is still a separate release checklist item.
 
 Setup, profile creation and configuration hide the report-results pane to give forms the full workspace height. Workflow pages restore it. The overview keeps workflow selection behind Choose workflows so the normal landing page shows readiness first. Native text scaling uses shared font objects, including settings opened after scaling.
+
+### Profile switching and file selections
+
+Stock, Cross Check and YoY remember their selected workbook paths independently for each profile. Switching profiles clears fields with no saved selection and refreshes enabled workflow navigation. Selecting a profile that disables the current workflow returns to its overview. Setup and running workers retain their profile lock.

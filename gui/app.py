@@ -72,6 +72,7 @@ class InventoryToolkitGUI(BaseWindow):
         self._build_top_bar()
         self._build_tabs()
         self._apply_yoy_profile_defaults()
+        self._restore_inventory_paths()
         self.active_profile.trace_add("write", self._on_profile_changed)
         self._build_status_bar()
         self.after(50, lambda: self._split.sashpos(0, round(self.winfo_height() * 0.73)) if len(self._split.panes()) == 2 else None)
@@ -419,16 +420,36 @@ class InventoryToolkitGUI(BaseWindow):
             return
         if hasattr(self, "yoy_variants"):
             self._apply_yoy_profile_defaults()
+        if hasattr(self, "sp_raw"):
+            self._restore_inventory_paths()
+        if hasattr(self, '_pages'):
+            selected = self._selected_module or 'overview'
+            if selected in MODULE_LABELS and selected not in enabled_modules(self.active_profile.get()):
+                selected = 'overview'
+            self._show_module(selected)
+            return
         if getattr(self, "_selected_module", None) == "overview" and hasattr(self, "tab_overview"):
             self._render_overview()
         elif getattr(self, "_selected_module", None) == "settings":
             self._render_settings()
 
+    def _restore_inventory_paths(self):
+        """Restore each profile's explicit selections without sharing paths across profiles."""
+        saved = load_last_paths(self.active_profile.get())
+        for module, fields in {
+            'stock_processing': {'stock': self.sp_raw, 'cost': self.sp_cost, 'sales': self.sp_sales},
+            'cross_check': {'system': self.cc_sys, 'count': self.cc_count, 'cost': self.cc_cost, 'sales': self.cc_sales},
+        }.items():
+            for role, variable in fields.items():
+                variable.set(saved.get(module, {}).get(role, ''))
+        self.sp_out.set(saved.get('stock_processing', {}).get('out') or 'Stock_Valuation_Report.xlsx')
+        self.cc_out.set(saved.get('cross_check', {}).get('out') or 'Cross_Check_Output.xlsx')
+
     def _apply_yoy_profile_defaults(self):
         """Restore YoY file paths and profile-owned defaults for the active profile."""
         try:
             profile = self.active_profile.get()
-            output = ConfigurationManager(profile).get_yoy_reports_config()["output"]
+            output = ConfigurationManager(profile, module="yoy_reports").get_yoy_reports_config()["output"]
             saved = load_last_paths(profile).get("yoy_reports", {})
         except Exception:
             return
@@ -562,6 +583,13 @@ class InventoryToolkitGUI(BaseWindow):
         if not out:
             return
 
+        try:
+            save_last_paths(self.active_profile.get(), {"cross_check": {
+                "system": self.cc_sys.get(), "count": self.cc_count.get(),
+                "cost": self.cc_cost.get(), "sales": self.cc_sales.get(), "out": out}})
+        except Exception as exc:
+            self._handle_error(exc)
+            return
         args = Namespace(
             cross_check_system=self.cc_sys.get(),
             cross_check_count=self.cc_count.get(),
@@ -630,6 +658,12 @@ class InventoryToolkitGUI(BaseWindow):
                 "cost": self._select_columns(self.sp_cost.get(), stock_price_columns(cm, "cost", required_only=True), defaults),
                 "sales": self._select_columns(self.sp_sales.get(), stock_price_columns(cm, "sales", required_only=True), defaults),
             }
+        except Exception as exc:
+            self._handle_error(exc)
+            return
+        try:
+            save_last_paths(self.active_profile.get(), {"stock_processing": {
+                "stock": self.sp_raw.get(), "cost": self.sp_cost.get(), "sales": self.sp_sales.get(), "out": out}})
         except Exception as exc:
             self._handle_error(exc)
             return
@@ -812,8 +846,12 @@ class InventoryToolkitGUI(BaseWindow):
             self._notify("error", "Invalid Date", f"Dates must be YYYY-MM-DD format:\n{err}", parent=self)
             return
 
-        config_manager = ConfigurationManager(self.active_profile.get())
-        yoy_config = deepcopy(config_manager.get_yoy_reports_config())
+        try:
+            config_manager = ConfigurationManager(self.active_profile.get(), module="yoy_reports")
+            yoy_config = deepcopy(config_manager.get_yoy_reports_config())
+        except Exception as exc:
+            self._handle_error(exc)
+            return
         if not yoy_config or "input" not in yoy_config:
             self._notify("error", "Config Error",
                                  f"YoY config missing for profile '{self.active_profile.get()}'.\n"

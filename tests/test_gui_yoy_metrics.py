@@ -28,7 +28,7 @@ def test_gui_captures_sales_selection_and_requires_only_selected_columns(tmp_pat
         'groups': {'group': ['A']},
     }
     original = deepcopy(config)
-    monkeypatch.setattr(app, 'ConfigurationManager', lambda _profile: SimpleNamespace(get_yoy_reports_config=lambda: config))
+    monkeypatch.setattr(app, 'ConfigurationManager', lambda _profile, **_kwargs: SimpleNamespace(get_yoy_reports_config=lambda: config))
     monkeypatch.setattr(app, 'save_last_paths', lambda *_args: None)
     monkeypatch.setattr(app.messagebox, 'showerror', lambda *_args, **_kwargs: pytest.fail('Unexpected GUI error'))
     selected_fields = []
