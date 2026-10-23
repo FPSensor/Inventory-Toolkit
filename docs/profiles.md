@@ -241,3 +241,7 @@ Stock numeric cleaning preserves decimal quantities, including store/deposit col
 ## Conditional setup and shared reviews
 
 The shared setup catalog defines labels, explanations, typed choices, numeric values, optional fields, sample-file roles and conditional pages. Normal setup reviews essential pages; additional configuration includes cleanup, filters, matching preferences, output layout and summaries. Scanner counts do not show quantity-table mappings; wide stock does not show row-based mappings. Unchanged shared settings reviewed in another module can be reused by a module that has not reviewed them yet. A module that already accepted older shared values must review a later change. Setup completion is review metadata, not proof that every row in a selected workbook is valid.
+
+## Creating a profile
+
+Both interfaces use `core.profile_creation.create_profile`. A display name generates a portable folder ID, workflows are selected before setup, and new profiles load `core/resources/new_profile_defaults.json` with neutral labels and whole-product identifiers instead of clothing/company defaults. Existing profile folders are never overwritten. A failed new-profile initialization removes only the new directory owned by that operation. The older bundled defaults continue to define inherited fields for existing schema-v3 profiles; they are not silently applied over an existing document.

@@ -8,6 +8,8 @@ Development changes after `v1.4.1`. The released application version remains `1.
 
 ### Added
 
+- **core: profiles:** Create new profiles through a shared service with neutral SKU/category/location vocabulary, exact product matching and independent input defaults. Generate portable profile IDs from display names, select workflows before setup, and remove an incomplete new profile if creation fails. Existing profiles are unchanged.
+
 - **stock: inputs:** Accept row-based stock with an explicit location column or one configured location, preserving source rows and fractional values. Single-location price lists no longer need an invented origin column; price-origin aliases now resolve configured location names. Product identifiers are read as text to preserve leading zeroes.
 
 - **cross: counts:** Support headered physical-count tables with configured product/quantity columns, including fractional counts, alongside the existing headerless scanner mode. Add explicit exact/prefix matching and a configurable quantity tolerance; reject missing products and invalid physical quantities with original Excel row numbers.

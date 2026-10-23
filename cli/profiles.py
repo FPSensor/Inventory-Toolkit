@@ -41,65 +41,30 @@ def _list_profiles():
 # ── New profile ───────────────────────────────────────────────────────────────
 
 def _create_new_profile() -> str | None:
-    """
-    Linear new-profile creation.
-    Returns the folder name of the created profile, or None if cancelled.
-    """
-    print("\n" + "=" * 50)
-    print("  ➕  CREATE NEW PROFILE")
-    print("=" * 50)
-
-    # 1. Folder name
-    while True:
-        folder = (
-            input("  Folder name (e.g. my_company): ")
-            .strip()
-            .lower()
-            .replace(" ", "_")
-        )
-        if not folder or folder in {".", ".."} or "/" in folder or "\\" in folder:
-            print("  ❌ Name cannot be empty.")
-            continue
-        profile_path = app_paths.profile_root(folder)
-        if os.path.exists(profile_path):
-            print(f"  ❌ A profile named '{folder}' already exists.")
-            continue
-        break
-
-    # 2. Display name + description
-    display_name = input(f"  Display name [{folder}]: ").strip() or folder
-    description  = input("  Description (optional): ").strip()
-
-    # 3. Create structure
-    configs_path = profile_path / "configs"
-    configs_path.mkdir(parents=True, exist_ok=True)
-    initialize_profile_files(configs_path)
-
-    save_json(str(profile_path / "profile.json"), {
-        "name":        display_name,
-        "description": description,
-        "version":     BUILD.version
-    })
-
-    print(f"\n  ✅ Profile '{display_name}' created at: {profile_path}\n")
-
-    print("  Choose the workflows you want to use (you can change this later).")
+    from core.profile_creation import create_profile
+    print("\n  CREATE A PROFILE — choose only what you use\n")
+    name = input("  Profile name (Enter cancels): ").strip()
+    if not name:
+        return None
+    description = input("  Description (optional): ").strip()
     choices = list(MODULE_LABELS)
-    for i, name in enumerate(choices, 1):
-        print(f"    {i}. {MODULE_LABELS[name]}")
+    for index, module in enumerate(choices, 1):
+        print(f"  {index}. {MODULE_LABELS[module]}")
     while True:
-        raw = input("  Numbers separated by commas [Enter=all]: ").strip()
-        parts = raw.split(",") if raw else [str(i) for i in range(1, 4)]
-        if all(part.strip() in {"1", "2", "3"} for part in parts):
-            set_enabled_modules(folder, [choices[int(part) - 1] for part in parts])
+        raw = input("  Workflows, comma-separated [Enter=all]: ").strip()
+        parts = [part.strip() for part in raw.split(',')] if raw else ['1', '2', '3']
+        if all(part in {'1', '2', '3'} for part in parts):
             break
-        print("  Choose at least one number: 1, 2 or 3.")
-    initialize_setup(folder)
-    print("  Select a module from the main menu to configure only what you use.")
-    print("  Setup progress is saved independently for each module.")
-    input("  Press Enter to continue...")
-
-    return folder
+        print("  Choose workflow numbers 1, 2 or 3.")
+    try:
+        profile = create_profile(name, description, [choices[int(part) - 1] for part in parts])
+    except (ValueError, OSError) as exc:
+        print(f"  Could not create profile: {exc}")
+        input("  Press Enter...")
+        return None
+    print("  Profile created. Choose a workflow to configure it with your own files.")
+    input("  Press Enter...")
+    return profile
 
 
 # ── Profile selector ──────────────────────────────────────────────────────────

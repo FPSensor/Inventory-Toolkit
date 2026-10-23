@@ -1,0 +1,124 @@
+{
+    "yoy_reports/settings": {
+        "version": 3,
+        "input": {
+            "date_column": "Date",
+            "quantity_column": "Quantity",
+            "sales_column": "Revenue",
+            "grouping_column": "Category",
+            "item_column": "SKU",
+            "branch_column": "Location",
+            "variant_column": "Variant"
+        },
+        "output": {
+            "quantity_label": "Quantity",
+            "quantity_format": "#,##0",
+            "default_path": "analysis_report.xlsx",
+            "metrics": [
+                "units"
+            ],
+            "annual_comparison": true,
+            "include_variants": false
+        },
+        "groups": {}
+    },
+    "stock_processing/settings": {
+        "version": 3,
+        "input": {
+            "article_column": "SKU",
+            "format": "wide",
+            "quantity_columns": {},
+            "deposit_columns": null,
+            "quantity_column": "",
+            "branch_column": "",
+            "default_store": ""
+        },
+        "cleaning": {
+            "text_columns": [
+                "SKU"
+            ],
+            "drop_columns": [],
+            "numeric_columns": []
+        },
+        "pricing": {
+            "article_tokenization": "whole",
+            "columns": {
+                "article": "SKU",
+                "database": "",
+                "price": "Price"
+            },
+            "aliases": {},
+            "cost_columns": {
+                "article": "SKU",
+                "database": "",
+                "price": "Cost"
+            },
+            "sales_columns": {
+                "article": "SKU",
+                "database": "",
+                "price": "Price"
+            },
+            "default_store": ""
+        },
+        "output": {
+            "quantity_label": "units",
+            "quantity_format": "#,##0",
+            "raw_data_sheet": "Stock",
+            "base_columns": [
+                "SKU",
+                "Category"
+            ],
+            "summaries": []
+        }
+    },
+    "cross_check/settings": {
+        "version": 3,
+        "pricing": {
+            "article_tokenization": "whole"
+        },
+        "input": {
+            "article_column": "SKU",
+            "count_mode": "scans",
+            "count_article_column": "",
+            "count_quantity_column": "",
+            "matching": "exact",
+            "quantity_column": "Quantity"
+        },
+        "reconciliation": {
+            "quantity_tolerance": 0.0,
+            "ignore_negative_system_stock_when_counted": false
+        },
+        "filters": {
+            "ignored_articles": [],
+            "ignored_terms": []
+        },
+        "price_lists": {
+            "cost": {
+                "article_column": "SKU",
+                "price_column": "Cost"
+            },
+            "sales": {
+                "article_column": "SKU",
+                "price_column": "Price"
+            }
+        }
+    },
+    "general/catalog": {
+        "version": 3,
+        "columns": {
+            "article": "SKU",
+            "family": "Category"
+        },
+        "default_family": "Other"
+    },
+    "general/families": {
+        "version": 3,
+        "rules": {}
+    },
+    "general/network": {
+        "version": 3,
+        "active": [],
+        "regional_groups": {},
+        "stock_database_columns": {}
+    }
+}
