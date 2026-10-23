@@ -133,24 +133,24 @@ def launch_yoy_reports(active_profile: str) -> None:
             print("  ❌ Enter 'Y' or 'N'.")
         yoy_config["output"]["annual_comparison"] = comparison_option == "y"
 
-    configured_include_sizes = yoy_config.get("output", {}).get("include_sizes", False)
-    size_default = "Y" if configured_include_sizes else "N"
+    configured_include_variants = yoy_config.get("output", {}).get("include_variants", False)
+    variant_default = "Y" if configured_include_variants else "N"
     while True:
-        size_option = input(
-            f"  Include size breakdown? [Y/N, default {size_default} from profile]: "
+        variant_option = input(
+            f"  Include variant breakdown? [Y/N, default {variant_default} from profile]: "
         ).strip().lower()
-        if size_option in ("y", "n", ""):
+        if variant_option in ("y", "n", ""):
             break
         print("  ❌ Enter 'Y' or 'N'.")
-    include_sizes = (
-        configured_include_sizes if size_option == "" else size_option == "y"
+    include_variants = (
+        configured_include_variants if variant_option == "" else variant_option == "y"
     )
 
     required_fields = ["date_column", "branch_column"]
     required_fields += ["quantity_column" if spec.key == "units" else "sales_column" for spec in metric_specs]
     required_fields.append("grouping_column" if grouping_option == "f" and has_families else "item_column")
-    if include_sizes:
-        required_fields.append("size_column")
+    if include_variants:
+        required_fields.append("variant_column")
     required_fields = list(dict.fromkeys(required_fields))
     try:
         resolved = choose_input_columns(
@@ -196,7 +196,7 @@ def launch_yoy_reports(active_profile: str) -> None:
         grouping_mode=grouping_option,
         has_families=has_families,
         segmented=segmented,
-        include_sizes=include_sizes,
+        include_variants=include_variants,
         start=str(start_date),
         end=str(end_date),
     )
@@ -216,7 +216,7 @@ def launch_yoy_reports(active_profile: str) -> None:
             segmented,
             has_families,
             profile,
-            include_sizes,
+            include_variants,
             progress=show_progress,
             stats=show_stats,
         )

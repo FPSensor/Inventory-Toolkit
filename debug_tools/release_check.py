@@ -467,7 +467,7 @@ def _run_yoy_demo(output: Path) -> None:
         True,
         False,
         "demo",
-        yoy_config["output"].get("include_sizes", False),
+        yoy_config["output"].get("include_variants", False),
         True,
     )
     if not result:

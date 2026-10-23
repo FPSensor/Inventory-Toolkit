@@ -25,7 +25,7 @@ try:
 except ImportError:
     PANDAS_AVAILABLE = False
 
-from core.business_schema import ARTICLE_COLUMN, DATABASE_ORIGIN_COLUMN, DEFAULT_FAMILY, FAMILY_COLUMN, PRICE_COLUMN, RAW_DATA_SHEET, SIZE_COLUMN
+from core.business_schema import ARTICLE_COLUMN, DATABASE_ORIGIN_COLUMN, DEFAULT_FAMILY, FAMILY_COLUMN, PRICE_COLUMN, RAW_DATA_SHEET, VARIANT_COLUMN
 from core.configuration_manager import ConfigurationManager
 from core.input_columns import choose_input_columns
 from core.profile_config import DEFAULTS
@@ -247,7 +247,7 @@ class InventoryToolkitGUI(BaseWindow):
                 return False
             self._partial_permission = None
             session.validate_required(include_sales=self.yoy_sales_amounts.get() if module == "yoy_reports" else False,
-                include_sizes=self.yoy_sizes.get() if module == "yoy_reports" else False)
+                include_variants=self.yoy_variants.get() if module == "yoy_reports" else False)
             return True
         except Exception as exc:
             self._handle_error(exc)
@@ -331,7 +331,7 @@ class InventoryToolkitGUI(BaseWindow):
             if self.active_profile.get() != self._running_profile:
                 self.active_profile.set(self._running_profile)
             return
-        if hasattr(self, "yoy_sizes"):
+        if hasattr(self, "yoy_variants"):
             self._apply_yoy_profile_defaults()
         if getattr(self, "_selected_module", None) == "overview" and hasattr(self, "tab_overview"):
             self._render_overview()
@@ -344,7 +344,7 @@ class InventoryToolkitGUI(BaseWindow):
             saved = load_last_paths(profile).get("yoy_reports", {})
         except Exception:
             return
-        self.yoy_sizes.set(bool(output.get("include_sizes", False)))
+        self.yoy_variants.set(bool(output.get("include_variants", False)))
         self.yoy_compare.set(False)
         self.yoy_sales_amounts.set(False)
         self.yoy_file.set(saved.get("file", ""))
@@ -563,7 +563,7 @@ class InventoryToolkitGUI(BaseWindow):
         self.yoy_seg     = tk.BooleanVar(value=False)
         self.yoy_compare = tk.BooleanVar(value=False)
         self.yoy_sales_amounts = tk.BooleanVar(value=False)
-        self.yoy_sizes   = tk.BooleanVar(value=False)
+        self.yoy_variants   = tk.BooleanVar(value=False)
         self.yoy_out     = tk.StringVar(value="yoy_analysis.xlsx")
 
         _lbl(self.tab_yoy, text="Sales Data File", font=("Arial", 11, "bold") if not USE_CTK else None
@@ -596,7 +596,7 @@ class InventoryToolkitGUI(BaseWindow):
         for text, variable, row, column in [
             ("File has Family column", self.yoy_has_fam, 0, 1),
             ("Segment by Month", self.yoy_seg, 1, 0),
-            ("Size breakdown", self.yoy_sizes, 1, 1),
+            ("Variant breakdown", self.yoy_variants, 1, 1),
         ]:
             check_class(opts, text=text, variable=variable).grid(row=row, column=column, sticky="w", padx=10, pady=8)
 
@@ -655,7 +655,7 @@ class InventoryToolkitGUI(BaseWindow):
             "yoy_reports": lambda: {"file": self.yoy_file.get()},
         }[module]()
         options = ({"include_sales": self.yoy_sales_amounts.get(),
-            "include_sizes": self.yoy_sizes.get(), "grouping": self.yoy_group.get().lower(),
+            "include_variants": self.yoy_variants.get(), "grouping": self.yoy_group.get().lower(),
             "has_families": self.yoy_has_fam.get()} if module == "yoy_reports" else {})
         profile = self.active_profile.get()
         result = queue.Queue(maxsize=1)
@@ -750,12 +750,12 @@ class InventoryToolkitGUI(BaseWindow):
             yoy_config["output"]["annual_comparison"] = self.yoy_compare.get()
         has_families = self.yoy_has_fam.get()
         profile = self.active_profile.get()
-        include_sizes = self.yoy_sizes.get()
+        include_variants = self.yoy_variants.get()
         required_fields = ["date_column", "branch_column"]
         required_fields += ["quantity_column" if m == "units" else "sales_column" for m in yoy_config["output"]["metrics"]]
         required_fields.append("grouping_column" if self.yoy_group.get() == "Family" and has_families else "item_column")
-        if include_sizes:
-            required_fields.append("size_column")
+        if include_variants:
+            required_fields.append("variant_column")
         try:
             resolved = self._select_columns(f_path,
                 {key: yoy_config["input"][key] for key in dict.fromkeys(required_fields)},
@@ -775,7 +775,7 @@ class InventoryToolkitGUI(BaseWindow):
         def task(progress, stats):
             return generate_sales_report(
                 f_path, out, s_dt, e_dt, yoy_config, grouping_column,
-                segmented, has_families, profile, include_sizes,
+                segmented, has_families, profile, include_variants,
                 non_interactive=True,
                 progress=progress,
                 stats=stats,

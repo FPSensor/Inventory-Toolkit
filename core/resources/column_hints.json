@@ -54,7 +54,7 @@
         "db",
         "base"
     ],
-    "size_hints": [
+    "variant_hints": [
         "talle",
         "size",
         "medida"

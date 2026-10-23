@@ -42,15 +42,15 @@ def show_profile_overview(profile):
                     for name, example in examples.items()}
                 options = {}
                 if entry.module == "yoy_reports":
-                    size_default = bool(ConfigurationManager(profile)
-                        .get_yoy_reports_config()["output"]["include_sizes"])
+                    variant_default = bool(ConfigurationManager(profile)
+                        .get_yoy_reports_config()["output"]["include_variants"])
                     group = input("  Inspect Family (F) or Item (I) grouping? [I]: ").strip().lower()
                     options["grouping"] = "family" if group == "f" else "item"
                     options["has_families"] = (input("  Does the file contain a Family column? [y/N]: ")
                         .strip().lower() == "y") if group == "f" else False
                     options["include_sales"] = input("  Include revenue columns? [y/N]: ").strip().lower() == "y"
-                    answer = input(f"  Include size breakdown? [{'Y/n' if size_default else 'y/N'}]: ").strip().lower()
-                    options["include_sizes"] = size_default if not answer else answer == "y"
+                    answer = input(f"  Include variant breakdown? [{'Y/n' if variant_default else 'y/N'}]: ").strip().lower()
+                    options["include_variants"] = variant_default if not answer else answer == "y"
                 print("\n" + inspect_workflow_inputs(profile, entry.module, files, **options).render())
             except (OSError, ValueError) as exc:
                 print(f"\n  Could not inspect inputs: {exc}")

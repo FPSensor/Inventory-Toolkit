@@ -88,7 +88,7 @@
             "grouping_column": "Familias",
             "item_column": "Articulo",
             "branch_column": "Base",
-            "size_column": "Talle"
+            "variant_column": "Talle"
         },
         "output": {
             "default_path": "analysis_report.xlsx",
@@ -97,7 +97,7 @@
                 "sales"
             ],
             "annual_comparison": true,
-            "include_sizes": false
+            "include_variants": false
         },
         "groups": {}
     }

@@ -48,7 +48,7 @@ def test_console_inspection_uses_selected_yoy_options(monkeypatch):
     monkeypatch.setattr(cli, 'load_last_paths', lambda _profile: {})
     monkeypatch.setattr(cli, 'input_default', lambda _profile, _saved, filename: filename)
     monkeypatch.setattr(cli, 'ConfigurationManager', lambda _profile: SimpleNamespace(
-        get_yoy_reports_config=lambda: {'output': {'include_sizes': False}}))
+        get_yoy_reports_config=lambda: {'output': {'include_variants': False}}))
     received = []
     monkeypatch.setattr(cli, 'inspect_workflow_inputs', lambda *args, **kwargs: (
         received.append(kwargs) or SimpleNamespace(render=lambda: 'Inspection complete')))
@@ -56,4 +56,4 @@ def test_console_inspection_uses_selected_yoy_options(monkeypatch):
     monkeypatch.setattr('builtins.input', lambda _prompt: next(answers))
     cli.show_profile_overview('example')
     assert received == [{'grouping': 'family', 'has_families': False,
-        'include_sales': True, 'include_sizes': False}]
+        'include_sales': True, 'include_variants': False}]

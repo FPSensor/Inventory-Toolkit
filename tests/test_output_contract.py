@@ -57,13 +57,13 @@ def test_yoy_rejects_xls_output_before_reading_sales_data(monkeypatch):
             "grouping_column": "Familias",
             "item_column": "Articulo",
             "branch_column": "Base",
-            "size_column": "Talle",
+            "variant_column": "Talle",
         },
         "output": {
             "default_path": "report.xlsx",
             "metrics": ["units"],
             "annual_comparison": True,
-            "include_sizes": False,
+            "include_variants": False,
         },
         "groups": {"All": ["STORE"]},
     }

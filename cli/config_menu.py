@@ -193,7 +193,7 @@ def _yoy_menu(configs: Path, profile: str):
         cmd=input("  Option: ").strip()
         if cmd=="0": return
         if cmd=="1":
-            for k,l in (("date_column","Date"),("quantity_column","Quantity"),("sales_column","Sales amount"),("grouping_column","Grouping/family"),("item_column","Item/SKU"),("branch_column","Branch/store"),("size_column","Size")): _edit_scalar(inp,k,l)
+            for k,l in (("date_column","Date"),("quantity_column","Quantity"),("sales_column","Sales amount"),("grouping_column","Grouping/family"),("item_column","Item/SKU"),("branch_column","Branch/store"),("variant_column","Variant")): _edit_scalar(inp,k,l)
         elif cmd=="2":
             _edit_scalar(out,"default_path","Default output path")
             current_metrics = out.get("metrics", ["units", "sales"])
@@ -208,7 +208,7 @@ def _yoy_menu(configs: Path, profile: str):
                     _pause("Press Enter to keep the current metric configuration...")
                 elif metrics:
                     out["metrics"] = list(dict.fromkeys(metrics))
-            for key,label in (("annual_comparison","Annual comparison"),("include_sizes","Include sizes")):
+            for key,label in (("annual_comparison","Annual comparison"),("include_variants","Include variants")):
                 _edit_scalar(out,key,label)
         elif cmd=="3":
             for k,v in groups.items(): print(f"  {k} → {', '.join(v)}")

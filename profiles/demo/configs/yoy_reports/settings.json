@@ -6,7 +6,7 @@
         "grouping_column": "Familias",
         "item_column": "Articulo",
         "branch_column": "Base",
-        "size_column": "Talle",
+        "variant_column": "Talle",
         "sales_column": "Monto"
     },
     "output": {
@@ -16,7 +16,7 @@
             "sales"
         ],
         "annual_comparison": true,
-        "include_sizes": false
+        "include_variants": false
     },
     "groups": {
         "branch_group_1": [

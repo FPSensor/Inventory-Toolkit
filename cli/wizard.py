@@ -32,7 +32,7 @@ _BRANCH_HINTS = tuple(_COLUMN_HINTS["branch_hints"])
 _PRICE_HINTS = tuple(_COLUMN_HINTS["price_hints"])
 _SALES_HINTS = tuple(_COLUMN_HINTS["sales_hints"])
 _DB_HINTS = tuple(_COLUMN_HINTS["db_hints"])
-_SIZE_HINTS = tuple(_COLUMN_HINTS["size_hints"])
+_VARIANT_HINTS = tuple(_COLUMN_HINTS["variant_hints"])
 _NON_STORE = tuple(_COLUMN_HINTS["non_store"])
 
 
@@ -232,7 +232,7 @@ def _setup_yoy(configs: Path) -> None:
             ("item_column", "Item/SKU column", _ARTICLE_HINTS, DEFAULTS["yoy_reports/settings"]["input"]["item_column"]),
             ("grouping_column", "Grouping/family column", _FAMILY_HINTS, DEFAULTS["yoy_reports/settings"]["input"]["grouping_column"]),
             ("branch_column", "Branch/store column", _BRANCH_HINTS, DEFAULTS["yoy_reports/settings"]["input"]["branch_column"]),
-            ("size_column", "Size column (optional)", _SIZE_HINTS, DEFAULTS["yoy_reports/settings"]["input"]["size_column"]),
+            ("variant_column", "Variant column (optional)", _VARIANT_HINTS, DEFAULTS["yoy_reports/settings"]["input"]["variant_column"]),
         ]
         for key, label, hints, default in fields:
             inp[key] = _pick(label, columns, inp.get(key, default), hints)
@@ -270,11 +270,11 @@ def _setup_yoy(configs: Path) -> None:
     elif annual in ("n", "no"):
         out["annual_comparison"] = False
 
-    inc = input(f"  Include size breakdown? [y/n, current={out.get('include_sizes',False)}]: ").strip().lower()
+    inc = input(f"  Include variant breakdown? [y/n, current={out.get('include_variants',False)}]: ").strip().lower()
     if inc in ("y", "yes"):
-        out["include_sizes"] = True
+        out["include_variants"] = True
     elif inc in ("n", "no"):
-        out["include_sizes"] = False
+        out["include_variants"] = False
     _save(configs, "yoy_reports/settings", cfg)
     print("  ✅ YoY settings saved. Report groups can be edited in Config Hub.")
     input("  Press Enter...")

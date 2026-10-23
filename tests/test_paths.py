@@ -73,7 +73,7 @@ def test_gui_yoy_restores_saved_paths_for_each_profile(tmp_path, monkeypatch):
         active_profile=Variable("first"),
         yoy_file=Variable(),
         yoy_out=Variable(),
-        yoy_sizes=Variable(),
+        yoy_variants=Variable(),
         yoy_compare=Variable(),
         yoy_sales_amounts=Variable(True),
     )

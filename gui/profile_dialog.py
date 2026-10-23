@@ -45,7 +45,7 @@ try:
 except ImportError:
     PANDAS_AVAILABLE = False
 
-from core.business_schema import ARTICLE_COLUMN, DATABASE_ORIGIN_COLUMN, DEFAULT_FAMILY, FAMILY_COLUMN, PRICE_COLUMN, RAW_DATA_SHEET, SIZE_COLUMN
+from core.business_schema import ARTICLE_COLUMN, DATABASE_ORIGIN_COLUMN, DEFAULT_FAMILY, FAMILY_COLUMN, PRICE_COLUMN, RAW_DATA_SHEET, VARIANT_COLUMN
 from core.configuration_manager import ConfigurationManager
 from core.input_columns import choose_input_columns
 from core.profile_config import DEFAULTS

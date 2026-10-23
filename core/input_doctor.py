@@ -57,7 +57,7 @@ class InputInspection:
         return "\n".join(lines)
 
 
-def _requirements(config, module, *, include_sales, include_sizes, grouping, has_families):
+def _requirements(config, module, *, include_sales, include_variants, grouping, has_families):
     """Capture only columns actually consumed by the selected workflow options."""
     catalog = config.get_catalog_columns()
     article = ("Article / SKU", catalog["article"], "article_hints")
@@ -94,17 +94,17 @@ def _requirements(config, module, *, include_sales, include_sizes, grouping, has
              "family_hints" if grouping == "family" and has_families else "article_hints")]
         if include_sales:
             required.append(("Sales amount", inputs["sales_column"], "sales_hints"))
-        if include_sizes:
-            required.append(("Size", inputs["size_column"], "size_hints"))
+        if include_variants:
+            required.append(("Variant", inputs["variant_column"], "variant_hints"))
         return {"file": ("Sales history", tuple(required))}
     raise ValueError(f"Unknown workflow: {module}")
 
 
 def inspect_workflow_inputs(profile, module, files, *, include_sales=False,
-                            include_sizes=False, grouping="family", has_families=True):
+                            include_variants=False, grouping="family", has_families=True):
     """Read at most five rows per input; never apply fallbacks or write config."""
     specs = _requirements(ConfigurationManager(profile), module,
-        include_sales=include_sales, include_sizes=include_sizes,
+        include_sales=include_sales, include_variants=include_variants,
         grouping=grouping, has_families=has_families)
     results = []
     for key, (role, required) in specs.items():

@@ -19,7 +19,7 @@ def render_yoy_sales_excel(
     yoy_config,
     grouping_column,
     segmented,
-    include_sizes=False,
+    include_variants=False,
     interactive=True,
     progress=None,
 ):
@@ -30,7 +30,7 @@ def render_yoy_sales_excel(
         previous_shape=previous_frame.shape,
         grouping_column=grouping_column,
         segmented=segmented,
-        include_sizes=include_sizes,
+        include_variants=include_variants,
         interactive=interactive,
     )
     workbook = openpyxl.Workbook()
@@ -105,7 +105,7 @@ def render_yoy_sales_excel(
                 period_previous_start,
                 yoy_config,
                 grouping_column,
-                include_sizes,
+                include_variants,
             )
             rendered_sheets += 1
 
@@ -135,7 +135,7 @@ def render_yoy_sales_excel(
                 year_previous_start,
                 yoy_config,
                 grouping_column,
-                include_sizes,
+                include_variants,
             )
             rendered_sheets += 1
     else:
@@ -151,7 +151,7 @@ def render_yoy_sales_excel(
             previous_start,
             yoy_config,
             grouping_column,
-            include_sizes,
+            include_variants,
         )
         rendered_sheets += 1
 
@@ -166,7 +166,7 @@ def render_yoy_sales_excel(
             previous_start,
             yoy_config,
             grouping_column,
-            include_sizes,
+            include_variants,
         )
         rendered_sheets += 1
 

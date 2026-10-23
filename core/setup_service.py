@@ -56,7 +56,7 @@ class SetupSession:
         ensure_profile_config(self.root)
 
     def data(self, step):
-        return _read(self.root / f'{step.logical}.json')
+        return _CONFIG_MODELS[step.logical].model_validate(_read(self.root / f'{step.logical}.json')).model_dump()
 
     def fingerprint(self, step):
         data = self.data(step)
@@ -102,7 +102,7 @@ class SetupSession:
             pass
         return SetupState.PARTIAL
 
-    def validate_required(self, *, include_sales=False, include_sizes=False):
+    def validate_required(self, *, include_sales=False, include_variants=False):
         for step in self.steps:
             raw = self.data(step)
             for field in step.fields:
@@ -114,8 +114,8 @@ class SetupSession:
                 if self.module == 'yoy_reports':
                     if field.path == ('input', 'sales_column'):
                         required = include_sales
-                    elif field.path == ('input', 'size_column'):
-                        required = include_sizes
+                    elif field.path == ('input', 'variant_column'):
+                        required = include_variants
                 if required and (not isinstance(value, str) or not value.strip()):
                     raise WorkflowError(ErrorCode.CONFIG_REQUIRED_FIELD,
                         f'{field.label} has not been configured.', module=self.module,
@@ -137,7 +137,8 @@ class SetupSession:
         raw = deepcopy(self.data(step))
         for field in step.fields:
             value = values['.'.join(field.path)]
-            if field.kind in {'column', 'text'} and (not isinstance(value, str) or not value.strip()):
+            optional_variant = field.path == ('input', 'variant_column') and not values.get('output.include_variants', False)
+            if field.kind in {'column', 'text'} and not optional_variant and (not isinstance(value, str) or not value.strip()):
                 raise WorkflowError(ErrorCode.CONFIG_REQUIRED_FIELD, f'{field.label} cannot be empty.', module=self.module, step=step.id, field='.'.join(field.path))
             set_value(raw, field.path, value)
         try:

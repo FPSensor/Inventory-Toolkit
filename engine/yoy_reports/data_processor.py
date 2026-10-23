@@ -44,6 +44,8 @@ def process_sales_data(
         grouping_source_column,
         *(metric.column for metric in metric_specs),
     }
+    if yoy_config["output"].get("include_variants", False):
+        required_columns.add(input_config["variant_column"])
     missing_columns = sorted(column for column in required_columns if column not in dataframe.columns)
     if missing_columns:
         raise ValueError(f"YoY input is missing required columns: {missing_columns}")

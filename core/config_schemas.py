@@ -2,7 +2,7 @@
 
 from typing import Dict, List, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from core.profile_config import CONFIG_VERSION, DEFAULTS
 from core.system_utils import normalize_xlsx_output_path
@@ -15,7 +15,7 @@ from core.business_schema import (
     PRICE_COLUMN,
     QUANTITY_COLUMN,
     RAW_DATA_SHEET,
-    SIZE_COLUMN,
+    VARIANT_COLUMN,
 )
 
 
@@ -159,7 +159,7 @@ class YoYInputConfig(_StrictConfigModel):
     grouping_column: str = FAMILY_COLUMN
     item_column: str = DEFAULTS["yoy_reports/settings"]["input"]["item_column"]
     branch_column: str = DEFAULTS["yoy_reports/settings"]["input"]["branch_column"]
-    size_column: str = SIZE_COLUMN
+    variant_column: str = Field(default=VARIANT_COLUMN, validation_alias=AliasChoices("variant_column", "size_column"))
 
 
 class YoYOutputConfig(_StrictConfigModel):
@@ -174,7 +174,7 @@ class YoYOutputConfig(_StrictConfigModel):
         min_length=1,
     )
     annual_comparison: bool = True
-    include_sizes: bool = False
+    include_variants: bool = Field(default=False, validation_alias=AliasChoices("include_variants", "include_sizes"))
 
 
 class YoYReportsConfig(_Config):

@@ -34,6 +34,8 @@ Development changes after `v1.4.1`. The released application version remains `1.
 
 ### Changed
 
+- **yoy: variants:** Generalize the optional size breakdown into a profile-mapped variant dimension (for example package weight, flavor or size). Reports use the chosen header; products without variants require no variant column. Existing size keys are accepted when reading and saved under variant names when reviewed.
+
 - **core: profiles:** Move validated profile persistence into core and remove GUI imports of CLI helpers and its wizard. GUI-only distributions can now create/edit profiles without shipping the CLI package.
 
 - **debug: tools:** Package diagnostics behind `python -m debug_tools` and load the developer console only when a debug build includes the optional package. Source command wrappers remain available; release source archives exclude diagnostics/tests and interfaces excluded by the build manifest.

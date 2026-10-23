@@ -22,7 +22,7 @@ class Config:
     def get_yoy_reports_config(self):
         return {'input': {'date_column': 'Date', 'quantity_column': 'Units',
             'branch_column': 'Branch', 'grouping_column': 'Family', 'item_column': 'Item',
-            'sales_column': 'Revenue', 'size_column': 'Size'}}
+            'sales_column': 'Revenue', 'variant_column': 'Size'}}
 
 
 def workbook(tmp_path, name, data, *, header=True):
@@ -54,7 +54,7 @@ def test_yoy_only_checks_columns_used_by_selected_options(tmp_path, monkeypatch)
     assert input_doctor.inspect_workflow_inputs('example', 'yoy_reports', files,
         grouping='item', has_families=False).ready
     selected = input_doctor.inspect_workflow_inputs('example', 'yoy_reports', files,
-        grouping='item', has_families=False, include_sales=True, include_sizes=True)
+        grouping='item', has_families=False, include_sales=True, include_variants=True)
     assert not selected.ready
     assert 'Revenue' in selected.render() and 'Size' in selected.render()
 

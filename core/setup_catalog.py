@@ -86,9 +86,9 @@ STEPS = {
             field('input.branch_column', 'Store / location column', 'Transaction store identifiers must match the report-group members.', hint_key='branch_hints'))),
         SetupStep('yoy_groups', 'Comparison groups', 'yoy_reports/settings', (
             field('groups', 'Report groups and stores', 'Name a group and list its stores. Multi-store groups get a Global comparison; single-store groups do not.', 'groups'),)),
-        SetupStep('yoy_sizes', 'Size breakdown', 'yoy_reports/settings', (
-            field('input.size_column', 'Size column', 'Header used only when the optional size breakdown is requested.', hint_key='size_hints', sample_required=False),
-            field('output.include_sizes', 'Default size breakdown', 'Enable only when your sales file contains size values.', 'bool'))),
+        SetupStep('yoy_variants', 'Variant breakdown', 'yoy_reports/settings', (
+            field('input.variant_column', 'Variant column', 'Optional product dimension: size, package weight, flavor or another attribute. Choose its actual spreadsheet header. This is separate from the numeric quantity sold.', hint_key='variant_hints', sample_required=False),
+            field('output.include_variants', 'Default variant breakdown', 'Enable only when the sales file contains variant values; leave disabled for products without variants.', 'bool'))),
         SetupStep('yoy_output', 'Report preferences', 'yoy_reports/settings', (
             field('output.default_path', 'Default report filename', 'A filename ending in .xlsx, or a filename without an extension.', 'text'),
             field('output.annual_comparison', 'Prior-year comparisons for monthly reports', 'Interactive full reports have a separate per-run comparison option.', 'bool'),

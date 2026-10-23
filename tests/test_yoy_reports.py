@@ -11,7 +11,7 @@ from engine.yoy_reports.excel_renderer import render_yoy_sales_excel
 from engine.yoy_reports.stats import build_yoy_stats
 
 
-def _config(*, metrics=None, annual_comparison=True, include_sizes=False, groups=None):
+def _config(*, metrics=None, annual_comparison=True, include_variants=False, groups=None):
     return {
         "version": 3,
         "input": {
@@ -21,13 +21,13 @@ def _config(*, metrics=None, annual_comparison=True, include_sizes=False, groups
             "grouping_column": "Category",
             "item_column": "SKU",
             "branch_column": "Branch",
-            "size_column": "Size",
+            "variant_column": "Size",
         },
         "output": {
             "default_path": "report.xlsx",
             "metrics": ["units", "sales"] if metrics is None else metrics,
             "annual_comparison": annual_comparison,
-            "include_sizes": include_sizes,
+            "include_variants": include_variants,
         },
         "groups": groups if groups is not None else {"north": ["A", "B"]},
     }
@@ -97,7 +97,7 @@ def test_yoy_renders_configured_units_and_sales_metrics():
         pd.Timestamp("2025-01-01"),
         config,
         "Category",
-        include_sizes=False,
+        include_variants=False,
     )
 
     values = _sheet_values(worksheet)
@@ -241,9 +241,9 @@ def test_cli_full_report_comparison_is_opt_in_and_reuses_last_paths(tmp_path, mo
     assert requested_defaults[3] == ("Output file", "report.xlsx")
 
 
-def test_generate_sales_report_uses_profile_include_sizes_default(monkeypatch, tmp_path):
+def test_generate_sales_report_uses_profile_include_variants_default(monkeypatch, tmp_path):
     current, previous = _frames()
-    config = _config(metrics=["units"], include_sizes=True)
+    config = _config(metrics=["units"], include_variants=True)
     captured = {}
     events = []
     stats = []
@@ -252,7 +252,7 @@ def test_generate_sales_report_uses_profile_include_sizes_default(monkeypatch, t
         return current, previous, pd.Timestamp("2025-01-01")
 
     def fake_render(*args, **kwargs):
-        captured["include_sizes"] = args[9]
+        captured["include_variants"] = args[9]
         return str(tmp_path / "report.xlsx")
 
     monkeypatch.setattr("engine.yoy_reports.generator.process_sales_data", fake_process)
@@ -272,7 +272,7 @@ def test_generate_sales_report_uses_profile_include_sizes_default(monkeypatch, t
         stats=stats.append,
     )
 
-    assert captured["include_sizes"] is True
+    assert captured["include_variants"] is True
     assert [event.completed for event in events] == [0, 1, 2, 3]
     assert "comparison periods selected" in events[1].message
     assert "Overall (2 unique branches): 6 vs 5 (+20.0%)" in stats[0].render()
@@ -280,19 +280,19 @@ def test_generate_sales_report_uses_profile_include_sizes_default(monkeypatch, t
 
 def test_size_labels_and_total_formula_use_configured_column():
     current, previous = _frames()
-    config = _config(include_sizes=True)
-    size_column = 'Dimension*?"'
-    current = current.rename(columns={"Size": size_column})
-    previous = previous.rename(columns={"Size": size_column})
-    config["input"]["size_column"] = size_column
+    config = _config(include_variants=True)
+    variant_column = 'Dimension*?"'
+    current = current.rename(columns={"Size": variant_column})
+    previous = previous.rename(columns={"Size": variant_column})
+    config["input"]["variant_column"] = variant_column
     workbook = Workbook()
     render_report_sheet(
         workbook.active, current, previous,
         pd.Timestamp("2026-01-01"), pd.Timestamp("2026-01-31"),
-        pd.Timestamp("2025-01-01"), config, "Category", include_sizes=True,
+        pd.Timestamp("2025-01-01"), config, "Category", include_variants=True,
     )
     values = _sheet_values(workbook.active)
-    assert any(str(value).startswith(f"  {size_column}: ") for value in values)
+    assert any(str(value).startswith(f"  {variant_column}: ") for value in values)
     assert any('Dimension~*~?""*' in str(value) for value in values if str(value).startswith('=SUMIF'))
 
 
@@ -416,3 +416,19 @@ def test_unset_revenue_column_has_a_stable_configuration_destination():
     assert error.value.code == ErrorCode.CONFIG_REQUIRED_FIELD
     assert error.value.step == 'yoy_period'
     assert error.value.field == 'input.sales_column'
+
+
+def test_variant_column_is_optional_until_breakdown_is_selected(tmp_path):
+    from engine.yoy_reports.data_processor import process_sales_data
+    import pytest
+    config = _config(metrics=["units"], include_variants=False)
+    frame = pd.DataFrame({"Date": [pd.Timestamp("2026-01-01")], "Store": ["A"], "Category": ["Goods"], "Units": [1.25]})
+    # Use the configured names to keep this independent of a retail profile.
+    frame.columns = [config["input"][key] for key in ("date_column", "branch_column", "grouping_column", "quantity_column")]
+    path = tmp_path / "sales.xlsx"
+    frame.to_excel(path, index=False)
+    current, _, _ = process_sales_data(path, pd.Timestamp("2026-01-01"), pd.Timestamp("2026-01-31"), config)
+    assert current[config["input"]["quantity_column"]].sum() == 1.25
+    config["output"]["include_variants"] = True
+    with pytest.raises(ValueError, match="missing required columns"):
+        process_sales_data(path, pd.Timestamp("2026-01-01"), pd.Timestamp("2026-01-31"), config)

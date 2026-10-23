@@ -101,7 +101,7 @@ These limitations are roadmap items rather than reasons to move business logic i
 
 ### Optional YoY sales amounts
 
-`Include sales amounts (revenue), in addition to units` starts unchecked and resets when the active profile changes. Enable it to add monetary sections to all generated worksheets; leave it unchecked for units only, even if the profile lists both metrics. The selection does not modify the stored profile, and the worker receives the captured choice before processing starts. This control is separate from monthly segmentation, annual comparisons and size breakdown.
+`Include sales amounts (revenue), in addition to units` starts unchecked and resets when the active profile changes. Enable it to add monetary sections to all generated worksheets; leave it unchecked for units only, even if the profile lists both metrics. The selection does not modify the stored profile, and the worker receives the captured choice before processing starts. This control is separate from monthly segmentation, annual comparisons and variant breakdown.
 
 Sales amounts are line revenue from the configured sales column, not unit prices. See the YoY formula contract in `docs/engine.md` for totals, percentage changes and zero-baseline behavior.
 

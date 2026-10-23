@@ -23,7 +23,7 @@ def test_gui_captures_sales_selection_and_requires_only_selected_columns(tmp_pat
     source.touch()
     config = {
         'input': {'date_column': 'Date', 'branch_column': 'Branch', 'quantity_column': 'Units',
-                  'sales_column': 'Amount', 'grouping_column': 'Category', 'item_column': 'SKU', 'size_column': 'Size'},
+                  'sales_column': 'Amount', 'grouping_column': 'Category', 'item_column': 'SKU', 'variant_column': 'Size'},
         'output': {'metrics': ['units', 'sales'], 'annual_comparison': True, 'default_path': 'out.xlsx'},
         'groups': {'group': ['A']},
     }
@@ -49,7 +49,7 @@ def test_gui_captures_sales_selection_and_requires_only_selected_columns(tmp_pat
         active_profile=Variable('test'), yoy_file=Variable(str(source)),
         yoy_start=Variable('2026-10-01'), yoy_end=Variable('2026-10-04'),
         yoy_group=Variable('Family'), yoy_has_fam=Variable(True),
-        yoy_seg=Variable(segmented), yoy_compare=Variable(False), yoy_sizes=Variable(False),
+        yoy_seg=Variable(segmented), yoy_compare=Variable(False), yoy_variants=Variable(False),
         yoy_sales_amounts=Variable(include_sales), yoy_out=Variable('out.xlsx'),
         _resolve_xlsx_output=lambda value, _default: value,
         _select_columns=select, _run_async=lambda task, _message: captured_tasks.append(task),

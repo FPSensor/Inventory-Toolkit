@@ -1,5 +1,7 @@
 """Orchestration for Year-over-Year sales reports."""
 
+from copy import deepcopy
+
 from core.configuration_manager import ConfigurationManager
 from core.logger import log, log_debug_event
 from core.progress import report_progress, report_stats
@@ -21,7 +23,7 @@ def generate_sales_report(
     yoy_segmented,
     yoy_has_families,
     profile,
-    yoy_include_sizes=None,
+    yoy_include_variants=None,
     non_interactive=False,
     progress=None,
     stats=None,
@@ -29,11 +31,13 @@ def generate_sales_report(
     report_progress(progress, 0, 3, "Reading sales and selecting comparison periods...")
     yoy_output_path = normalize_xlsx_output_path(yoy_output_path)
     output_config = yoy_config["output"]
-    include_sizes = (
-        output_config.get("include_sizes", False)
-        if yoy_include_sizes is None
-        else bool(yoy_include_sizes)
+    include_variants = (
+        output_config.get("include_variants", False)
+        if yoy_include_variants is None
+        else bool(yoy_include_variants)
     )
+    yoy_config = deepcopy(yoy_config)
+    yoy_config["output"]["include_variants"] = include_variants
     metric_specs = resolve_metric_specs(yoy_config)
     configured_branches(yoy_config)
 
@@ -47,7 +51,7 @@ def generate_sales_report(
         grouping_column=yoy_grouping_col,
         segmented=yoy_segmented,
         has_families=yoy_has_families,
-        include_sizes=include_sizes,
+        include_variants=include_variants,
         metrics=[metric.key for metric in metric_specs],
         annual_comparison=output_config.get("annual_comparison", True),
         non_interactive=non_interactive,
@@ -96,7 +100,7 @@ def generate_sales_report(
         yoy_config,
         yoy_grouping_col,
         yoy_segmented,
-        include_sizes,
+        include_variants,
         interactive=not non_interactive,
         progress=progress,
     )

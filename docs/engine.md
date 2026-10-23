@@ -120,7 +120,7 @@ YoY has more renderer modules because worksheet formulas/layout became substanti
 - `generator.py` — high-level workflow orchestration.
 - `excel_renderer.py` — workbook/time-segment orchestration and saving.
 - `sheet_renderer.py` — worksheet-level orchestration.
-- `current_sales_renderer.py` — current-period blocks and optional size breakdowns.
+- `current_sales_renderer.py` — current-period blocks and optional variant breakdowns.
 - `comparison_renderer.py` — YoY comparison blocks/formulas.
 - `styles.py` — shared worksheet style primitives.
 - `metrics.py` — configured metric resolution and report-group/branch validation.
@@ -135,7 +135,7 @@ YoY has more renderer modules because worksheet formulas/layout became substanti
 5. segment by month if requested;
 6. render each enabled metric (`units` and/or `sales`) using its configured input column;
 7. render YoY comparison blocks when `annual_comparison` is enabled; for a non-segmented CLI/GUI run, the operator explicitly opts into these extra blocks (default: off), without changing the stored profile setting;
-8. optionally include size breakdowns using the profile default or an explicit runtime override;
+8. optionally include variant breakdowns using the profile default or an explicit runtime override;
 9. create monthly sheets when segmented, followed by a consolidated Full Report or yearly full reports for multi-year spans;
 10. save safely.
 

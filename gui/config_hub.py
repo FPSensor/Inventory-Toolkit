@@ -44,7 +44,7 @@ try:
 except ImportError:
     PANDAS_AVAILABLE = False
 
-from core.business_schema import ARTICLE_COLUMN, DATABASE_ORIGIN_COLUMN, DEFAULT_FAMILY, FAMILY_COLUMN, PRICE_COLUMN, RAW_DATA_SHEET, SIZE_COLUMN
+from core.business_schema import ARTICLE_COLUMN, DATABASE_ORIGIN_COLUMN, DEFAULT_FAMILY, FAMILY_COLUMN, PRICE_COLUMN, RAW_DATA_SHEET, VARIANT_COLUMN
 from core.configuration_manager import ConfigurationManager
 from core.input_columns import choose_input_columns
 from core.profile_config import DEFAULTS
@@ -910,7 +910,7 @@ class ConfigHubWindow(BaseToplevel):
             ("item_column", "Item / SKU column"),
             ("grouping_column", "Grouping / Family column"),
             ("branch_column", "Branch / Store column"),
-            ("size_column", "Size column"),
+            ("variant_column", "Variant column"),
         ]
         input_vars = {}
         for row_index, (key, label) in enumerate(input_fields):
@@ -942,7 +942,7 @@ class ConfigHubWindow(BaseToplevel):
         units_var = tk.BooleanVar(value="units" in enabled_metrics)
         sales_var = tk.BooleanVar(value="sales" in enabled_metrics)
         annual_var = tk.BooleanVar(value=output_config.get("annual_comparison", True))
-        sizes_var = tk.BooleanVar(value=output_config.get("include_sizes", False))
+        variants_var = tk.BooleanVar(value=output_config.get("include_variants", False))
 
         _lbl(output_tab, text="Default output path").grid(
             row=0, column=0, sticky="w", padx=8, pady=5
@@ -961,7 +961,7 @@ class ConfigHubWindow(BaseToplevel):
             ctk.CTkCheckBox(output_tab, text="Annual comparison", variable=annual_var).grid(
                 row=2, column=0, columnspan=2, sticky="w", padx=8, pady=5
             )
-            ctk.CTkCheckBox(output_tab, text="Include size breakdown", variable=sizes_var).grid(
+            ctk.CTkCheckBox(output_tab, text="Include variant breakdown", variable=variants_var).grid(
                 row=3, column=0, columnspan=2, sticky="w", padx=8, pady=5
             )
         else:
@@ -970,7 +970,7 @@ class ConfigHubWindow(BaseToplevel):
             ttk.Checkbutton(output_tab, text="Annual comparison", variable=annual_var).grid(
                 row=2, column=0, columnspan=2, sticky="w", padx=8, pady=5
             )
-            ttk.Checkbutton(output_tab, text="Include size breakdown", variable=sizes_var).grid(
+            ttk.Checkbutton(output_tab, text="Include variant breakdown", variable=variants_var).grid(
                 row=3, column=0, columnspan=2, sticky="w", padx=8, pady=5
             )
 
@@ -997,7 +997,7 @@ class ConfigHubWindow(BaseToplevel):
                 return
             output_config["metrics"] = metrics
             output_config["annual_comparison"] = bool(annual_var.get())
-            output_config["include_sizes"] = bool(sizes_var.get())
+            output_config["include_variants"] = bool(variants_var.get())
             data["output"] = output_config
             self._save(data)
             messagebox.showinfo("Saved", "YoY output settings saved.", parent=self)
