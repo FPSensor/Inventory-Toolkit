@@ -50,6 +50,8 @@ Development changes after `v1.4.1`. The released application version remains `1.
 
 ### Changed
 
+- **debug: sources:** Remove trailing whitespace inherited by the relocated integrity/stress tools so the complete development diff passes Git whitespace verification. Runtime behavior is unchanged.
+
 - **docs: configuration:** Align installation, module READMEs and CLI/engine references with shared guided settings, generic variants and optional developer packages. Remove remaining outdated GUI milestone labels and duplicate-menu instructions.
 
 - **tests: gui:** Keep saved-path regression fixtures compatible with module-scoped configuration loading, so the test continues exercising path restoration instead of intercepting an unsupported mock signature.

@@ -46,7 +46,7 @@ def audit_profiles():
     for prof in profiles:
         print(f"\n  👉 Profile: [{prof.name}]")
         cfg_path = prof / "configs"
-        
+
         # Expected current configuration files
         expected_configs = [
             "general/catalog.json",
@@ -81,7 +81,7 @@ def audit_profiles():
 # =========================================================================
 def run_benchmark(n_items=50000):
     print(f"\n⚡ [2/3] Generating synthetic stress dataset ({n_items:,} rows)...")
-    
+
     families_mock = {
         "Category A": ["AX", "AY"],
         "Category B": ["AXQ", "BZ", "BQ"],
@@ -132,7 +132,7 @@ def run_benchmark(n_items=50000):
         print(f"\n  ⚠️ Batch classifier: {slowdown:.2f}x slower than apply on this dataset")
     else:
         print("\n  ⚠️ Batch benchmark could not calculate a valid ratio")
-    
+
     # Category distribution output
     counts = batch_result.value_counts().to_dict()
     print(f"  📈 Category Distribution: {counts}")
@@ -147,7 +147,7 @@ def audit_system():
     print("\n🖥️ [3/3] Environment check...")
     print(f"  🐍 Python Version: {sys.version.split()[0]} ({sys.platform})")
     print(f"  📦 Pandas Version: {pd.__version__}")
-    
+
     # Audit logs directory
     logs_dir = LOGS_ROOT
     if logs_dir.exists():

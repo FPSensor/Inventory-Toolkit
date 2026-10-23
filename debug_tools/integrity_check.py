@@ -96,7 +96,7 @@ class IntegrityAuditor:
         ])
 
         cleaned = clean_sku_series(raw_series)
-        
+
         self.assert_check("Removal of accidental '.0' suffix", cleaned[1] == "SKU-B", f"Got: '{cleaned[1]}'")
         self.assert_check("Trimming of leading/trailing whitespace", cleaned[2] == "ABCD-99", f"Got: '{cleaned[2]}'")
         self.assert_check("Safe conversion of NaN to empty string", cleaned[3] == "", f"Got: '{cleaned[3]}'")
@@ -109,7 +109,7 @@ class IntegrityAuditor:
     # -------------------------------------------------------------------------
     def audit_prefix_matching_and_family_resolution(self):
         print("\n🔍 [2/7] Auditing Longest-Prefix Priority & Family Resolution...")
-        
+
         families_dict = {
             "Broad Category": ["ABC", "08"],
             "Specific Category": ["ABCD", "XYZ", "BCD"],  # More specific (4 chars)
@@ -146,7 +146,7 @@ class IntegrityAuditor:
         # Invariant 4: Physical count normalization against Master Base
         master_base = ["ABCD-100", "ABCD-100-M", "SKU-A-XL"]
         master_set = set(master_base)
-        
+
         self.assert_check("Exact match in master article list", normalize_article("ABCD-100", master_base, master_set) == "ABCD-100")
         self.assert_check("Longest matching prefix available", normalize_article("ABCD-100-M-RED", master_base, master_set) == "ABCD-100-M")
         self.assert_check("Unmatched item marked as REVISAR", normalize_article("99999-NOPE", master_base, master_set) == "REVISAR | 99999-NOPE")
@@ -177,7 +177,7 @@ class IntegrityAuditor:
         price = 3499.50
         ctotal = diff * cost
         vtotal = diff * price
-        
+
         self.assert_check("CTOTAL exact currency calculation", math.isclose(ctotal, -5999.97, abs_tol=1e-4), f"CTOTAL: {ctotal}")
         self.assert_check("VTOTAL exact currency calculation", math.isclose(vtotal, -10498.50, abs_tol=1e-4), f"VTOTAL: {vtotal}")
 
@@ -288,7 +288,7 @@ class IntegrityAuditor:
     # -------------------------------------------------------------------------
     def audit_e2e_simulation_with_real_profile(self):
         print("\n🚀 [6/7] End-to-End simulation with active profile configs...")
-        
+
         try:
             cm = ConfigurationManager(profile="demo")
             families = cm.get_family_rules()
