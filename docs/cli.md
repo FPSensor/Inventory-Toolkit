@@ -61,7 +61,7 @@ Store mappings, family rules, cleaning rules, pricing mappings, and summary layo
 
 ### YoY Reports
 
-`cli/yoy_reports_launcher.py` collects the historical sales workbook, date range, segmentation/options, and output path, then calls `engine/yoy_reports/`. Enabled unit/sales metrics, annual-comparison behavior, and the default size-breakdown choice come from the active profile; the CLI may override variant breakdown for a single run.
+`cli/yoy_reports_launcher.py` collects the historical sales workbook, date range, segmentation/options, and output path, then calls `engine/yoy_reports/`. Enabled unit/sales metrics, annual-comparison behavior, and the default variant-breakdown choice come from the active profile; the CLI may override variant breakdown for a single run.
 
 ## Progress and final statistics
 
@@ -79,37 +79,19 @@ YoY remembers its input and output alongside Stock and Cross Check. Accepting a 
 
 Open `K` from the main menu.
 
-The hub is organized by domain instead of by JSON filename:
-
-1. Catalog & families
-2. Stores & network
-3. Stock Processing
-4. Cross Check
-5. YoY Reports
-
-Additional actions:
-
-- Guided Setup;
-- profile validation;
-
-The intent is that a normal user chooses **what concept to configure**, not **which internal JSON file to edit**.
+The menu lists only enabled workflows and offers **M** to change that selection. Select a module for guided setup, validation, search or a section editor. Human-readable labels and help text come from the shared setup catalog; the CLI does not maintain a second copy of configuration forms.
 
 ## Guided Setup
 
-The Guided Setup is module-oriented. It does not assume a single sample workbook describes every workflow.
+Each module owns its samples and column mappings. The assistant shows essential pages first, with additional settings available separately. Conditional pages follow wide/row-based stock and scanner/quantity-table choices. Stock and Cross Check can use source categories, prefix rules or one default category. YoY retains its own sales mappings and report groups.
 
-Each module can inspect the sample that actually belongs to it:
+During the assistant, **B** returns to the previous page and **Q** pauses between pages. Saved pages are retained. Optional text fields can be cleared explicitly with **-**. The final review shows friendly field names and choices. Finishing setup does not execute a report automatically.
 
-- Stock Processing: raw stock + price-list sample;
-- Cross Check: cost/sales-list samples;
-- YoY: historical sales sample;
-- catalog/families and network: independent configuration.
-
-The dashboard shows readiness and saves each section independently.
+Profile creation asks for a display name, optional description and workflows. It generates a portable folder ID and starts from neutral defaults. Module review state and structured recovery remain independent of the presentation frontend.
 
 ## Runtime debug levels
 
-Type `debug` in the main menu.
+In a debug build with the optional `debug_tools` package installed, type `debug` in the main menu. Release builds omit this capability.
 
 ### Level 1 — Operator
 
@@ -194,7 +176,7 @@ Guided module setup can inspect sample headers, identify absent configured colum
 
 Press **H** in the main menu to see whether each workflow is ready, how many setup pages have been reviewed, and the next page needing attention. Select a numbered workflow to open its module setup there. Existing profiles without review metadata show as ready after configuration validation; new profiles report their independent review progress. The overview describes configuration review, not whether a particular spreadsheet has matching columns.
 
-From this overview, enter **I1**, **I2** or **I3** to inspect remembered input files for Cross Check, Stock Processing or YoY. Demo defaults are used when no path has been remembered for the demo profile. YoY inspection asks which grouping, Family-column presence, revenue and size choices to check. Each workbook inspection reads up to five rows and does not alter files or configuration.
+From this overview, enter **I1**, **I2** or **I3** to inspect remembered input files for Cross Check, Stock Processing or YoY. Demo defaults are used when no path has been remembered for the demo profile. YoY inspection asks which grouping, Family-column presence, revenue and variant choices to check. Each workbook inspection reads up to five rows and does not alter files or configuration.
 
 ## Module settings workspace
 

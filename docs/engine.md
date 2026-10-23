@@ -110,7 +110,7 @@ The private `__itk_*` keys must never escape into generated workbooks. This boun
 
 ## YoY Sales Reports — `engine/yoy_reports/`
 
-Purpose: compare a selected sales period with the corresponding previous-year period, optionally segmented by month and size.
+Purpose: compare a selected sales period with the corresponding previous-year period, optionally segmented by month and variant.
 
 YoY has more renderer modules because worksheet formulas/layout became substantial enough to justify independent boundaries.
 
@@ -157,7 +157,7 @@ YoY compares the selected date range with the aligned previous-year range, inclu
 
 ## Price-list identifiers and workbook formatting
 
-Stock and Cross Check independently resolve `pricing.article_tokenization`: `first_token` keeps the first whitespace-delimited token, while `whole` retains internal spaces after cleanup. Existing profiles use the historical `first_token` default. Stock formatting follows column roles and configured labels; Cross Check formatting uses bundled labels, and YoY size formulas use the configured size column with escaped criteria.
+Stock and Cross Check independently resolve `pricing.article_tokenization`: `first_token` keeps the first whitespace-delimited token, while `whole` retains internal spaces after cleanup. Existing profiles use the historical `first_token` default. Stock formatting follows column roles and configured labels; Cross Check formatting uses bundled labels, and YoY variant formulas use the configured variant column with escaped criteria.
 
 ## Calling engines outside the CLI
 

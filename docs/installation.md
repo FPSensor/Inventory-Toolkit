@@ -1,6 +1,6 @@
 # Installation and Launchers
 
-Inventory Toolkit is a Python application. The CLI is the primary supported interface; the GUI is Alpha Pre-Beta.
+Inventory Toolkit is a Python application. The CLI is the primary supported interface; the GUI is RC preview.
 
 ## Requirements
 
@@ -11,7 +11,7 @@ Inventory Toolkit is a Python application. The CLI is the primary supported inte
   - `xlrd`
   - `numpy`
   - `pydantic>=2,<3`
-- Tkinter for native file dialogs and the Alpha Pre-Beta GUI
+- Tkinter for native file dialogs and the RC preview GUI
 
 `xlrd` is required for the legacy `.xls` Cross Check demo fixture.
 
@@ -64,12 +64,12 @@ python cli.py
 
 Some Linux distributions package Tkinter separately (for example `python3-tk`). Install the platform package if file dialogs or the GUI cannot start.
 
-## Alpha Pre-Beta GUI
+## RC preview GUI
 
 From the repository root:
 
 ```bash
-python -m gui.app
+python -m inventory_toolkit --interface gui
 ```
 
 CustomTkinter is optional. If it is unavailable, the GUI falls back to standard Tkinter/ttk.
@@ -90,7 +90,7 @@ The Windows and shell launchers still change to the repository root for convenie
 
 User-supplied relative workbook paths keep normal shell semantics and resolve from the directory where the command was invoked. For example, invoking `python C:/path/to/Inventory-Toolkit/cli.py` while standing in `C:/Work/Today` will still interpret `stock.xlsx` as `C:/Work/Today/stock.xlsx`, while the active profile continues to come from `C:/path/to/Inventory-Toolkit/profiles/`.
 
-The Alpha Pre-Beta GUI is still normally launched as a module from the repository root (`python -m gui.app`) because Python module discovery is separate from Inventory Toolkit resource-path resolution.
+The RC preview GUI is still normally launched as a module from the repository root (`python -m inventory_toolkit --interface gui`) because Python module discovery is separate from Inventory Toolkit resource-path resolution.
 
 ## Upgrading dependencies
 
@@ -99,7 +99,7 @@ The project intentionally keeps `requirements.txt` small. Before changing packag
 1. install the candidate environment cleanly;
 2. run `pytest -q`;
 3. run `python tools/ReleaseCheck.py --release`;
-4. verify the Alpha Pre-Beta GUI can at least launch if the change affects Tk/Python packaging.
+4. verify the RC preview GUI can at least launch if the change affects Tk/Python packaging.
 
 Do not infer dependency compatibility only from a successful import.
 
