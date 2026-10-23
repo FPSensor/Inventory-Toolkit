@@ -50,6 +50,8 @@ Development changes after `v1.4.1`. The released application version remains `1.
 
 ### Changed
 
+- **tests: references:** Refresh only configuration fingerprints after renaming variant keys and adding optional profile fields. All three regenerated demo reports match the approved semantic references; no golden workbook is replaced.
+
 - **debug: comparison:** Stream hashes of semantic XLSX parts before allocating canonical XML trees. Identical report parts compare with bounded memory; serializer differences still use canonical/model checks. Cache styles in mismatch diagnostics as well.
 
 - **docs: workspace:** Consolidate the current setup, module ownership, variants, build capabilities and developer-package documentation. Mark the desktop as RC preview after Linux real-widget checks, with native Windows/macOS review explicitly pending; keep the published toolkit version at 1.4.1.

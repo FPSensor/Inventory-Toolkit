@@ -112,3 +112,7 @@ main menu → type debug → level 3 → D
 ```
 
 The Developer Console exposes pytest, quick verification, demo smoke, strict release certification, golden-master update, log tail.
+
+### Remodel reference verification
+
+The build/profile/variant remodel retained all three approved golden workbooks. Regenerated Stock, Cross Check and YoY reports matched the existing semantic parts. Only fixture fingerprints changed for the renamed YoY keys, bundled variant-label key and additive default-schema fields. No expected numerical output was regenerated to accept a failing comparison.

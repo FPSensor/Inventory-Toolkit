@@ -1,7 +1,7 @@
 {
     "fixtures": {
-        "core/resources/profile_defaults.json": "6e45e5780d043deabd73788ab681725815863e1bf7ec57a5d1c1a145ba12f9fd",
-        "core/resources/workbook_labels.json": "21fcc2bae187b3d931e2c28b82be1eb3735460cc464161ee132dce5b5d7747c4",
+        "core/resources/profile_defaults.json": "100f7fa6004314eb947ac24b386ddf2be5ae3676c81ca616c045471535666a18",
+        "core/resources/workbook_labels.json": "9eefc72d3b51dbd0dcbe0516d1ba9c7a06a02cfb119485e9f98b8a403ff44044",
         "examples/demo/cross_check_physical_count.xlsx": "794fdb075051a56cc7060ba8ff27dc162ad17ee22d8c879e741dbb7161d7bbc7",
         "examples/demo/cross_check_system_stock.xls": "2a0fbd3fd38192182aac0b70bed7f9218ddb5965aa8a3d816024037319bb5e62",
         "examples/demo/shared_cost_list.xlsx": "641744486d3223a09c48033f00570a7885a6bfd15dc2b206298923f5dd631d6e",
@@ -13,7 +13,7 @@
         "profiles/demo/configs/general/families.json": "9019f8e66bad18c9ea1bd9d6c52c4e2250fffff07c00515976152b6be2ad97ee",
         "profiles/demo/configs/general/network.json": "d4de0f5f2148d4cb283b5d8731fcd4f7b4438acb0cde30c738ca71ac2eec0987",
         "profiles/demo/configs/stock_processing/settings.json": "418434359ace17c769e8a8010c3c6ab7f9fcdcba40ec19334edc82b13d345709",
-        "profiles/demo/configs/yoy_reports/settings.json": "46308f95c3fac31cad79ef1522f2f5f44509becf74bb5561cc829e7076d44a7f",
+        "profiles/demo/configs/yoy_reports/settings.json": "45effc8b2ab8f131b50f6d290d5e6853997b5fc7ab9187ca0ec181316a5708ff",
         "profiles/demo/profile.json": "591e1b880de26548385a7bbd1ded6bd3ee2969a99889caeefc8e8e68a19cc4e2"
     },
     "profile": "demo",
