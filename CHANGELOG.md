@@ -89,6 +89,8 @@ Development changes after `v1.4.1`. The released application version remains `1.
 
 ### Fixed
 
+- **yoy: identifiers:** Import product, location and variant identifiers as text so numeric-looking codes retain their leading zeroes. Quantity and revenue columns keep numeric processing.
+
 - Resolved demo input suggestions from the application-owned `examples/demo/` directory for Cross Check, Stock and YoY while giving remembered paths priority.
 - Advanced YoY rendering percentage across individual sheets instead of keeping it fixed for the entire rendering stage; completion is reported after saving.
 - Removed the special family-label shortcut so every article follows profile rules and longest-prefix priority, including articles whose text resembles a review marker.

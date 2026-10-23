@@ -22,7 +22,8 @@ def process_sales_data(
     quantity_column = input_config["quantity_column"]
     metric_specs = resolve_metric_specs(yoy_config)
 
-    dataframe = pd.read_excel(yoy_file_path, sheet_name=0)
+    text_columns = {input_config[key]: str for key in ("item_column", "branch_column", "variant_column") if input_config.get(key)}
+    dataframe = pd.read_excel(yoy_file_path, sheet_name=0, dtype=text_columns)
     log_debug_event(
         "yoy_input_loaded",
         file_path=yoy_file_path,
