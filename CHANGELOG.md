@@ -107,6 +107,8 @@ Development changes after `v1.4.1`. The released application version remains `1.
 
 ### Fixed
 
+- **debug: integrity:** Supply the resolved input contract in the synthetic Stock integrity fixture after introducing module-owned mappings. Keep the diagnostic executable under the full release gate.
+
 - **stock: quantities:** Keep entirely whole-number input columns integral while preserving fractional measurements. This retains existing integer-report column widths without rounding measured stock.
 
 - **gui: profiles:** Restore Stock and Cross Check workbook selections per profile, persist their selected paths before dispatch, and refresh disabled workflow navigation after switching profiles. YoY configuration failures now stay in the interface and validate only YoY settings.

@@ -201,6 +201,7 @@ class IntegrityAuditor:
         self.assert_check("Zero-margin baseline (sales == cost -> 0%)", margins[4] == 0.0)
 
         custom_plan = StockProcessingPlan(
+            input={},
             article_column="SKU_CUSTOM",
             family_column="FAMILY_CUSTOM",
             default_family="UNMAPPED",
