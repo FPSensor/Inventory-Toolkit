@@ -102,3 +102,5 @@ The project intentionally keeps `requirements.txt` small. Before changing packag
 4. verify the Alpha Pre-Beta GUI can at least launch if the change affects Tk/Python packaging.
 
 Do not infer dependency compatibility only from a successful import.
+
+The shell and Windows launchers now call `python -m inventory_toolkit`. `build.prop` selects the default interface, allowed interfaces and development capabilities. CLI-only and GUI-only source trees import without the excluded frontend or developer package. This prepares source packaging boundaries; it is not a frozen binary installer.

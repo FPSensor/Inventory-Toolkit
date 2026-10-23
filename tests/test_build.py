@@ -41,3 +41,32 @@ def test_debug_is_optional_and_release_archives_exclude_development(monkeypatch)
     monkeypatch.setattr(optional_debug, "BUILD", BUILD)
     monkeypatch.setattr(optional_debug.util, "find_spec", lambda _name: None)
     assert not optional_debug.debug_available()
+
+
+@pytest.mark.parametrize('interface', ['cli', 'gui', 'both'])
+def test_release_source_tree_imports_without_excluded_packages(tmp_path, interface):
+    from dataclasses import replace
+    import shutil
+    import subprocess
+    import sys
+    from tools.BuildDistribution import distribution_files, ROOT
+    from core.build import BUILD
+    default = 'gui' if interface == 'gui' else 'cli'
+    release = replace(BUILD, type='release', control_type=interface, default_control=default)
+    for source in distribution_files(release):
+        destination = tmp_path / source.relative_to(ROOT)
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source, destination)
+    manifest = (tmp_path / 'build.prop').read_text()
+    manifest = manifest.replace('type = debug', 'type = release').replace('control-type = both', f'control-type = {interface}').replace('default-control = cli', f'default-control = {default}')
+    (tmp_path / 'build.prop').write_text(manifest)
+    assert not (tmp_path / 'debug_tools').exists()
+    assert not (tmp_path / 'tests').exists()
+    if interface != 'both':
+        assert not (tmp_path / ('gui' if interface == 'cli' else 'cli')).exists()
+    imports = 'import cli.menu' if interface == 'cli' else 'import gui.app'
+    code = imports + '; from core.optional_debug import debug_available; assert not debug_available()'
+    result = subprocess.run([sys.executable, '-c', code], cwd=tmp_path, capture_output=True, text=True, timeout=30)
+    assert result.returncode == 0, result.stderr
+    result = subprocess.run([sys.executable, '-m', 'inventory_toolkit', '--version'], cwd=tmp_path, capture_output=True, text=True, timeout=30)
+    assert result.returncode == 0 and result.stdout.strip() == BUILD.version
