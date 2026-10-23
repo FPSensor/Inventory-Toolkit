@@ -202,16 +202,17 @@ def test_yoy_setup_uses_bundled_defaults_and_detection_hints(tmp_path, monkeypat
     monkeypatch.setattr("builtins.input", lambda *_: "")
     selections = []
 
-    def pick(label, columns, current, hints):
-        assert isinstance(hints, tuple) and hints
+    def pick(label, columns, current, **kwargs):
+        assert columns == ["Sample"]
         selections.append(current)
         return current
 
     monkeypatch.setattr(wizard, "_pick", pick)
-    wizard._setup_yoy(configs)
+    monkeypatch.setattr(app_paths, "PROFILES_ROOT", tmp_path / "profiles")
+    wizard.run_module_setup("wizard", "yoy_reports", "yoy_period", single_page=True)
     saved = json.loads((configs / "yoy_reports/settings.json").read_text(encoding="utf-8"))
     assert saved["input"] == DEFAULTS["yoy_reports/settings"]["input"]
-    assert len(selections) == len(saved["input"])
+    assert len(selections) == 3
 
 
 def test_cross_check_schema_rejects_empty_quantity_column():

@@ -42,6 +42,8 @@ Development changes after `v1.4.1`. The released application version remains `1.
 
 ### Changed
 
+- **cli: configuration:** Replace duplicate JSON-oriented editors with searchable module settings backed by the same typed assistant. Add single-section editing, back/pause navigation, reusable input samples, and workflow activation without configuring unused modules.
+
 - **core: json:** Reject duplicate keys and non-finite JSON values, centralize profile persistence, and save setup documents plus review metadata as one staged operation with rollback on replacement failure. Validation still precedes writes; concurrent profile editing is not supported.
 
 - **setup: flow:** Replace storage-oriented pages with conditional, module-specific questions and human-readable choices. Separate essential review from additional configuration, cover independent price lists and new stock/count layouts, reuse unchanged shared reviews for untouched modules, and print a final setup summary.
