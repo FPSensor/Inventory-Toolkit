@@ -8,6 +8,7 @@ from tkinter import filedialog
 
 from core.setup_catalog import MODULE_LABELS, STEPS, get_value
 from core.column_assist import advise_columns
+from core.profile_store import save_last_paths
 from core.setup_service import SetupSession, SetupState
 from core.workflow_errors import WorkflowError
 from gui.widgets import BaseFrame, BaseScrollable, BaseTextbox, USE_CTK, ctk, ttk, _btn, _lbl, _entry
@@ -71,36 +72,94 @@ class SetupWizard(BaseFrame):
         for widget in self.winfo_children():
             widget.destroy()
         step = self.session.steps[self.index]
-        self._getters = {}
-        self._column_variables = {}
-        self._samples = self._samples_by_step.get(step.id, {})
-        _lbl(self, text=f'{MODULE_LABELS[self.session.module]} setup | Step {self.index + 1} of {len(self.session.steps)}', font=('Arial', 15, 'bold')).pack(anchor='w', padx=20, pady=(16, 6))
-        _lbl(self, text=step.title, font=('Arial', 20, 'bold')).pack(anchor='w', padx=20)
-        if step.shared:
-            _lbl(self, text='Shared setting: changes affect other modules in this profile.', wraplength=650).pack(anchor='w', padx=20, pady=4)
-        self.notice = _lbl(self, text='Saved pages remain available when you leave. Review defaults before continuing.', wraplength=650, justify='left')
+        self._getters, self._column_variables = {}, {}
+        self._samples = self._samples_by_step.get(step.sample or step.id, {})
+        rail = BaseFrame(self, width=190)
+        rail.pack(side='left', fill='y', padx=(8, 12), pady=8)
+        rail.pack_propagate(False)
+        _lbl(rail, text='SETUP' if not self.single_page else 'SETTINGS', style='Muted.TLabel', font=('Arial', 10, 'bold')).pack(anchor='w', padx=12, pady=(14, 4))
+        _lbl(rail, text=MODULE_LABELS[self.session.module], font=('Arial', 14, 'bold'), wraplength=165, justify='left').pack(anchor='w', padx=12, pady=(0, 12))
+        navigation = BaseScrollable(rail)
+        navigation.pack(fill='both', expand=True)
+        reviews = self.session.effective_reviews() or {}
+        for index, item in enumerate(self.session.steps):
+            done = reviews.get(item.id) == self.session.fingerprint(item)
+            title = item.title if len(item.title) <= 21 else item.title[:20] + '…'
+            prefix = '✓' if done else str(index + 1)
+            _btn(navigation, f'{prefix}  {title}', lambda step_id=item.id: self._jump(step_id),
+                variant='secondary' if index == self.index else 'ghost', anchor='w').pack(fill='x', padx=6, pady=3)
+        body = BaseFrame(self)
+        body.pack(side='left', fill='both', expand=True, padx=(0, 8), pady=8)
+        _lbl(body, text=f'Step {self.index + 1} of {len(self.session.steps)}', style='Muted.TLabel').pack(anchor='w', padx=20, pady=(16, 4))
+        _lbl(body, text=step.title, font=('Arial', 22, 'bold'), wraplength=600, justify='left').pack(anchor='w', padx=20, pady=(0, 4))
+        if USE_CTK:
+            progress = ctk.CTkProgressBar(body, height=4)
+            progress.set(self.index / max(1, len(self.session.steps)))
+        else:
+            progress = ttk.Progressbar(body, maximum=len(self.session.steps), value=self.index)
+        progress.pack(fill='x', padx=20, pady=8)
+        self.notice = _lbl(body, text=('Shared settings affect this profile’s other workflows. ' if step.shared else '') +
+            'Saved pages are retained. Review this page before continuing.', wraplength=600, justify='left', style='Muted.TLabel')
         self.notice.pack(fill='x', padx=20, pady=6)
-        sample_bar = BaseFrame(self)
-        sample_bar.pack(fill='x', padx=20, pady=6)
-        self._sample_button = _btn(sample_bar, 'Choose sample Excel', self._load_sample)
-        self._sample_button.pack(side='left', padx=4)
-        if self._samples and any(field.kind == 'column' for field in step.fields):
-            _btn(sample_bar, 'Use unique suggestions', self._apply_suggestions).pack(side='left', padx=4)
-        _lbl(sample_bar, text='Optional: read headers and up to five example rows.').pack(side='left', padx=8)
-        self.content = BaseScrollable(self)
-        self.content.pack(fill='both', expand=True, padx=20, pady=6)
+        sample_bar = BaseFrame(body)
+        sample_bar.pack(fill='x', padx=16, pady=4)
+        self._sample_button = _btn(sample_bar, 'Choose your Excel file', self._load_sample)
+        if any(field.kind == 'column' for field in step.fields) or step.sample:
+            self._sample_button.pack(side='left', padx=4)
+            if self._samples:
+                _btn(sample_bar, 'Use matching headers', self._apply_suggestions).pack(side='left', padx=4)
+        if not self.single_page:
+            advanced = tk.BooleanVar(value=self.session.include_advanced)
+            cls = ctk.CTkCheckBox if USE_CTK else ttk.Checkbutton
+            cls(body, text='Show additional settings', variable=advanced,
+                command=lambda: self._toggle_advanced(advanced.get())).pack(anchor='w', padx=20, pady=6)
+        self.content = BaseScrollable(body)
+        self.content.pack(fill='both', expand=True, padx=16, pady=6)
         data = self.session.data(step)
+        self._initial_values = {'.'.join(field.path): get_value(data, field.path) for field in step.fields}
         for field in step.fields:
-            self._render_field(field, (draft or {}).get(".".join(field.path), get_value(data, field.path)))
-        footer = BaseFrame(self)
-        footer.pack(fill='x', padx=20, pady=12)
-        self._back_button = _btn(footer, 'Back', self._back)
+            self._render_field(field, (draft or {}).get('.'.join(field.path), get_value(data, field.path)))
+        self._footer = BaseFrame(body)
+        self._footer.pack(fill='x', padx=16, pady=12)
+        self._back_button = _btn(self._footer, 'Back', self._back)
         self._back_button.pack(side='left', padx=4)
         if self.index == 0:
             self._back_button.configure(state='disabled')
-        _btn(footer, 'Leave setup', self._leave).pack(side='left', padx=4)
-        self._next_button = _btn(footer, 'Save changes' if self.single_page else ('Review setup' if self.index == len(self.session.steps) - 1 else 'Save & next'), self._next)
+        _btn(self._footer, 'Close settings' if self.single_page else 'Pause setup', self._leave, variant='ghost').pack(side='left', padx=4)
+        label = 'Save changes' if self.single_page else ('Review setup' if self.index == len(self.session.steps) - 1 else 'Save & next')
+        self._next_button = _btn(self._footer, label, self._next, variant='primary')
         self._next_button.pack(side='right', padx=4)
+
+    def _jump(self, step_id):
+        if self._save():
+            self.index = next((i for i, step in enumerate(self.session.steps) if step.id == step_id), min(self.index, len(self.session.steps) - 1))
+            self._render()
+
+    def _toggle_advanced(self, enabled):
+        step_id = self.session.steps[self.index].id
+        if not self._save():
+            return
+        self.session.include_advanced = enabled
+        self.index = next((i for i, step in enumerate(self.session.steps) if step.id == step_id), 0)
+        self._render()
+
+    def _render_review(self):
+        for child in self.winfo_children():
+            child.destroy()
+        _lbl(self, text='Review your setup', font=('Arial', 24, 'bold')).pack(anchor='w', padx=24, pady=(24, 8))
+        _lbl(self, text='Your settings are saved. Finishing returns to the workflow; Run remains a separate action.', wraplength=700, justify='left', style='Muted.TLabel').pack(anchor='w', padx=24, pady=(0, 12))
+        content = BaseScrollable(self)
+        content.pack(fill='both', expand=True, padx=20, pady=8)
+        for line in self.session.review_summary():
+            _lbl(content, text=line, wraplength=650, justify='left').pack(anchor='w', padx=12, pady=5)
+        footer = BaseFrame(self)
+        footer.pack(fill='x', padx=20, pady=16)
+        _btn(footer, 'Back to settings', self._render).pack(side='left')
+        _btn(footer, 'Finish setup', self._complete, variant='primary').pack(side='right')
+
+    def _complete(self):
+        self._closed = True
+        self.on_exit(f'{MODULE_LABELS[self.session.module]} setup complete. Choose files and Run when ready.')
 
     def _render_field(self, field, value):
         block = BaseFrame(self.content)
@@ -226,6 +285,7 @@ class SetupWizard(BaseFrame):
         try:
             values = {key: getter() for key, getter in self._getters.items()}
             self.session.save_step(self.session.steps[self.index].id, values)
+            self._initial_values = values
         except (ValueError, OSError) as exc:
             self.notice.configure(text=str(exc))
             return False
@@ -249,8 +309,7 @@ class SetupWizard(BaseFrame):
                 self._render()
                 self.notice.configure(text=str(exc))
                 return
-            self._closed = True
-            self.on_exit(f'{MODULE_LABELS[self.session.module]} setup complete. Select Run when you are ready.')
+            self._render_review()
 
     def _back(self):
         if self.index > 0 and self._save():
@@ -262,8 +321,40 @@ class SetupWizard(BaseFrame):
             self.notice.configure(text='Wait for the sample to finish reading before leaving.')
             return
         # Only committed pages survive; the current draft is deliberately not reviewed.
+        if getattr(self, '_getters', None):
+            try:
+                dirty = {key: getter() for key, getter in self._getters.items()} != self._initial_values
+            except ValueError:
+                dirty = True
+            if dirty:
+                self.notice.configure(text='This page has unsaved changes. Save it, discard this draft, or stay here.')
+                for child in self._footer.winfo_children():
+                    child.destroy()
+                def save_and_leave():
+                    if self._save():
+                        self._discard_and_leave()
+                _btn(self._footer, 'Save & leave', save_and_leave, variant='primary').pack(side='right', padx=4)
+                _btn(self._footer, 'Discard draft', self._discard_and_leave, variant='danger').pack(side='right', padx=4)
+                _btn(self._footer, 'Stay here', self._stay).pack(side='left')
+                return
+        SetupWizard._discard_and_leave(self)
+
+    def _stay(self):
+        for child in self._footer.winfo_children():
+            child.destroy()
+        self._back_button = _btn(self._footer, 'Back', self._back)
+        self._back_button.pack(side='left', padx=4)
+        if self.index == 0:
+            self._back_button.configure(state='disabled')
+        _btn(self._footer, 'Pause setup', self._leave, variant='ghost').pack(side='left', padx=4)
+        label = 'Save changes' if self.single_page else ('Review setup' if self.index == len(self.session.steps) - 1 else 'Save & next')
+        self._next_button = _btn(self._footer, label, self._next, variant='primary')
+        self._next_button.pack(side='right', padx=4)
+        self.notice.configure(text='Continue editing. Your current draft is still here.')
+
+    def _discard_and_leave(self):
         self._closed = True
-        self.on_exit('Setup paused. Saved pages are retained; unsaved changes on this page were discarded.')
+        self.on_exit('Setup paused. Saved pages are retained; the current unsaved draft was discarded.')
 
     def _load_sample(self):
         if self._loading:
@@ -300,9 +391,16 @@ class SetupWizard(BaseFrame):
                 self.notice.configure(text=f'Fix the unfinished table row before loading another sample: {exc}')
                 return
             if ok:
-                self._samples_by_step[self.session.steps[self.index].id] = payload
+                step = self.session.steps[self.index]
+                self._samples_by_step[step.sample or step.id] = payload
+                persistence_issue = ''
+                if step.sample:
+                    try:
+                        save_last_paths(self.session.profile, {self.session.module: {step.sample: path}})
+                    except (ValueError, OSError) as exc:
+                        persistence_issue = f' Could not remember the selected file: {exc}'
                 self._render(draft)
-                self.notice.configure(text=f'Read {len(payload)} columns for this page. Sample values stay in this session only.')
+                self.notice.configure(text=f'Read {len(payload)} columns for this input. Review matching headers before saving.' + persistence_issue)
             else:
                 self._sample_button.configure(state='normal')
                 self._next_button.configure(state='normal')

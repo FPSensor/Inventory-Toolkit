@@ -130,3 +130,7 @@ Configuration is an embedded workspace, not a separate window or JSON-file list.
 ## Desktop appearance and navigation
 
 The desktop remains dark by default on both CustomTkinter and native ttk, with shared color/typography tokens and distinct primary/secondary actions. Navigation indicates the current workflow and disables workflows excluded by the profile. Activity and final statistics have separate result tabs. Use Ctrl+, for configuration, Ctrl+N for a new profile, and Escape to request leaving setup. The native scroll container supports the mouse wheel on Windows/macOS and X11.
+
+## Guided setup workspace
+
+The assistant has a step navigator, progress indicator, contextual explanations and a final review. Show additional settings expands the same catalog used by Configuration. Choosing an Excel sample offers matching headers and examples; samples are shared only across pages for that input role, and explicitly selected sample paths are remembered for later runs. Pausing with an unsaved draft presents Save & leave, Discard draft and Stay here inside the workspace. Finishing setup never starts a report automatically.
