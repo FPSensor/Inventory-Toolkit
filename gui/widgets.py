@@ -1,7 +1,7 @@
 """Shared dark design tokens and accessible Tk/CustomTkinter controls."""
 import sys
 import tkinter as tk
-from tkinter import ttk
+from tkinter import ttk, font as tkfont
 import weakref
 
 COLORS = dict(background='#0c1320', surface='#141f30', raised='#1b2a3e',
@@ -16,12 +16,21 @@ try:
     USE_CTK = True
     BaseWindow, BaseToplevel = ctk.CTk, ctk.CTkToplevel
     BaseButton, BaseLabel = ctk.CTkButton, ctk.CTkLabel
-    BaseEntry, BaseTextbox = ctk.CTkEntry, ctk.CTkTextbox
+    BaseEntry = ctk.CTkEntry
+
+    class BaseTextbox(ctk.CTkTextbox):
+        def __init__(self, parent, **kwargs):
+            kwargs.setdefault("fg_color", COLORS["entry"])
+            kwargs.setdefault("corner_radius", 8)
+            kwargs.setdefault("font", (FONT, 12))
+            super().__init__(parent, **kwargs)
 
     class BaseFrame(ctk.CTkFrame):
         def __init__(self, parent, **kwargs):
             kwargs.setdefault('fg_color', COLORS['surface'])
             kwargs.setdefault('corner_radius', 12)
+            kwargs.setdefault('height', 0)
+            kwargs.setdefault('width', 0)
             super().__init__(parent, **kwargs)
 
     class BaseScrollable(ctk.CTkScrollableFrame):
@@ -46,6 +55,26 @@ def _font(value):
     return value
 
 
+def _font_ref(parent, value):
+    if not isinstance(value, tuple):
+        return value
+    root = parent.winfo_toplevel()
+    if not hasattr(root, '_itk_fonts'):
+        root._itk_fonts = {}
+    key = tuple(value)
+    if key not in root._itk_fonts:
+        reference = tkfont.Font(root=root, font=value)
+        reference.configure(size=round(value[1] * getattr(root, '_itk_text_scale', 1)))
+        root._itk_fonts[key] = reference
+    return root._itk_fonts[key]
+
+
+def set_text_scale(root, fraction):
+    root._itk_text_scale = fraction
+    for specification, reference in getattr(root, '_itk_fonts', {}).items():
+        reference.configure(size=round(specification[1] * fraction))
+
+
 def _btn(parent, text, command, **kwargs):
     variant = kwargs.pop('variant', 'secondary')
     kwargs = {key: value for key, value in kwargs.items() if value is not None}
@@ -62,12 +91,14 @@ def _btn(parent, text, command, **kwargs):
 
 def _lbl(parent, text, **kwargs):
     kwargs = {key: value for key, value in kwargs.items() if value is not None}
+    kwargs.setdefault('anchor', 'w')
     kwargs['font'] = _font(kwargs.get('font', (FONT, 12)))
     if USE_CTK:
         style = kwargs.pop('style', '')
         if style.startswith('Muted'):
             kwargs.setdefault('text_color', COLORS['muted'])
         return ctk.CTkLabel(parent, text=text, **kwargs)
+    kwargs['font'] = _font_ref(parent, kwargs['font'])
     if 'text_color' in kwargs:
         kwargs['foreground'] = kwargs.pop('text_color')
     allowed = {key: value for key, value in kwargs.items() if key in {'font', 'wraplength', 'justify', 'anchor', 'width', 'padding', 'style', 'foreground', 'background'}}
@@ -113,7 +144,11 @@ if not USE_CTK:
     class BaseScrollable(ttk.Frame):
         def __init__(self, parent, **kwargs):
             self.outer = ttk.Frame(parent)
-            canvas = tk.Canvas(self.outer, bg=COLORS['surface'], highlightthickness=0)
+            requested_width = kwargs.pop('width', None)
+            if requested_width:
+                self.outer.configure(width=requested_width)
+                self.outer.pack_propagate(False)
+            canvas = tk.Canvas(self.outer, width=requested_width or 1, bg=COLORS['surface'], highlightthickness=0)
             scroll = ttk.Scrollbar(self.outer, orient='vertical', command=canvas.yview)
             canvas.configure(yscrollcommand=scroll.set)
             canvas.pack(side='left', fill='both', expand=True)
@@ -138,7 +173,7 @@ def apply_dark_theme(root):
     root.configure(**({'fg_color': COLORS['background']} if USE_CTK else {'bg': COLORS['background']}))
     style = ttk.Style(root)
     style.theme_use('clam')
-    style.configure('.', background=COLORS['surface'], foreground=COLORS['text'], font=(FONT, 12))
+    style.configure('.', background=COLORS['surface'], foreground=COLORS['text'], font=_font_ref(root, (FONT, 12)))
     style.configure('Muted.TLabel', foreground=COLORS['muted'])
     style.configure('TEntry', fieldbackground=COLORS['entry'], foreground=COLORS['text'], insertcolor=COLORS['text'], bordercolor=COLORS['border'], padding=8)
     style.configure('TCombobox', fieldbackground=COLORS['entry'], foreground=COLORS['text'], arrowcolor=COLORS['muted'], padding=7)
@@ -156,6 +191,10 @@ def apply_dark_theme(root):
     style.configure('TProgressbar', background=COLORS['accent'], troughcolor=COLORS['entry'], borderwidth=0)
     style.configure('TNotebook', background=COLORS['surface'])
     style.configure('TNotebook.Tab', background=COLORS['raised'], foreground=COLORS['text'], padding=9)
+    style.map('TNotebook.Tab', background=[('selected', COLORS['border']), ('active', COLORS['raised'])], foreground=[('selected', COLORS['text'])])
+    style.configure('TScrollbar', background=COLORS['raised'], troughcolor=COLORS['surface'], arrowcolor=COLORS['muted'], borderwidth=0)
+    style.map('TScrollbar', background=[('active', COLORS['border'])])
+    style.map('TEntry', fieldbackground=[('readonly', COLORS['entry'])], foreground=[('readonly', COLORS['text'])])
     style.configure('Treeview', background=COLORS['entry'], fieldbackground=COLORS['entry'], foreground=COLORS['text'], rowheight=32)
     for control in ('Listbox', 'Text', 'TCombobox*Listbox'):
         root.option_add(f'*{control}.background', COLORS['entry'])
@@ -163,4 +202,4 @@ def apply_dark_theme(root):
         root.option_add(f'*{control}.selectBackground', COLORS['border'])
         root.option_add(f'*{control}.selectForeground', COLORS['text'])
     root.option_add('*Text.insertBackground', COLORS['text'])
-    root.option_add('*Text.font', (FONT, 11))
+    root.option_add('*Text.font', _font_ref(root, (FONT, 11)))

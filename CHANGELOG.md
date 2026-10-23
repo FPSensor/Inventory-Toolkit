@@ -44,6 +44,8 @@ Development changes after `v1.4.1`. The released application version remains `1.
 
 ### Changed
 
+- **gui: layout:** Correct CustomTkinter empty-container sizing found during real widget rendering, keep the sidebar scrollable at smaller sizes, set an initial workspace/results split, and explicitly style native notebook/readonly controls dark.
+
 - **gui: profiles:** Replace the modal new-profile dialog with embedded onboarding: a display name, generated portable folder ID, optional description and workflow choices. Validate inline, create through the shared neutral-profile service, and guard an uncreated draft before leaving.
 
 - **gui: setup:** Remodel the assistant into a step navigator with visible progress, optional additional settings and a final review. Reuse samples by input role, remember explicitly selected files, and provide inline save/discard/stay actions for an unsaved page instead of losing edits on exit.

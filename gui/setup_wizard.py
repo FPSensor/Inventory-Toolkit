@@ -91,7 +91,9 @@ class SetupWizard(BaseFrame):
         body = BaseFrame(self)
         body.pack(side='left', fill='both', expand=True, padx=(0, 8), pady=8)
         _lbl(body, text=f'Step {self.index + 1} of {len(self.session.steps)}', style='Muted.TLabel').pack(anchor='w', padx=20, pady=(16, 4))
-        _lbl(body, text=step.title, font=('Arial', 22, 'bold'), wraplength=600, justify='left').pack(anchor='w', padx=20, pady=(0, 4))
+        heading = _lbl(body, text=step.title, font=('Arial', 22, 'bold'), wraplength=600, justify='left')
+        heading.pack(anchor='w', padx=20, pady=(0, 4))
+        body.bind('<Configure>', lambda event: heading.configure(wraplength=max(180, event.width - 40)))
         if USE_CTK:
             progress = ctk.CTkProgressBar(body, height=4)
             progress.set(self.index / max(1, len(self.session.steps)))

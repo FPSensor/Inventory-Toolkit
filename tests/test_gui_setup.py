@@ -88,7 +88,7 @@ def test_recovery_uses_codes_and_keeps_unrelated_failures_out_of_setup():
 def test_inline_notice_retains_message_without_a_dialog():
     stored = []
     view = SimpleNamespace(_feedback_text=SimpleNamespace(configure=lambda **kw: stored.append(kw['text'])),
-        _feedback_actions=SimpleNamespace(winfo_children=lambda: []))
+        _feedback_actions=SimpleNamespace(winfo_children=lambda: [], pack_forget=lambda: None))
     InventoryToolkitGUI._notify(view, 'error', 'Example', 'Readable explanation')
     assert stored == ['Example: Readable explanation']
 

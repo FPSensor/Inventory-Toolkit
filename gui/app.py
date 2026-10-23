@@ -18,7 +18,7 @@ from tkinter import filedialog, messagebox, simpledialog
 
 from gui.widgets import (ctk, ttk, USE_CTK, BaseWindow, BaseToplevel, BaseFrame,
     BaseButton, BaseLabel, BaseEntry, BaseTextbox, BaseScrollable,
-    _btn, _lbl, _entry, _pack_btn, apply_dark_theme, COLORS)
+    _btn, _lbl, _entry, _pack_btn, apply_dark_theme, set_text_scale, COLORS)
 
 try:
     import pandas as pd
@@ -74,6 +74,7 @@ class InventoryToolkitGUI(BaseWindow):
         self._apply_yoy_profile_defaults()
         self.active_profile.trace_add("write", self._on_profile_changed)
         self._build_status_bar()
+        self.after(50, lambda: self._split.sashpos(0, round(self.winfo_height() * 0.73)) if len(self._split.panes()) == 2 else None)
         self._show_module("overview")
         self.bind("<Control-Shift-I>", self._show_easter_egg)
         self.bind('<Control-comma>', lambda _event: self._open_config_hub())
@@ -109,10 +110,9 @@ class InventoryToolkitGUI(BaseWindow):
         self._split.pack(fill="both", expand=True, padx=12, pady=12)
         self._body = BaseFrame(self._split)
         self._split.add(self._body, weight=3)
-        bar = BaseFrame(self._body, width=228)
+        bar = BaseScrollable(self._body, width=228)
         self._top_bar = bar
         bar.pack(side="left", fill="y", padx=(0, 12))
-        bar.pack_propagate(False)
         _lbl(bar, text="INVENTORY\nTOOLKIT", font=("Arial", 20, "bold")).pack(anchor="w", padx=16, pady=(20, 4))
         _lbl(bar, text=f"v{BUILD.version} · {BUILD.gui_stage}", style="Muted.TLabel").pack(anchor="w", padx=16, pady=(0, 20))
         _lbl(bar, text="Active profile").pack(anchor="w", padx=16)
@@ -161,16 +161,31 @@ class InventoryToolkitGUI(BaseWindow):
         if USE_CTK:
             ctk.set_widget_scaling(fraction)
         else:
-            from tkinter import font
-            for name in ("TkDefaultFont", "TkTextFont", "TkMenuFont"):
-                font.nametofont(name).configure(size=round(12 * fraction))
-            ttk.Style(self).configure(".", font=("Arial", round(12 * fraction)))
+            set_text_scale(self, fraction)
+
+    def _set_results_visible(self, visible):
+        if not hasattr(self, '_results'):
+            return
+        included = str(self._results) in {str(pane) for pane in self._split.panes()}
+        if visible and not included:
+            self._split.add(self._results, weight=1)
+            self.after_idle(lambda: self._split.sashpos(0, round(self.winfo_height() * .73)) if len(self._split.panes()) == 2 else None)
+        elif not visible and included:
+            self._split.forget(self._results)
+
+    def _manage_workflows(self):
+        self._module_selector_open = True
+        self._show_module('overview')
 
     def _notify(self, kind, title, message, actions=(), **_kwargs):
         tone = COLORS.get({'error': 'error', 'warning': 'warning', 'success': 'positive'}.get(kind, 'muted'))
         self._feedback_text.configure(text=f"{title}: {message}", **({'text_color': tone} if USE_CTK else {'foreground': tone}))
         for widget in self._feedback_actions.winfo_children():
             widget.destroy()
+        if actions:
+            self._feedback_actions.pack(fill="x", padx=8, pady=(0, 4))
+        else:
+            self._feedback_actions.pack_forget()
         for label, callback in actions:
             _btn(self._feedback_actions, label, callback).pack(side="left", padx=4, pady=4)
         if hasattr(self, "_activity") and kind in {"warning", "error"}:
@@ -184,6 +199,7 @@ class InventoryToolkitGUI(BaseWindow):
             self._notify("info", "Workflow disabled", "Enable this workflow in Profile overview before opening it.")
             return
         self._selected_module = module
+        self._set_results_visible(module in MODULE_LABELS)
         for name, button in getattr(self, '_nav_buttons', {}).items():
             selected = name == module
             enabled = name not in MODULE_LABELS or name in enabled_modules(self.active_profile.get())
@@ -231,6 +247,9 @@ class InventoryToolkitGUI(BaseWindow):
         def cancel():
             close_panel()
             self._show_module('overview')
+        self._set_results_visible(False)
+        self._page_title.configure(text="New profile")
+        self._notify("info", "Create a workspace", "Choose only the workflows you need. Other settings come later.")
         self._setup_panel = NewProfilePanel(self._page_host, self.active_profile.get(), on_done, cancel)
         self._setup_panel.grid(row=0, column=0, sticky='nsew')
         self._setup_panel.tkraise()
@@ -247,6 +266,8 @@ class InventoryToolkitGUI(BaseWindow):
             self._notify("info", "Select a workflow", "Choose a workflow before opening its setup assistant.")
             return
         profile = self.active_profile.get()
+        self._set_results_visible(False)
+        self._page_title.configure(text=f"{MODULE_LABELS[module]} settings" if edit_mode else f"Set up {MODULE_LABELS[module]}")
         def finish(message):
             panel = self._setup_panel
             self._setup_panel = None
@@ -304,7 +325,7 @@ class InventoryToolkitGUI(BaseWindow):
             child.destroy()
         workspace = ConfigurationWorkspace(page, self.active_profile.get(),
             lambda module, step: self._open_wizard(module, step, edit_mode=True, single_page=True, return_to_settings=True),
-            lambda: self._show_module('overview'))
+            self._manage_workflows)
         workspace.pack(fill='both', expand=True)
 
     def _select_columns(self, file_path, configured, defaults):
@@ -338,30 +359,36 @@ class InventoryToolkitGUI(BaseWindow):
             child.destroy()
         entries = inspect_profile(self.active_profile.get())
         selected = enabled_modules(self.active_profile.get())
-        chooser = BaseFrame(page)
-        chooser.pack(fill="x", padx=18, pady=12)
-        _lbl(chooser, text="Use only the workflows you need", font=("Arial", 15, "bold")).pack(anchor="w", padx=12, pady=8)
-        choices = {}
-        for name, label in MODULE_LABELS.items():
-            choices[name] = tk.BooleanVar(value=name in selected)
-            cls = ctk.CTkCheckBox if USE_CTK else ttk.Checkbutton
-            cls(chooser, text=label, variable=choices[name]).pack(anchor="w", padx=12, pady=4)
-        def apply_modules():
-            if not self._require_idle():
-                return
-            try:
-                set_enabled_modules(self.active_profile.get(), [name for name, variable in choices.items() if variable.get()])
-                self._render_overview()
-                self._notify("info", "Workflows updated", "Disabled workflows keep their settings for later.")
-            except ValueError as exc:
-                self._notify("error", "Choose workflows", str(exc))
-        _btn(chooser, "Apply workflow selection", apply_modules).pack(anchor="w", padx=12, pady=10)
+        if getattr(self, "_module_selector_open", False):
+            chooser = BaseFrame(page)
+            chooser.pack(fill="x", padx=18, pady=12)
+            _lbl(chooser, text="Use only the workflows you need", font=("Arial", 15, "bold")).pack(anchor="w", padx=12, pady=8)
+            choices = {}
+            for name, label in MODULE_LABELS.items():
+                choices[name] = tk.BooleanVar(value=name in selected)
+                cls = ctk.CTkCheckBox if USE_CTK else ttk.Checkbutton
+                cls(chooser, text=label, variable=choices[name]).pack(anchor="w", padx=12, pady=4)
+            def apply_modules():
+                if not self._require_idle():
+                    return
+                try:
+                    set_enabled_modules(self.active_profile.get(), [name for name, variable in choices.items() if variable.get()])
+                    self._module_selector_open = False
+                    self._render_overview()
+                    self._notify("info", "Workflows updated", "Disabled workflows keep their settings for later.")
+                except ValueError as exc:
+                    self._notify("error", "Choose workflows", str(exc))
+            _btn(chooser, "Apply workflow selection", apply_modules).pack(anchor="w", padx=12, pady=10)
+        else:
+            _btn(page, "Choose workflows", self._manage_workflows, variant="ghost").pack(anchor="w", padx=20, pady=12)
         ready = sum(entry.state == SetupState.COMPLETE for entry in entries)
         _lbl(page, text=f"{ready} of {len(selected)} enabled workflows ready", font=("Arial", 17, "bold")
             ).pack(anchor="w", padx=20, pady=(12, 5))
         _lbl(page, text="Review setup pages by workflow. 'Ready' reflects configuration review; input headers are checked when you select a file.",
             wraplength=650, justify="left").pack(anchor="w", padx=20, pady=(0, 10))
         for entry in entries:
+            if not entry.enabled:
+                continue
             card = BaseFrame(page)
             card.pack(fill="x", padx=18, pady=7)
             _lbl(card, text=f"{entry.label}   |   {entry.status}", font=("Arial", 16, "bold")
@@ -505,7 +532,7 @@ class InventoryToolkitGUI(BaseWindow):
 
         if PANDAS_AVAILABLE:
             try:
-                cm = ConfigurationManager(self.active_profile.get())
+                cm = ConfigurationManager(self.active_profile.get(), module="cross_check")
                 cross_config = cm.get_cross_check_config()
                 mappings = cross_config["price_lists"]
                 defaults = DEFAULTS["cross_check/settings"]["price_lists"]
@@ -593,7 +620,7 @@ class InventoryToolkitGUI(BaseWindow):
         if not out:
             return
         try:
-            cm = ConfigurationManager(self.active_profile.get())
+            cm = ConfigurationManager(self.active_profile.get(), module="stock_processing")
             pricing = cm.get_stock_pricing()["columns"]
             defaults = DEFAULTS["stock_processing/settings"]["pricing"]["columns"]
             overrides = {
