@@ -116,8 +116,8 @@ class ConfigurationManager:
     def get_config(self, logical_name: str, default: Any = None) -> Any:
         """Return raw config by logical path.
 
-        Pre-v2 short names remain available as a narrow compatibility bridge
-        for third-party callers. Built-in modules use the current English API.
+        Logical names identify current schema-v3 documents. Built-in modules
+        use the typed workflow accessors when possible.
         """
         if logical_name in self._index:
             log_debug_event(

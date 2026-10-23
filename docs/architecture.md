@@ -6,29 +6,18 @@ The boundaries are pragmatic rather than ceremonial. Modules are split when doin
 
 ## High-level flow
 
-```text
-User / automation
-      │
-      ├── CLI (primary)
-      └── GUI (Alpha Pre-Beta)
-             │
-             ▼
-      Profile + parameters
-             │
-             ▼
-      core infrastructure
-      configuration / logging /
-      sanitization / safe saving
-             │
-             ▼
-           engine
-      transformations +
-      business calculations +
-      workbook rendering
-             │
-             ▼
-        Excel output
+```mermaid
+flowchart TD
+    B["build.prop and lazy launcher"] --> C["CLI package"]
+    B --> G["GUI package"]
+    C --> S["Shared configuration and setup services"]
+    G --> S
+    S --> E["Independent report engines"]
+    E --> X["Excel reports"]
 ```
+
+The launcher imports only the selected interface. GUI persistence does not import CLI utilities. `debug_tools` is discovered only in debug builds and can be physically absent. The existing source builder excludes disabled interfaces and developer packages according to the manifest.
+
 
 ## Layer responsibilities
 

@@ -1,4 +1,4 @@
-"""Dark Alpha Pre-Beta desktop shell with shared engines and guided setup."""
+"""Dark desktop workspace with shared engines and guided setup."""
 
 import os
 from core.build import BUILD

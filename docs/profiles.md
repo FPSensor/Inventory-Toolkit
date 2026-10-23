@@ -119,10 +119,10 @@ Owns:
 
 Owns:
 
-- input date/quantity/sales-amount/family/article/branch/size mapping;
+- input date/quantity/sales-amount/family/article/branch/variant mapping;
 - default output path;
 - enabled metrics (`units` and/or `sales`) for direct engine calls; interactive CLI/GUI runs select units and explicitly opt into sales amounts for that run;
-- annual-comparison/size options;
+- annual-comparison/variant options;
 - report groups that define the branches rendered by the workbook.
 
 ## `profile.json`
@@ -245,3 +245,9 @@ The shared setup catalog defines labels, explanations, typed choices, numeric va
 ## Creating a profile
 
 Both interfaces use `core.profile_creation.create_profile`. A display name generates a portable folder ID, workflows are selected before setup, and new profiles load `core/resources/new_profile_defaults.json` with neutral labels and whole-product identifiers instead of clothing/company defaults. Existing profile folders are never overwritten. A failed new-profile initialization removes only the new directory owned by that operation. The older bundled defaults continue to define inherited fields for existing schema-v3 profiles; they are not silently applied over an existing document.
+
+## Categories and safe JSON writes
+
+See [Category sources](CATEGORY_SOURCES.md) for source-column, prefix-rule and unclassified modes in Stock and Cross Check. Sales mappings remain independent.
+
+JSON documents reject duplicate keys and non-finite numbers. Setup stages the configuration and review metadata together, replaces files atomically and restores the prior bytes if a later replacement fails. This prevents a failed save from keeping only one half of an edit; it is not a multi-process transaction or a guarantee against machine power loss between files. Keep one writer per profile.

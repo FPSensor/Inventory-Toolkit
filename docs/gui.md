@@ -1,146 +1,71 @@
-# Desktop GUI — Alpha Pre-Beta
+# Desktop GUI — RC preview
 
-`gui/app.py` is the current desktop frontend for Inventory Toolkit.
-
-Launch as a module from the repository root (Python module discovery requirement, not an application-resource CWD requirement):
+The desktop uses the same setup, validation and report engines as the CLI. Start it from the repository root:
 
 ```bash
-python -m gui.app
+python -m inventory_toolkit --interface gui
 ```
 
-## Status
+`build.prop` must include `gui` in `control-type`. Its `gui-stage` supplies the visible milestone label. The application release version remains 1.4.1; RC preview does not publish a new toolkit release.
 
-Profile/configuration resources used by the GUI are anchored to the Inventory Toolkit application root and do not follow the process CWD.
+## Workspace
 
-The GUI is **Alpha Pre-Beta**: a dark desktop workspace for the three workflows, graphical module setup and configuration recovery. The toolkit release version remains 1.4.1. The CLI remains the reference surface for developer/release tooling. Native desktop review on Windows/macOS is still required before declaring Beta.
+Both CustomTkinter and the standard Tk/ttk fallback start dark. The sidebar contains profile selection, enabled workflows, setup, configuration and session text scaling. Disabled workflows remain visible but cannot run. Switching to a profile that disables the current workflow returns to the overview.
 
-Do not assume GUI behavior is feature-complete merely because an engine is exposed there.
+Workflow pages show Activity and Statistics in separate tabs, with a persistent last-successful-report panel. Overview, configuration, setup and profile creation use the available height without an empty results pane. Main forms scroll at smaller sizes. Text scaling is available at 100%, 115% and 130%.
 
-## UI backends
+Keyboard shortcuts: Ctrl+, opens Configuration, Ctrl+N opens New profile, and Escape requests leaving setup. Unsaved drafts are guarded.
 
-The application attempts to use CustomTkinter when available. If it cannot import CustomTkinter, it falls back to standard Tkinter/ttk.
+## Profile creation
 
-CustomTkinter is optional and is not required by `requirements.txt`.
+New profile is an embedded form, not a modal dialog. Enter a display name, optional description and only the workflows you need. A portable folder ID is generated automatically. New profiles use neutral data-owned defaults and whole product identifiers; they do not inherit the demo company's families or locations.
 
-## Current scope
+Creating a profile does not make every workflow ready. Its overview shows each selected module's review state and a direct setup action. Disabled modules retain their settings if enabled later.
 
-Top-level GUI actions include:
+## Guided module setup
 
-- a profile overview showing each workflow's review state and its next setup page;
-- active-profile selection;
-- new profile creation;
-- resumable graphical setup for each module;
-- graphical Configuration Hub;
-- Cross Check page;
-- Stock Processing page;
-- YoY Reports page.
+The assistant uses friendly labels and short explanations rather than JSON variable names. Essential pages appear first; **Show additional settings** reveals cleanup, filters, output layout and other advanced choices. Conditional pages follow the selected data layout:
 
-YoY restores its last input/output paths for the active profile. For a
-non-segmented report, the extra annual-comparison block beneath the full report
-is off by default and can be enabled for that run. Segmented reports continue
-to use the profile's annual-comparison setting.
+- scanner readings or a physical-count quantity table;
+- stock columns by location or quantities recorded per row;
+- source categories, prefix rules or unclassified products;
+- independent purchase and retail mappings;
+- optional product variants and revenue comparisons.
 
-## Progress and completion summaries
+The step rail supports navigation and shows reviewed pages. Shared settings identify their effect on other modules, and unchanged shared reviews can be reused. A final review precedes Finish; finishing setup never starts a report automatically.
 
-The status bar uses a determinate progress bar driven by engine stage events. An activity area retains concise stage messages and final statistics after the status changes to completion. Success, errors and collected warnings are retained inline; completion does not require dismissing a dialog. Drag the divider to resize the activity/results area.
+Choose an Excel sample on a mapping page to inspect headers and at most five rows. Unique suggestions are opt-in and remain drafts until saved. Samples are scoped by input role, so cost and sales lists stay separate. Explicit selections can be remembered for that workflow.
 
-Worker threads send progress, statistics and completion through queues; the Tk event loop updates widgets and inline notices. Percentages describe stage/sheet completion, not measured execution time. A failed task does not force the progress bar to 100%.
+Save & next validates and persists a page. Back saves a valid page. Leaving an edited page offers Save & leave, Discard draft or Stay here. Invalid values remain available for correction. A missing required setting offers structured recovery to the relevant page; missing input headers retain explicit per-run default/abort behavior.
 
-The statistics have the same engine-owned meaning as the CLI summaries; see [engine.md](engine.md#final-statistics-contract).
+## Configuration
 
-## Last successful output
+Configuration is an embedded searchable workspace. Search friendly section titles, field labels or help text; filter by workflow if useful. Selecting a section opens the same typed editor used by setup and returns to Configuration after saving. Shared sections appear once rather than requiring separate editor implementations.
 
-A persistent result panel shows the last successful report's absolute path, originating profile and duration. The path can be selected and copied. Open report delegates to the system's associated application; Open folder opens its containing directory. Neither action runs automatically. Both are disabled while processing to avoid opening a workbook during a write.
+Mappings, rules, groups and summaries use structured row editors. Choice fields show human-readable labels while saving the schema value. JSON is a storage format, not the primary configuration interface.
 
-The panel remains available after completion and after a later failed run; its label explicitly identifies it as the last successful output. Starting a new run clears the activity area for that run, while failures are recorded there and leave the previous successful report accessible. Selecting another profile does not relabel the originating profile of the result. This state lasts for the GUI session only.
+## Files and run options
 
-## Configuration Hub
+Stock, Cross Check and YoY remember paths independently per profile. Switching profiles clears fields with no saved selection. Moving a profile folder does not relocate absolute last paths automatically.
 
-The graphical hub edits the current schema-v3 files for:
+YoY variants are optional and use the configured column label, such as flavor or presentation. Sales amounts are an explicit opt-in, reset on profile change, and mean **line revenue**, not unit price. Amounts are not multiplied by quantity again. Non-segmented annual comparison is separately opt-in; monthly reports use the configured annual-comparison preference.
 
-- family rules;
-- active stores/regional groups;
-- Stock cleaning/pricing/output;
-- Cross Check settings;
-- YoY input/output/report groups.
+Inspect selected files checks headers in a worker without generating a report, modifying the profile or applying guessed replacements. Input inspection and execution follow the selected grouping, metrics, variants and count layout.
 
-It exists alongside the CLI Configuration Hub. The CLI remains the more complete maintenance surface.
+## Execution and results
 
-## Execution lifecycle
+Only one task runs at a time. Profile and input controls lock during processing and recover their prior state after completion or failure. Workers report progress, statistics and completion through queues; only Tk's main thread updates widgets. Stage percentages describe completed work stages/sheets, not elapsed-time predictions.
 
-Only one processing task may run at a time. The GUI disables profile/actions and input controls across all three workflows while processing, then restores their previous states on success or failure. Controls already disabled by an option remain disabled. The activity area remains available for reviewing progress.
+Completion, warnings and failures stay inline. A failure does not force progress to 100%. The result panel retains the last successful report's absolute path, originating profile and duration, even after a subsequent failed run. Open report/folder are explicit actions and are disabled while processing.
 
-Close open profile/configuration windows before starting a workflow; this prevents an existing editor from changing settings during processing. Exit and window-close requests wait for the task to finish instead of terminating a saving worker. Failure to start a worker also restores the controls. After completion, existing input selections remain available for another run.
+Engines receive non-interactive saving behavior. Locked workbooks produce an actionable failure instead of an invisible terminal prompt. Close requests do not terminate a saving worker.
 
-## Threading rule
+## Validation and remaining work
 
-Long-running engine calls must not block Tk's main loop. Worker threads may perform processing, but Tk widgets/message boxes must be updated from the main thread.
+Real-widget checks cover Tk and CustomTkinter under a Linux display, including 900×680 windows, 130% scaling, embedded forms, profile guards and results-pane focus. Engine checks cover the existing demo and synthetic kiosk, greengrocer and grocery scenarios. See [testing_and_examples.md](testing_and_examples.md).
 
-This constraint is architectural: engine/core code should report results/errors without requiring terminal interaction so both CLI and GUI can consume the same processing logic.
+Native Windows/macOS rendering, keyboard/accessibility review and broader user testing remain pending. CustomTkinter is optional; the fallback remains supported. Developer certification stays in the optional `debug_tools` package and is not part of the GUI. This milestone is an RC preview, not a claim of native-platform release certification.
 
-## Locked output files
+## Frontend structure
 
-Core safe-saving functions support non-interactive mode. GUI callers must receive an `OutputFileLockedError` rather than hanging on an invisible `input()` prompt.
-
-## Error handling
-
-The GUI validates obvious missing files/dates/configuration before launching a workflow and reports runtime failures through inline notices with explicit configuration actions when a structured error has a destination.
-
-Use **Inspect selected files** on a workflow page for an optional, background read of up to five rows per selected workbook. The activity area lists column counts, required headers found or missing, and possible unique replacements. It respects the current YoY grouping/revenue/size choices. This inspection does not generate a report, apply default fallbacks, or modify the profile; running the workflow continues to use its normal confirmation and validation rules.
-
-For deeper diagnosis, reproduce with CLI debug level 2/3 when practical and inspect `logs/session.log`.
-
-## Current limitations
-
-- GUI UX is still being iterated and may change between minor versions.
-- Developer Console/release maintenance lives in the CLI, not the GUI.
-- CustomTkinter packaging is not yet part of the default dependency story.
-- Automated GUI coverage is smaller than engine/CLI coverage.
-
-These limitations are roadmap items rather than reasons to move business logic into `gui/app.py`.
-
-### Optional YoY sales amounts
-
-`Include sales amounts (revenue), in addition to units` starts unchecked and resets when the active profile changes. Enable it to add monetary sections to all generated worksheets; leave it unchecked for units only, even if the profile lists both metrics. The selection does not modify the stored profile, and the worker receives the captured choice before processing starts. This control is separate from monthly segmentation, annual comparisons and variant breakdown.
-
-Sales amounts are line revenue from the configured sales column, not unit prices. See the YoY formula contract in `docs/engine.md` for totals, percentage changes and zero-baseline behavior.
-
-### Frontend structure
-
-`gui/app.py` owns workflow dispatch and session state. `gui/config_hub.py` keeps the advanced editors, `gui/profile_dialog.py` owns profile creation, and `gui/widgets.py` owns shared controls and the dark Tk/CustomTkinter presentation. Reusable setup contracts live in `core/setup_catalog.py` and `core/setup_service.py`, independent of Tk and console input.
-
-## Dark workspace and guided setup
-
-Both backends start dark, including native ttk controls and advanced-editor listboxes. No light theme is enabled. The sidebar selects a workflow, active profile, module setup or advanced editing. Main workflow pages scroll independently; YoY options use multiple rows instead of a clipped horizontal strip. Text scaling is available at 100%, 115% and 130% for the current session.
-
-Each setup page explains at most three related fields. Column fields accept manual names or sample-workbook headers; examples are limited to five rows and stay in memory. Sample reading uses a worker and all widget updates happen on Tk's thread. Different price-list pages can use different samples. Families, groups, aliases and summaries use editable rows instead of JSON entry. Prefix rules use longest-match priority; no business category is hardcoded. Shared steps explicitly identify their effect on other modules.
-
-After choosing a sample, the page distinguishes an existing header from a missing configured header and a unique suggestion. Ambiguous suggestions require manual choice. The **Use unique suggestions** action updates only the current unsaved page; review each field and save to persist it. Samples are kept per setup page, so a cost-list sample never appears while configuring the sales list.
-
-Save & next commits and reviews the page. Back also saves a valid page. Leave setup retains previously saved pages and discards the current unsaved page. A new profile starts with every module unconfigured. Starting that module opens its assistant. Partial setup offers Continue anyway or Complete setup; missing mandatory values produce a coded error with a direct setup action. Completing recovery does not run a report automatically. File selections and run options remain in the workflow page.
-
-Advanced Configuration Hub editing remains available for experienced users. Native file choosers and operator decisions (such as a missing-column default fallback) may still open dialogs. Main workflow progress, completion and configuration recovery use inline feedback.
-
-The design uses labeled settings with nearby explanations and validation at page boundaries, informed by the [VS Code Settings editor](https://code.visualstudio.com/docs/configure/settings) and [Qt wizard page validation](https://doc.qt.io/qt-6/qwizardpage.html). These are design references; the implementation remains Tk/CustomTkinter.
-
-## Integrated configuration
-
-Configuration is an embedded workspace, not a separate window or JSON-file list. Search human field names/help text and filter by enabled workflow. Shared sections appear once. Edit settings opens the same typed assistant used for setup, saves one section, and returns to the settings workspace. Run inputs remain intact. Workflow activation is managed through Profile overview.
-
-## Desktop appearance and navigation
-
-The desktop remains dark by default on both CustomTkinter and native ttk, with shared color/typography tokens and distinct primary/secondary actions. Navigation indicates the current workflow and disables workflows excluded by the profile. Activity and final statistics have separate result tabs. Use Ctrl+, for configuration, Ctrl+N for a new profile, and Escape to request leaving setup. The native scroll container supports the mouse wheel on Windows/macOS and X11.
-
-## Guided setup workspace
-
-The assistant has a step navigator, progress indicator, contextual explanations and a final review. Show additional settings expands the same catalog used by Configuration. Choosing an Excel sample offers matching headers and examples; samples are shared only across pages for that input role, and explicitly selected sample paths are remembered for later runs. Pausing with an unsaved draft presents Save & leave, Discard draft and Stay here inside the workspace. Finishing setup never starts a report automatically.
-
-Profile creation is also embedded. Enter a display name and select workflows; the folder ID is generated automatically. Errors remain beside the form, and leaving an uncreated draft requires an explicit discard action. Profile initialization uses the same neutral resource-backed service as the CLI.
-
-Real-widget validation covers both CustomTkinter and native ttk on a Linux virtual display. Empty containers do not reserve phantom space; the sidebar remains scrollable when text/window size reduces available room, and the workspace/results divider can be resized. Native Windows/macOS visual review is still a separate release checklist item.
-
-Setup, profile creation and configuration hide the report-results pane to give forms the full workspace height. Workflow pages restore it. The overview keeps workflow selection behind Choose workflows so the normal landing page shows readiness first. Native text scaling uses shared font objects, including settings opened after scaling.
-
-### Profile switching and file selections
-
-Stock, Cross Check and YoY remember their selected workbook paths independently for each profile. Switching profiles clears fields with no saved selection and refreshes enabled workflow navigation. Selecting a profile that disables the current workflow returns to its overview. Setup and running workers retain their profile lock.
+`gui/app.py` owns dispatch and session state. `config_hub.py` provides the searchable workspace, `setup_wizard.py` renders the shared catalog, `profile_dialog.py` provides embedded creation and `widgets.py` owns the dark design tokens and controls. Core owns profile persistence, typed configuration, setup state, input contracts and recovery codes. GUI code does not import the CLI package.

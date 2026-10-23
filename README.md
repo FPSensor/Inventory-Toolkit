@@ -9,11 +9,11 @@ Inventory Toolkit is a profile-driven Python application for retail inventory re
 
 It was built around real operational constraints: legacy `.xls` exports, inconsistent scanner output, variable-length article codes, multiple stores and regional groups, price lists from different sources, Excel files left open by users, and business rules that must change without forking the processing engine.
 
-The project currently exposes a mature CLI, an Alpha Pre-Beta desktop GUI, a typed configuration system, forensic logging, and a reproducible pre-release gate backed by golden-master workbooks.
+The project exposes independent CLI and dark desktop interfaces, guided setup per workflow, typed JSON configuration, optional developer tools and a release gate backed by golden-master workbooks. The desktop is an RC preview under active testing; native Windows/macOS review remains pending.
 
 > **Current release line:** `1.4.x`
 > **Primary interface:** CLI
-> **GUI status:** Alpha Pre-Beta / active testing
+> **GUI status:** RC preview / native platform review pending
 > **Configuration schema:** v3
 > **Development state:** post-1.4.1 changes are recorded under `Unreleased` in [CHANGELOG.md](CHANGELOG.md); the release badge identifies the published version.
 
@@ -27,9 +27,9 @@ Inventory Toolkit contains three production-oriented workflows:
 | --- | --- | --- | --- |
 | **Inventory Cross Check** | Reconcile physical scanner counts against system stock and value the differences | system stock, physical count, cost list, sales list | discrepancy workbook |
 | **Stock Processing** | Clean and consolidate multi-store stock, assign families, attach cost/sales prices, value inventory, and create summaries | raw stock, cost list, sales list | detail + summary workbook |
-| **YoY Sales Reports** | Compare current and previous periods by family/store/group, with optional monthly segmentation and size breakdown | historical sales workbook | multi-sheet comparative report |
+| **YoY Sales Reports** | Compare current and previous periods by family/store/group, with optional monthly segmentation and variant breakdown | historical sales workbook | multi-sheet comparative report |
 
-The same engines can be used from the CLI, the Alpha Pre-Beta GUI, or directly from Python.
+The same engines can be used from the CLI, the RC preview GUI, or directly from Python.
 
 ---
 
@@ -39,7 +39,9 @@ The same engines can be used from the CLI, the Alpha Pre-Beta GUI, or directly f
 
 Profiles under `profiles/<name>/configs/` own store mappings, family prefixes, column mappings, exclusions, report groups, pricing fields, and output layout. The built-in engines consume typed configuration instead of hard-coding one company or dataset.
 
-## Ambiguous scanner data is preserved, not guessed
+## Explicit product matching
+
+New profiles use exact product matching. Cross Check can also select longest-known-prefix matching when scanner suffixes are part of the input contract. The following describes that opt-in mode and existing demo behavior.
 
 `normalize_article()` does **not** assume fixed article-code length. It uses the system-stock article master as the source of truth, accepts exact matches, otherwise selects the **longest valid article prefix**, and preserves unresolved input as `REVISAR | <original value>` for human review.
 
@@ -48,7 +50,7 @@ Example:
 ```text
 scanner value:      11111-261XXLH1
 known article:      11111-261
-size/color suffix:  XXL / H1
+variant/color suffix:  XXL / H1
 normalized result:  11111-261
 ```
 
@@ -68,7 +70,10 @@ The strict pre-release gate executes all three demo workflows and compares their
 
 - Three independent Excel-processing engines: Cross Check, Stock Processing, and YoY Reports.
 - Profile-based configuration with schema-v3 validation through Pydantic.
-- Module-oriented Guided Setup with per-workflow sample-file detection.
+- Progressive setup with friendly labels, per-workflow sample mapping, conditional pages and a final review.
+- Select only the workflows a profile needs; configure each input independently.
+- Optional variants, source categories, fractional quantities, row-based stock and measured physical counts.
+- One `build.prop` for version, interfaces and debug/release capabilities.
 - Interactive Configuration Hub for catalog/families, network, Stock Processing, Cross Check, and YoY settings.
 - Shared longest-prefix family classifier backed by a trie implementation.
 - Variable-length article normalization against the system master.
@@ -80,7 +85,7 @@ The strict pre-release gate executes all three demo workflows and compares their
 - Runtime-selectable debug levels and a hidden level-3 Developer Console.
 - Forensic session logging to `logs/session.log`.
 - Pytest, IntegrityCheck, stress/diagnostic tooling, demo smoke tests, and semantic golden-master certification.
-- Alpha Pre-Beta Tkinter/CustomTkinter desktop GUI.
+- RC preview Tkinter/CustomTkinter desktop GUI.
 - Windows launcher/setup helpers plus Linux/macOS shell launcher.
 
 ---
@@ -91,7 +96,7 @@ The strict pre-release gate executes all three demo workflows and compares their
 
 1. Clone or extract the repository.
 2. Run `Setup Environment.bat` once.
-3. Run `Inventory Toolkit.bat` for normal CLI use.
+3. Run `Inventory Toolkit.bat`; `build.prop` selects its default interface.
 
 `Setup Environment.bat` installs Python 3.11.9 when `python` is not available, upgrades `pip`, and installs `requirements.txt`.
 
@@ -181,7 +186,7 @@ See [docs/cli.md](docs/cli.md).
 
 ---
 
-# Alpha Pre-Beta Desktop GUI
+# RC preview Desktop GUI
 
 Launch from the repository root:
 
@@ -199,7 +204,7 @@ The GUI currently covers:
 - one-at-a-time workflow execution with guarded profile/input actions;
 - retained progress/statistics and a last-successful-output panel with report/folder actions.
 
-It uses CustomTkinter when installed and falls back to Tkinter/ttk. The GUI is **Alpha Pre-Beta**, with a dark workspace, graphical per-module setup and inline workflow feedback. Developer/release tooling remains in the CLI. Engine code must therefore remain headless and must not assume that terminal input is available.
+It uses CustomTkinter when installed and falls back to Tkinter/ttk. The GUI is **RC preview**, with a dark workspace, graphical per-module setup and inline workflow feedback. Developer/release tooling remains in the CLI. Engine code must therefore remain headless and must not assume that terminal input is available.
 
 See [docs/gui.md](docs/gui.md).
 
@@ -322,7 +327,7 @@ Inventory-Toolkit/
 │   ├── profile_config.py
 │   ├── resource_config.py
 │   ├── progress.py
-│   ├── resources/                 # defaults, labels, hints and legacy contracts
+│   ├── resources/                 # defaults, labels and mapping hints
 │   ├── paths.py
 │   ├── logger.py
 │   ├── telemetry.py
@@ -334,7 +339,7 @@ Inventory-Toolkit/
 │   ├── yoy_reports/
 │   └── shared/
 ├── gui/
-│   └── app.py                     # Alpha Pre-Beta desktop shell
+│   └── app.py                     # RC preview desktop shell
 ├── profiles/
 │   └── demo/
 ├── examples/
@@ -370,7 +375,7 @@ Start at **[docs/index.md](docs/index.md)**.
 | [Installation](docs/installation.md) | dependencies, launchers, platform notes |
 | [Architecture](docs/architecture.md) | layers, boundaries, design invariants |
 | [CLI](docs/cli.md) | menus, launchers, debug levels, Developer Console |
-| [GUI](docs/gui.md) | Alpha Pre-Beta GUI scope and limitations |
+| [GUI](docs/gui.md) | RC preview GUI scope and limitations |
 | [Core](docs/core.md) | configuration, logging, sanitization, safe savers |
 | [Engine](docs/engine.md) | all three processing pipelines and shared rules |
 | [Profiles](docs/profiles.md) | schema-v3 configuration and Guided Setup |
@@ -404,23 +409,13 @@ The roadmap is directional rather than a release-date promise. Business correctn
 
 `v1.4.1` is the released stabilization baseline. Subsequent changes are listed under `Unreleased` in [CHANGELOG.md](CHANGELOG.md), including progress/statistics, demo-path suggestions, external JSON resources and retirement-tool improvements.
 
-Next work should build on those features: validate the summaries with operational data, improve GUI usability and configuration parity, and expand targeted coverage when behavior changes.
+The current testing branch adds a dark RC-preview desktop, embedded setup/configuration, neutral module-selected profiles, independent mappings, variants, measured quantities and optional developer packages. The pre-v3 compatibility layer has been retired after validation; current schema-v3 validation remains strict.
 
-For a source archive containing only application files, demo inputs, and
-release references, run `python tools/BuildDistribution.py dist/Inventory-Toolkit.zip`.
-The builder excludes local workbooks, logs, caches, Git internals, and
-non-demo profiles. Run `python tools/ReleaseCheck.py --release` before sharing
-the archive.
+`build.prop` is the runtime source for version and capabilities. For a source archive, use the existing `python tools/BuildDistribution.py dist/Inventory-Toolkit.zip`. It excludes local workbooks, logs, caches, Git internals and non-demo profiles; release builds also omit developer tooling and tests. This is preparation for future bundles, not a new binary packaging system.
 
-## v1.5.0 — GUI beta and interface parity
+## Desktop stabilization
 
-Target: make the desktop GUI a credible beta from the Alpha Pre-Beta foundation.
-
-- Bring profile setup and configuration workflows closer to CLI parity.
-- Finish GUI-safe error/retry handling so no engine path assumes terminal input.
-- Add automated smoke coverage for the GUI's critical paths.
-- Refine the existing progress/activity/statistics presentation through real workflow testing.
-- Define the supported CustomTkinter/Tkinter experience and installation story.
+Completed foundations include both real-widget backends, embedded section editors, searchable settings, draft protection and focused activity/statistics panels. Remaining release work is native Windows/macOS review, user feedback on real workbook mapping, keyboard/accessibility review and a supported optional-GUI dependency story. RC preview describes the interface milestone; it does not replace release certification or platform validation.
 
 ## v1.6.0 — Distribution readiness
 
