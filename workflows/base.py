@@ -32,17 +32,11 @@ class Job:
     """A verified request. It asks nothing, so it can run on any thread."""
 
     request: Any
-    engine: Callable[..., str | None]
+    engine: Callable[..., str]
 
-    def run(self, *, progress=None, stats=None, interactive=False) -> RunResult:
+    def run(self, *, progress=None, stats=None, on_locked=None) -> RunResult:
         warnings, started = [], time.time()
-        output = self.engine(progress=progress, stats=stats, warnings=warnings, interactive=interactive)
-        if not output:
-            raise WorkflowError(
-                ErrorCode.REPORT_NOT_CREATED,
-                "The operation finished without producing an output file. "
-                "Check logs/session.log for the validation error.",
-            )
+        output = self.engine(progress=progress, stats=stats, warnings=warnings, on_locked=on_locked)
         result = RunResult(output, time.time() - started, tuple(warnings))
         log_debug_event("workflow_complete", output=output, elapsed_seconds=round(result.elapsed, 4))
         return result

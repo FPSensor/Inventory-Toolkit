@@ -57,8 +57,7 @@ def test_business_stock_quantities_categories_and_valuations(business):
     case, profile, files, root = business
     output = root / 'stock-report.xlsx'
     args = SimpleNamespace(stock_processing_raw=files['stock'], shared_cost=files['prices'],
-        shared_sales=files['prices'], stock_processing_out=str(output), stock_processing_profile=profile,
-        non_interactive=True)
+        shared_sales=files['prices'], stock_processing_out=str(output), stock_processing_profile=profile)
     assert run_stock_processing(args) == str(output)
     frame = pd.read_excel(output, sheet_name='Stock', dtype={'SKU': str})
     assert frame['SKU'].tolist() == [row['Stock code'] for row in case['workbooks']['stock']]
@@ -78,7 +77,7 @@ def test_business_cross_options_preserve_reconciliation(business):
         args = SimpleNamespace(cross_check_system=files['system'], cross_check_count=files['count'],
             shared_cost=files['prices'], shared_sales=files['prices'], cross_check_out=str(output),
             cross_check_profile=profile, cross_check_consolidate=consolidate,
-            cross_check_partial=partial, non_interactive=True)
+            cross_check_partial=partial)
         assert run_cross_check(args) == str(output)
         frame = pd.read_excel(output)
         assert sorted(frame[DIFFERENCE_COLUMN]) == sorted(case['expected']['differences'])
@@ -100,7 +99,7 @@ def test_business_yoy_option_matrix(business):
         output = root / f'yoy-{segmented}-{annual}-{variants}-{revenue}-{by_item}-{source_categories}.xlsx'
         grouping = selected['input']['item_column' if by_item else 'grouping_column']
         generate_sales_report(files['sales'], str(output), start, end, selected, grouping,
-            segmented, source_categories, profile, yoy_include_variants=variants, non_interactive=True)
+            segmented, source_categories, profile, yoy_include_variants=variants)
         workbook = load_workbook(output, data_only=False)
         assert len(workbook.sheetnames) == (3 if segmented else 1)
         # Every generated sheet has a real metric block, and variants never create sheets.

@@ -167,8 +167,7 @@ def test_unsupported_calculated_fields_are_rejected(formula):
 
 def test_standard_report_honors_cost_factor_totals_and_hidden_families(tmp_path):
     path = tmp_path / "standard.xlsx"
-    render_stock_excel(str(path), FRAME, [SUMMARY], list(FRAME.columns), "Base", family_column="Rubro",
-                       interactive=False, cost_factor=2, hidden_families=("Oculto",), totals_label="Total")
+    render_stock_excel(str(path), FRAME, [SUMMARY], list(FRAME.columns), "Base", family_column="Rubro", cost_factor=2, hidden_families=("Oculto",), totals_label="Total")
     rows = list(load_workbook(path)["Fijo"].iter_rows(min_row=2, values_only=True))
     assert [row[0] for row in rows] == ["Bermudas", "Nuevo", "Remeras", "Total"]
     assert rows[0][4] == 0.5
@@ -208,7 +207,7 @@ def run_stock(stock, price, output, warnings=None, **options):
 
     return run_stock_processing(Namespace(
         stock_processing_raw=str(stock), shared_cost=str(price), shared_sales=str(price),
-        stock_processing_out=str(output), stock_processing_profile="report", non_interactive=True,
+        stock_processing_out=str(output), stock_processing_profile="report",
         warnings=[] if warnings is None else warnings, **options,
     ))
 

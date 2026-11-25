@@ -15,7 +15,7 @@ def test_store_cleaning_and_excel_preserve_fractional_quantities(tmp_path):
     export = pd.DataFrame({"SKU": ["A"], "Category": ["Food"], "Counter": [1.25]})
     path = tmp_path / "stock.xlsx"
     render_stock_excel(path, export, [{"sheet_name": "Summary", "entities": ["Counter"]}],
-        export.columns, "Stock", family_column="Category", interactive=False,
+        export.columns, "Stock", family_column="Category",
         quantity_format="#,##0.###", quantity_columns=("Counter",))
     workbook = load_workbook(path)
     assert workbook["Stock"]["C2"].value == 1.25

@@ -18,7 +18,6 @@ def test_stock_rejects_xls_output_before_input_validation():
                 shared_sales="missing-sales.xlsx",
                 stock_processing_out="result.xls",
                 stock_processing_profile="demo",
-                non_interactive=True,
             )
         )
 
@@ -35,7 +34,6 @@ def test_cross_rejects_xls_output_before_input_validation():
                 cross_check_profile="demo",
                 cross_check_consolidate=False,
                 cross_check_partial=False,
-                non_interactive=True,
             )
         )
 
@@ -79,5 +77,4 @@ def test_yoy_rejects_xls_output_before_reading_sales_data(monkeypatch):
             False,
             True,
             "demo",
-            non_interactive=True,
         )

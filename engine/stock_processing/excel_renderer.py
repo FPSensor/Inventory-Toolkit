@@ -128,7 +128,7 @@ def render_stock_excel(
     stock_columns,
     raw_data_sheet,
     family_column=FAMILY_COLUMN,
-    interactive=True,
+    on_locked=None,
     quantity_format="#,##0",
     quantity_columns=(),
     cost_factor=1.0,
@@ -142,7 +142,6 @@ def render_stock_excel(
         data_shape=stock_frame.shape,
         summary_count=len(summaries),
         raw_data_sheet=raw_data_sheet,
-        interactive=interactive,
     )
     workbook = Workbook()
     workbook.remove(workbook.active)
@@ -201,7 +200,7 @@ def render_stock_excel(
         row_count=data_worksheet.max_row,
         column_count=data_worksheet.max_column,
     )
-    final_path = safe_openpyxl_save(workbook, output_file, interactive=interactive)
+    final_path = safe_openpyxl_save(workbook, output_file, on_locked=on_locked)
     log_debug_event(
         "stock_render_saved",
         output_file=final_path,

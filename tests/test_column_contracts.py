@@ -112,7 +112,6 @@ def test_stock_processing_honors_custom_catalog_and_pricing_columns(tmp_path, mo
             shared_sales=str(sales_path),
             stock_processing_out=str(output_path),
             stock_processing_profile=profile,
-            non_interactive=True,
             warnings=warnings,
             progress=events.append,
             stats=stats.append,
@@ -211,7 +210,6 @@ def test_cross_check_honors_catalog_article_and_family_columns(tmp_path, monkeyp
             cross_check_profile=profile,
             cross_check_consolidate=True,
             cross_check_partial=False,
-            non_interactive=True,
             progress=events.append,
             stats=stats.append,
         )
@@ -274,7 +272,6 @@ def test_cross_check_price_article_tokenization_controls_valuation(
         shared_cost=str(cost), shared_sales=str(sales),
         cross_check_out=str(output), cross_check_profile=profile,
         cross_check_consolidate=True, cross_check_partial=False,
-        non_interactive=True,
     )
     assert run_cross_check(args) == str(output)
     result = pd.read_excel(output)

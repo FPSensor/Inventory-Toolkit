@@ -147,7 +147,6 @@ def test_full_report_can_omit_extra_annual_comparison_without_losing_metrics(tmp
         str(path), current, previous,
         pd.Timestamp("2026-01-01"), pd.Timestamp("2026-01-31"),
         pd.Timestamp("2025-01-01"), config, "Category", False,
-        interactive=False,
     )
 
     workbook = load_workbook(path, read_only=True)
@@ -171,8 +170,7 @@ def test_segmented_progress_advances_after_each_rendered_sheet(tmp_path):
     render_yoy_sales_excel(
         str(tmp_path / "segmented.xlsx"), current, previous,
         pd.Timestamp("2026-01-01"), pd.Timestamp("2026-02-28"),
-        pd.Timestamp("2025-01-01"), _config(), "Category", True,
-        interactive=False, progress=events.append,
+        pd.Timestamp("2025-01-01"), _config(), "Category", True, progress=events.append,
     )
 
     assert len(events) == 4  # Two months, the consolidated sheet, then saving.
@@ -351,7 +349,7 @@ def test_selected_metrics_keep_units_and_line_revenue_separate_on_every_sheet(tm
     path = tmp_path / 'selected.xlsx'
     render_yoy_sales_excel(str(path), current, previous,
         pd.Timestamp('2026-09-01'), pd.Timestamp('2026-10-04'),
-        pd.Timestamp('2025-09-01'), config, 'Category', segmented, interactive=False)
+        pd.Timestamp('2025-09-01'), config, 'Category', segmented)
     workbook = load_workbook(path)
     assert workbook.sheetnames == (['09-26', '10-26', 'Full Report'] if segmented else ['Sales'])
     for sheet in workbook:

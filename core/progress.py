@@ -40,15 +40,13 @@ def report_stats(callback: Optional[StatsCallback], *lines: str) -> None:
 
 
 def report_warning(args, message: Optional[str]) -> None:
-    """Log a data warning and deliver it to the caller's list, or the console."""
+    """Log a data warning and deliver it to the caller."""
     if not message:
         return
     log.warning(message)
     warnings = getattr(args, "warnings", None)
     if warnings is not None:
         warnings.append(message)
-    else:
-        print(f"\n⚠️ {message}")
 
 
 def report_progress(

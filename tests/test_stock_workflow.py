@@ -8,7 +8,6 @@ from core import paths as app_paths
 from core.profile_store import load_last_paths
 from core.system_utils import InvalidExcelOutputPathError
 from core.workflow_errors import ErrorCode, WorkflowError
-from engine.stock_processing import generator
 from tests.test_report_template import _profile
 from workflows import stock
 
@@ -70,8 +69,8 @@ def test_warnings_are_returned_instead_of_printed(request_, tmp_path, capsys):
     assert "Remeras" not in capsys.readouterr().out
 
 
-def test_a_run_without_report_is_an_error(request_, monkeypatch):
-    monkeypatch.setattr(generator, "run_stock_processing", lambda _args: None)
-    with pytest.raises(WorkflowError) as error:
+def test_an_unusable_stock_file_explains_itself(request_, capsys):
+    pd.DataFrame({"SKU": ["R1"], "Otro": [2]}).to_excel(request_.stock, index=False)
+    with pytest.raises(ValueError, match="stock.xlsx"):
         stock.prepare(request_, stock.check(request_)).run()
-    assert error.value.code is ErrorCode.REPORT_NOT_CREATED
+    assert capsys.readouterr().out == ""

@@ -26,9 +26,10 @@ def test_layers_only_depend_on_the_ones_below(package, forbidden):
     assert imports(package, forbidden) == set()
 
 
-def test_workflows_never_talk_to_a_terminal():
+@pytest.mark.parametrize("package", ["core", "engine", "workflows"])
+def test_only_interfaces_talk_to_a_terminal(package):
     calls = {
-        (path.name, node.func.id) for path in (ROOT / "workflows").rglob("*.py")
+        (path.name, node.func.id) for path in (ROOT / package).rglob("*.py")
         for node in ast.walk(ast.parse(path.read_text(encoding="utf-8")))
         if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id in {"print", "input"}
     }

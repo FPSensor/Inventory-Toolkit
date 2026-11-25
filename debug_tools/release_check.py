@@ -379,7 +379,6 @@ def _run_cross_demo(cross_system_override: str | None, output: Path) -> None:
             cross_check_profile="demo",
             cross_check_consolidate=True,
             cross_check_partial=False,
-            non_interactive=True,
         )
     )
     if not result:
@@ -416,7 +415,6 @@ def _run_stock_demo(output: Path) -> None:
             shared_sales=str(demo / "shared_sales_price_list.xlsx"),
             stock_processing_out=str(output),
             stock_processing_profile="demo",
-            non_interactive=True,
         )
     )
     if not result:

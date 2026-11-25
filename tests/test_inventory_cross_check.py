@@ -101,7 +101,7 @@ def test_cross_check_renderer_owns_header_style(tmp_path):
     workbook.save(output)
     workbook.close()
 
-    apply_excel_formatting(output, interactive=False)
+    apply_excel_formatting(output)
 
     workbook = load_workbook(output)
     try:

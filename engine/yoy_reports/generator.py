@@ -24,7 +24,7 @@ def generate_sales_report(
     yoy_has_families,
     profile,
     yoy_include_variants=None,
-    non_interactive=False,
+    on_locked=None,
     progress=None,
     stats=None,
 ):
@@ -54,7 +54,6 @@ def generate_sales_report(
         include_variants=include_variants,
         metrics=[metric.key for metric in metric_specs],
         annual_comparison=output_config.get("annual_comparison", True),
-        non_interactive=non_interactive,
     )
     family_rules = None
     if not yoy_has_families:
@@ -101,7 +100,7 @@ def generate_sales_report(
         yoy_grouping_col,
         yoy_segmented,
         include_variants,
-        interactive=not non_interactive,
+        on_locked=on_locked,
         progress=progress,
     )
     report_progress(progress, 3, 3, "YoY report saved.")

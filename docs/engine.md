@@ -28,7 +28,10 @@ Purpose: reconcile physical scanner counts against system stock, calculate diffe
 ### Files
 
 - `data_processor.py` — scan/article normalization and difference arithmetic.
-- `generator.py` — workflow orchestration, loading/filtering/consolidation/pricing.
+- `contracts.py` — resolves the profile and per-run headers into one immutable plan.
+- `inputs.py` — reads and normalizes the four workbooks.
+- `reconciliation.py` — matching, filters, differences, families and valuation.
+- `generator.py` — stage orchestration, progress and statistics.
 - `excel_renderer.py` — final workbook creation and formatting.
 
 ### Article normalization

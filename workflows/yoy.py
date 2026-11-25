@@ -77,7 +77,7 @@ def prepare(request: YoYRequest, config: dict, notify=None) -> Job:
     return Job(request, partial(_run, request, config))
 
 
-def _run(request, config, *, progress, stats, warnings, interactive):
+def _run(request, config, *, progress, stats, warnings, on_locked):
     from engine.yoy_reports import generator
 
     start, end = period(request.start, request.end)
@@ -85,5 +85,5 @@ def _run(request, config, *, progress, stats, warnings, interactive):
         request.sales, request.output, start, end, config,
         config["input"]["grouping_column" if request.by_family else "item_column"],
         request.by_month, request.has_families or not request.by_family, request.profile, request.variants,
-        non_interactive=not interactive, progress=progress, stats=stats,
+        on_locked=on_locked, progress=progress, stats=stats,
     )

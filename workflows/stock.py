@@ -50,7 +50,7 @@ def prepare(request: StockRequest, columns: dict, notify=None) -> Job:
     return Job(request, partial(_run, request, columns))
 
 
-def _run(request, columns, *, progress, stats, warnings, interactive):
+def _run(request, columns, *, progress, stats, warnings, on_locked):
     from engine.stock_processing import generator
 
     return generator.run_stock_processing(Namespace(
@@ -61,7 +61,7 @@ def _run(request, columns, *, progress, stats, warnings, interactive):
         stock_processing_profile=request.profile,
         column_overrides=columns,
         include_unit_prices=request.unit_prices,
-        non_interactive=not interactive,
+        on_locked=on_locked,
         progress=progress,
         stats=stats,
         warnings=warnings,

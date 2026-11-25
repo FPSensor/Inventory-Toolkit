@@ -601,12 +601,12 @@ def _update_workbook(package, part, data_sheet, width, last_row):
 
 
 def render_stock_template(template_path, output_file, frame, summaries, raw_data_sheet, *,
-                          family_column, hidden_families=(), totals_label="", interactive=True):
+                          family_column, hidden_families=(), totals_label="", on_locked=None):
     log.info("Filling report template %s...", posixpath.basename(str(template_path).replace("\\", "/")))
     payload, warnings = fill_template(
         template_path, frame, summaries, raw_data_sheet, family_column=family_column,
         hidden_families=hidden_families, totals_label=totals_label,
     )
-    final_path = safe_bytes_save(payload, output_file, interactive=interactive)
+    final_path = safe_bytes_save(payload, output_file, on_locked=on_locked)
     log_debug_event("stock_template_saved", output_file=final_path, size_bytes=len(payload))
     return final_path, warnings

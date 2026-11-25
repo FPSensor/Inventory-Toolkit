@@ -4,7 +4,7 @@ import os
 # operating system kernels and vintage portable Discman players share
 # the same philosophy: mechanical skipping is just a state of mind.
 
-from core.logger import log, log_debug_event
+from core.logger import log_debug_event
 
 
 class InvalidExcelOutputPathError(ValueError):
@@ -73,102 +73,48 @@ class OutputFileLockedError(PermissionError):
         )
 
 
-def _handle_locked_file(current_path, base, ext, attempt, *, interactive, message):
-    log.warning(f"PermissionError caught for {current_path}")
-    log_debug_event(
-        "output_file_locked",
-        path=current_path,
-        attempt=attempt,
-        interactive=interactive,
-    )
-    if not interactive:
-        raise OutputFileLockedError(current_path)
-
-    print(f"\n❌ APB Alert: {message.format(filename=os.path.basename(current_path))}")
-    try:
-        ans = input(
-            "Close it and press Enter to retry (or type 'C' to save as a copy): "
-        ).strip().upper()
-    except EOFError as exc:
-        raise OutputFileLockedError(current_path) from exc
-
-    if ans == 'C':
-        return f"{base}_copy{attempt}{ext}", attempt + 1
-    return current_path, attempt
+def require_input_files(*paths):
+    """Raise for the first input that does not exist."""
+    for path in paths:
+        if not os.path.exists(path):
+            raise FileNotFoundError(f"Data file not found: {path}")
 
 
-def safe_pandas_to_excel(df, filepath, *, interactive=True, **kwargs):
-    filepath = normalize_xlsx_output_path(filepath)
-    base, ext = os.path.splitext(filepath)
-    attempt = 1
-    current_path = filepath
+def _save(filepath, write, on_locked):
+    """Write a report, asking ``on_locked(path)`` what to do while it is open elsewhere.
+
+    The answer is true to save a copy or false to try again. Without someone to
+    ask, a locked file is an error.
+    """
+    path = normalize_xlsx_output_path(filepath)
+    base, ext = os.path.splitext(path)
+    copies = 0
     while True:
         try:
-            log_debug_event("pandas_excel_save_attempt", path=current_path, attempt=attempt)
-            df.to_excel(current_path, **kwargs)
-            log_debug_event("pandas_excel_save_ok", path=current_path, attempt=attempt)
-            return current_path
+            write(path)
+            log_debug_event("report_saved", path=path)
+            return path
         except PermissionError as exc:
-            try:
-                current_path, attempt = _handle_locked_file(
-                    current_path,
-                    base,
-                    ext,
-                    attempt,
-                    interactive=interactive,
-                    message="The file '{filename}' is currently open in another program (like Excel).",
-                )
-            except OutputFileLockedError as locked:
-                raise locked from exc
+            log_debug_event("output_file_locked", path=path, can_ask=on_locked is not None)
+            if on_locked is None:
+                raise OutputFileLockedError(path) from exc
+            if on_locked(path):
+                copies += 1
+                path = f"{base}_copy{copies}{ext}"
 
 
-def safe_openpyxl_save(wb, filepath, *, interactive=True):
-    filepath = normalize_xlsx_output_path(filepath)
-    base, ext = os.path.splitext(filepath)
-    attempt = 1
-    current_path = filepath
-    while True:
-        try:
-            log_debug_event("openpyxl_save_attempt", path=current_path, attempt=attempt)
-            wb.save(current_path)
-            log_debug_event("openpyxl_save_ok", path=current_path, attempt=attempt)
-            return current_path
-        except PermissionError as exc:
-            try:
-                current_path, attempt = _handle_locked_file(
-                    current_path,
-                    base,
-                    ext,
-                    attempt,
-                    interactive=interactive,
-                    message="The file '{filename}' is currently open in Excel.",
-                )
-            except OutputFileLockedError as locked:
-                raise locked from exc
+def safe_pandas_to_excel(df, filepath, *, on_locked=None, **kwargs):
+    return _save(filepath, lambda path: df.to_excel(path, **kwargs), on_locked)
 
 
-def safe_bytes_save(payload, filepath, *, interactive=True):
-    """Write an already verified workbook with the shared locked-file handling."""
-    filepath = normalize_xlsx_output_path(filepath)
-    base, ext = os.path.splitext(filepath)
-    attempt = 1
-    current_path = filepath
-    while True:
-        try:
-            log_debug_event("workbook_bytes_save_attempt", path=current_path, attempt=attempt)
-            with open(current_path, "wb") as handle:
-                handle.write(payload)
-            log_debug_event("workbook_bytes_save_ok", path=current_path, attempt=attempt)
-            return current_path
-        except PermissionError as exc:
-            try:
-                current_path, attempt = _handle_locked_file(
-                    current_path,
-                    base,
-                    ext,
-                    attempt,
-                    interactive=interactive,
-                    message="The file '{filename}' is currently open in Excel.",
-                )
-            except OutputFileLockedError as locked:
-                raise locked from exc
+def safe_openpyxl_save(wb, filepath, *, on_locked=None):
+    return _save(filepath, wb.save, on_locked)
+
+
+def safe_bytes_save(payload, filepath, *, on_locked=None):
+    """Write an already verified workbook."""
+    def write(path):
+        with open(path, "wb") as handle:
+            handle.write(payload)
+
+    return _save(filepath, write, on_locked)

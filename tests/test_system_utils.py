@@ -32,23 +32,27 @@ class _FlakyDataFrame:
 def test_safe_pandas_non_interactive_raises_instead_of_prompting(tmp_path):
     output = tmp_path / "locked.xlsx"
     with pytest.raises(OutputFileLockedError) as exc_info:
-        safe_pandas_to_excel(_LockedDataFrame(), str(output), interactive=False)
+        safe_pandas_to_excel(_LockedDataFrame(), str(output))
     assert exc_info.value.filepath == str(output)
 
 
 def test_safe_openpyxl_non_interactive_raises_instead_of_prompting(tmp_path):
     output = tmp_path / "locked.xlsx"
     with pytest.raises(OutputFileLockedError) as exc_info:
-        safe_openpyxl_save(_LockedWorkbook(), str(output), interactive=False)
+        safe_openpyxl_save(_LockedWorkbook(), str(output))
     assert exc_info.value.filepath == str(output)
 
 
-def test_safe_pandas_cli_copy_behavior_is_preserved(tmp_path, monkeypatch):
+def test_a_locked_report_can_be_retried_or_saved_as_a_copy(tmp_path):
     output = tmp_path / "report.xlsx"
     frame = _FlakyDataFrame()
-    monkeypatch.setattr("builtins.input", lambda _prompt: "C")
+    asked = []
 
-    final_path = safe_pandas_to_excel(frame, str(output))
+    final_path = safe_pandas_to_excel(frame, str(output), on_locked=lambda path: asked.append(path) or True)
+    assert asked == [str(output)]
+    retried = _FlakyDataFrame()
+    assert safe_pandas_to_excel(retried, str(output), on_locked=lambda _path: False) == str(output)
+    assert retried.paths == [str(output)] * 2
 
     assert frame.paths == [str(output), str(tmp_path / "report_copy1.xlsx")]
     assert final_path == str(tmp_path / "report_copy1.xlsx")
@@ -94,5 +98,5 @@ def test_xlsx_output_path_contract_accepts_case_insensitive_xlsx(tmp_path):
 def test_safe_writer_rejects_xls_before_touching_dataframe(tmp_path):
     frame = _FlakyDataFrame()
     with pytest.raises(InvalidExcelOutputPathError):
-        safe_pandas_to_excel(frame, str(tmp_path / "report.xls"), interactive=False)
+        safe_pandas_to_excel(frame, str(tmp_path / "report.xls"))
     assert frame.paths == []

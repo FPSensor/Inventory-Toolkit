@@ -62,7 +62,7 @@ def prepare(request: CrossRequest, columns: dict, notify=None) -> Job:
     return Job(request, partial(_run, request, columns))
 
 
-def _run(request, columns, *, progress, stats, warnings, interactive):
+def _run(request, columns, *, progress, stats, warnings, on_locked):
     from engine.inventory_cross_check import generator
 
     return generator.run_cross_check(Namespace(
@@ -75,7 +75,7 @@ def _run(request, columns, *, progress, stats, warnings, interactive):
         cross_check_consolidate=request.consolidate,
         cross_check_partial=request.partial_count,
         column_overrides=columns,
-        non_interactive=not interactive,
+        on_locked=on_locked,
         progress=progress,
         stats=stats,
         warnings=warnings,

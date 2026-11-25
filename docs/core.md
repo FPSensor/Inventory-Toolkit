@@ -123,7 +123,7 @@ Cross-platform/system helpers and safe workbook saving.
 
 ### Safe savers
 
-`safe_pandas_to_excel()` and `safe_openpyxl_save()` handle output files that are locked/open elsewhere.
+`safe_pandas_to_excel()`, `safe_openpyxl_save()` and `safe_bytes_save()` handle output files that are locked/open elsewhere. The caller may pass `on_locked(path)`, which answers whether to save a copy or try again; without it a locked file raises `OutputFileLockedError`. Core and engines never print or read a terminal.
 
 - Interactive CLI callers can retry or save a numbered copy.
 - Non-interactive callers receive `OutputFileLockedError` and decide how to present recovery in their own interface.

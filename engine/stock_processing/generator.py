@@ -11,7 +11,7 @@ from core.business_schema import COST_COLUMN, SALES_VALUE_LABEL
 from core.configuration_manager import ConfigurationManager
 from core.logger import log, log_debug_event
 from core.progress import report_progress, report_stats, report_warning
-from core.system_utils import normalize_xlsx_output_path
+from core.system_utils import normalize_xlsx_output_path, require_input_files
 from core.telemetry import execution_timer
 from engine.shared.families import build_family_rules
 from engine.stock_processing.contracts import INTERNAL_ARTICLE_COLUMN, INTERNAL_FAMILY_COLUMN, StockProcessingPlan
@@ -99,7 +99,7 @@ def _stock_stats(result_frame, stock_frame, plan, input_rows, input_columns, exc
 def run_stock_processing(args):
     """Execute the profile-driven stock cleanup, pricing, valuation and export pipeline."""
     output_path = normalize_xlsx_output_path(args.stock_processing_out)
-    interactive = not getattr(args, "non_interactive", False)
+    on_locked = getattr(args, "on_locked", None)
     progress = getattr(args, "progress", None)
     stats = getattr(args, "stats", None)
     report_progress(progress, 0, 4, "Reading stock and checking input columns...")
@@ -110,15 +110,9 @@ def run_stock_processing(args):
         cost_file=args.shared_cost,
         sales_file=args.shared_sales,
         output_file=output_path,
-        interactive=interactive,
     )
 
-    required_files = [args.stock_processing_raw, args.shared_cost, args.shared_sales]
-    for file_path in required_files:
-        if not os.path.exists(file_path):
-            log.error("Data file '%s' not found.", file_path)
-            return None
-
+    require_input_files(args.stock_processing_raw, args.shared_cost, args.shared_sales)
     log.info("Loading configurations for profile: %s...", args.stock_processing_profile)
     plan = _load_plan(args.stock_processing_profile)
     overrides = getattr(args, "column_overrides", {})
@@ -132,26 +126,18 @@ def run_stock_processing(args):
         source_article = overrides.get("stock", {}).get("article", plan.input["article_column"])
         raw_frame = pd.read_excel(args.stock_processing_raw, dtype={source_article: str})
         input_rows, input_columns = raw_frame.shape
-        raw_frame = adapt_stock_headers(raw_frame, plan, source_article)
-        raw_frame, missing_article_warning = remove_unidentified_stock(raw_frame, plan)
-        excluded_rows = input_rows - len(raw_frame)
-        if missing_article_warning:
-            report_warning(args, missing_article_warning)
-        log_debug_event(
-            "stock_processing_input_loaded",
-            shape=raw_frame.shape,
-            columns=list(raw_frame.columns),
-        )
         try:
+            raw_frame = adapt_stock_headers(raw_frame, plan, source_article)
+            raw_frame, missing_article_warning = remove_unidentified_stock(raw_frame, plan)
             stock_frame = prepare_stock_frame(raw_frame, plan)
             validate_stock_network(stock_frame, plan)
         except ValueError as exc:
-            log.error("APB Error: %s", exc)
-            print(
-                f"\n❌ APB Error: The file '{os.path.basename(args.stock_processing_raw)}' "
-                f"is NOT a valid Stock file. {exc}"
-            )
-            return None
+            raise ValueError(
+                f"The file '{os.path.basename(args.stock_processing_raw)}' is not a valid Stock file. {exc}"
+            ) from exc
+        excluded_rows = input_rows - len(raw_frame)
+        report_warning(args, missing_article_warning)
+        log_debug_event("stock_processing_input_loaded", shape=raw_frame.shape, columns=list(raw_frame.columns))
     report_progress(progress, 1, 4, "Stock loaded and cleaned. Classifying stores and families...")
 
     with execution_timer("Stock Network & Classification"):
@@ -242,7 +228,7 @@ def run_stock_processing(args):
                 family_column=plan.family_column,
                 hidden_families=plan.hidden_families,
                 totals_label=plan.totals_label,
-                interactive=interactive,
+                on_locked=on_locked,
             )
             for message in template_warnings:
                 report_warning(args, message)
@@ -256,7 +242,7 @@ def run_stock_processing(args):
                 family_column=plan.family_column,
                 quantity_format=plan.quantity_format,
                 quantity_columns=plan.entities_to_value,
-                interactive=interactive,
+                on_locked=on_locked,
                 **presentation,
             )
 
