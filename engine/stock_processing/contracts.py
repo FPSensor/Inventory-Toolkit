@@ -9,6 +9,7 @@ external vocabulary with implementation details.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Mapping
 
 from core.business_schema import ARTICLE_COLUMN, FAMILY_COLUMN, RAW_DATA_SHEET
@@ -17,6 +18,19 @@ from core.workflow_contracts import stock_input
 
 INTERNAL_ARTICLE_COLUMN = "__itk_article"
 INTERNAL_FAMILY_COLUMN = "__itk_family"
+
+
+def _resolve_template(profile_root: Path, template: str) -> Path | None:
+    """Resolve a template that must live inside its own profile."""
+    if not template:
+        return None
+    root = profile_root.resolve()
+    path = (root / template).resolve()
+    if not path.is_relative_to(root):
+        raise ValueError(f"Report template must be inside the profile folder: {template}")
+    if not path.is_file():
+        raise ValueError(f"Report template not found: {path}")
+    return path
 
 
 @dataclass(frozen=True)
@@ -40,6 +54,10 @@ class StockProcessingPlan:
     input: Mapping[str, Any]
     quantity_label: str = "units"
     quantity_format: str = "#,##0"
+    template_path: Path | None = None
+    cost_factor: float = 1.0
+    hidden_families: tuple[str, ...] = ()
+    totals_label: str = ""
 
     @classmethod
     def from_manager(cls, config: ConfigurationManager) -> "StockProcessingPlan":
@@ -86,6 +104,10 @@ class StockProcessingPlan:
             input=source,
             quantity_label=output["quantity_label"],
             quantity_format=output["quantity_format"],
+            template_path=_resolve_template(config.base_dir.parent, output.get("template", "")),
+            cost_factor=output.get("cost_factor", 1.0),
+            hidden_families=tuple(output.get("hidden_families", [])),
+            totals_label=output.get("totals_label", ""),
         )
 
     @property

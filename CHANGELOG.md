@@ -8,6 +8,10 @@ Development changes after `v1.4.1`. The released application version remains `1.
 
 ### Added
 
+- **stock: templates:** Let a profile own an Excel report template. Native PivotTables, calculated fields, styles and summaries are rebuilt from each run's data; layouts that cannot be rebuilt faithfully are rejected and every generated package is structurally verified before saving. Adds the `lxml` dependency.
+
+- **stock: summaries:** Add optional `cost_factor`, `hidden_families` and `totals_label` settings, editable from guided setup. The profile decides family visibility on every sheet, and a warning reports hidden families that have stock. Defaults preserve existing reports.
+
 - **tests: maintenance:** Verify headless diagnostics in isolated CLI-only/GUI-only release trees, exclude local checkpoint data from distributions and reject unsupported checkpoint schemas even when their checksums are valid.
 
 - **gui: recovery:** Embed profile diagnostics and checkpoint management in Overview. Run file operations in workers, show actionable configuration destinations, require inline restore confirmation, retain a pre-restore point and lock profile/navigation until maintenance finishes. Exercise real Tk/CustomTkinter save/restore flows.

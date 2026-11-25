@@ -64,7 +64,11 @@
                 "Artículo",
                 "Familias"
             ],
-            "summaries": []
+            "summaries": [],
+            "template": "",
+            "cost_factor": 1.0,
+            "hidden_families": [],
+            "totals_label": ""
         }
     },
     "cross_check/settings": {

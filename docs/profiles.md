@@ -106,6 +106,17 @@ Owns:
 
 This configuration belongs to Stock Processing; it must not be hidden in YoY configuration.
 
+Optional report settings under `output`:
+
+| Key | Default | Meaning |
+| --- | --- | --- |
+| `template` | `""` | `.xlsx` inside the profile folder, for example `templates/stock.xlsx`; see [engine.md](engine.md) |
+| `cost_factor` | `1.0` | multiplies cost in summary margins: `1 - cost * factor / sales` |
+| `hidden_families` | `[]` | families omitted from summaries and family PivotTables, replacing the visibility saved in a template; their rows stay in the data sheet and a warning reports any stock left out |
+| `totals_label` | `""` | label of the summary total row; empty omits it |
+
+Templates can contain real business data. Workbooks are ignored by Git outside the demo fixtures; do not force-add them. In template summaries a margin is blank only when sales are zero, matching PivotTable arithmetic; standard summaries keep a zero margin for non-positive sales.
+
 ### `cross_check/settings.json`
 
 Owns:

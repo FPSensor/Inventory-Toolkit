@@ -10,7 +10,7 @@ import pandas as pd
 from core.business_schema import COST_COLUMN, SALES_VALUE_LABEL
 from core.configuration_manager import ConfigurationManager
 from core.logger import log, log_debug_event
-from core.progress import report_progress, report_stats
+from core.progress import report_progress, report_stats, report_warning
 from core.system_utils import normalize_xlsx_output_path
 from core.telemetry import execution_timer
 from engine.shared.families import build_family_rules
@@ -25,7 +25,7 @@ from engine.stock_processing.data_processor import (
     remove_unidentified_stock,
     validate_stock_network,
 )
-from engine.stock_processing.excel_renderer import render_stock_excel
+from engine.stock_processing.excel_renderer import build_summary, render_stock_excel
 from engine.stock_processing.pricing import process_pricing
 from engine.stock_processing.valuation import (
     attach_unit_prices,
@@ -55,6 +55,20 @@ def _log_plan(plan: StockProcessingPlan) -> None:
         summary_count=len(plan.summaries),
         raw_data_sheet=plan.raw_data_sheet,
     )
+
+
+def _hidden_stock_warning(result_frame, plan):
+    """Say how much stock the profile leaves out of the report totals."""
+    stores = [store for store in plan.active_stores if store in result_frame.columns]
+    rows = result_frame[result_frame[plan.family_column].isin(plan.hidden_families)]
+    units = rows.groupby(plan.family_column)[stores].sum().sum(axis=1) if stores else pd.Series(dtype=float)
+    units = units[units != 0]
+    if units.empty:
+        return None
+    detail = ", ".join(
+        f"{family}: {value:,.6f}".rstrip("0").rstrip(".") for family, value in units.items()
+    )
+    return f"Hidden families have stock that is not included in the report totals ({detail} {plan.quantity_label})."
 
 
 def _stock_stats(result_frame, stock_frame, plan, input_rows, input_columns, excluded_rows):
@@ -123,12 +137,7 @@ def run_stock_processing(args):
         raw_frame, missing_article_warning = remove_unidentified_stock(raw_frame, plan)
         excluded_rows = input_rows - len(raw_frame)
         if missing_article_warning:
-            log.warning(missing_article_warning)
-            warnings = getattr(args, "warnings", None)
-            if warnings is not None:
-                warnings.append(missing_article_warning)
-            else:
-                print(f"\n⚠️ {missing_article_warning}")
+            report_warning(args, missing_article_warning)
         log_debug_event(
             "stock_processing_input_loaded",
             shape=raw_frame.shape,
@@ -204,20 +213,52 @@ def run_stock_processing(args):
             shape=result_frame.shape,
             columns=list(result_frame.columns),
         )
+    report_warning(args, _hidden_stock_warning(result_frame, plan))
     report_progress(progress, 3, 4, "Valuation complete. Writing workbook...")
 
     with execution_timer("Stock Excel Rendering"):
-        final_path = render_stock_excel(
-            output_path,
-            result_frame,
-            plan.summaries,
-            result_frame.columns,
-            plan.raw_data_sheet,
-            family_column=plan.family_column,
-            quantity_format=plan.quantity_format,
-            quantity_columns=plan.entities_to_value,
-            interactive=interactive,
-        )
+        presentation = {
+            "cost_factor": plan.cost_factor,
+            "hidden_families": plan.hidden_families,
+            "totals_label": plan.totals_label,
+        }
+        if plan.template_path is not None:
+            # Imported on demand: only template reports need direct package editing.
+            from engine.stock_processing.template_renderer import render_stock_template
+
+            summaries = {
+                summary["sheet_name"]: build_summary(
+                    result_frame, summary, plan.family_column,
+                    blank_undefined_margin=True, **presentation,
+                )[0]
+                for summary in plan.summaries
+            }
+            final_path, template_warnings = render_stock_template(
+                plan.template_path,
+                output_path,
+                result_frame,
+                summaries,
+                plan.raw_data_sheet,
+                family_column=plan.family_column,
+                hidden_families=plan.hidden_families,
+                totals_label=plan.totals_label,
+                interactive=interactive,
+            )
+            for message in template_warnings:
+                report_warning(args, message)
+        else:
+            final_path = render_stock_excel(
+                output_path,
+                result_frame,
+                plan.summaries,
+                result_frame.columns,
+                plan.raw_data_sheet,
+                family_column=plan.family_column,
+                quantity_format=plan.quantity_format,
+                quantity_columns=plan.entities_to_value,
+                interactive=interactive,
+                **presentation,
+            )
 
     log.info("Process completed. File saved at: %s", final_path)
     report_progress(progress, 4, 4, "Stock report saved.")

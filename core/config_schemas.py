@@ -116,6 +116,18 @@ class StockOutputConfig(_StrictConfigModel):
     raw_data_sheet: str = RAW_DATA_SHEET
     base_columns: List[str] = Field(default_factory=lambda: [ARTICLE_COLUMN, FAMILY_COLUMN])
     summaries: List[StockSummaryConfig] = Field(default_factory=list)
+    template: str = ""
+    cost_factor: float = Field(default=1.0, gt=0, allow_inf_nan=False)
+    hidden_families: List[str] = Field(default_factory=list)
+    totals_label: str = ""
+
+    @field_validator("template")
+    @classmethod
+    def validate_template(cls, value: str) -> str:
+        value = value.strip()
+        if value and not value.lower().endswith(".xlsx"):
+            raise ValueError("report template must be an .xlsx workbook")
+        return value
 
 
 class StockProcessingConfig(_Config):

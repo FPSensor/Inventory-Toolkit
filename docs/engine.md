@@ -86,6 +86,8 @@ row numbers and quantities; a valid output can therefore carry warnings.
 - `valuation.py` — unit-price attachment plus store/region cost and sales valuation.
 - `generator.py` — thin stage orchestration and diagnostics.
 - `excel_renderer.py` — detail and summary workbook rendering.
+- `template_renderer.py` — fills a profile-owned Excel template with native PivotTables.
+- `pivot_formulas.py` — arithmetic of pivot calculated fields.
 
 ### Pipeline
 
@@ -101,6 +103,14 @@ Stock Processing now treats profile vocabulary as an input/output boundary rathe
 8. attach unit prices and calculate store/regional cost and sales values;
 9. project the configured output layout and restore the profile-owned article/family labels;
 10. render configured summary sheets + raw-data sheet.
+
+### Report templates
+
+With `output.template`, the profile's `.xlsx` owns the design and the engine replaces its data. The data sheet (`output.raw_data_sheet`) is rewritten using the template's columns and styles, each PivotTable and its cache are rebuilt, and sheets named in `output.summaries` are filled below their header. Calculated fields are evaluated from the template; `cost_factor` does **not** change them, so both must be kept in agreement by the profile owner.
+
+Supported pivots: one row field, summed values or arithmetic calculated fields (`+ - * /`), hidden items, label sorting, and an optional grand total. One PivotTable per sheet, sourced from a range of the data sheet, saved with its source data. Anything else (report/value filters, column fields, grouping, slicers, macros, external connections, formulas or notes inside generated areas) is rejected: leaving it untouched would deliver the previous report's figures.
+
+`core/workbook_package.py` verifies the finished package (cell placement, styles, strings, relationships, cache records, pivot items and ranges) before anything is written. A rejected report leaves an existing output file untouched. Structural verification does not replace opening a new template's first report in Excel.
 
 The private `__itk_*` keys must never escape into generated workbooks. This boundary lets a profile use names such as `SKU`/`Family` without forcing the core valuation pipeline to carry those external strings through every operation.
 

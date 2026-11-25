@@ -3,3 +3,4 @@ openpyxl
 xlrd
 numpy
 pydantic>=2,<3
+lxml

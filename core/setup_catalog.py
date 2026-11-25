@@ -120,7 +120,12 @@ STEPS = {
             field('output.quantity_label', 'Quantity unit', 'For example units, kg or liters. Inventory Toolkit does not convert units.', 'text'),
             field('output.quantity_format', 'Excel quantity format', 'Whole units: #,##0. Fractions: #,##0.###.', 'text'))),
         SetupStep('stock_summaries', 'Optional summary sheets', 'stock_processing/settings', (
-            field('output.summaries', 'Summary sheets', 'Choose a sheet name and its locations. Display titles may be left empty.', 'summaries'),), advanced=True), NETWORK_GROUPS),
+            field('output.summaries', 'Summary sheets', 'Choose a sheet name and its locations. Display titles may be left empty.', 'summaries'),), advanced=True),
+        SetupStep('stock_template', 'Report template and margins', 'stock_processing/settings', (
+            field('output.template', 'Excel template (optional)', 'A .xlsx file inside the profile folder, for example templates/stock.xlsx. Leave empty for the standard report.', 'text', optional=True),
+            field('output.cost_factor', 'Cost multiplier for summary margins', 'Margin is 1 - cost x multiplier / sales. Use 1 for cost as listed. PivotTable formulas in a template keep their own multiplier.', 'number'),
+            field('output.hidden_families', 'Families left out of totals', 'One family per line. Their rows stay in the detail sheet and a warning appears when they have stock.', 'list'),
+            field('output.totals_label', 'Summary total row (optional)', 'For example Totals. Leave empty to omit the total row.', 'text', optional=True)), advanced=True), NETWORK_GROUPS),
     'yoy_reports': (CATALOG, FAMILIES,
         SetupStep('yoy_period', 'Sales dates and amounts', 'yoy_reports/settings', (
             field('input.date_column', 'Transaction date', 'Dates used to select current and previous-year periods.', hint_key='date_hints'),

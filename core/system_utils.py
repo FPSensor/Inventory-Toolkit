@@ -145,3 +145,30 @@ def safe_openpyxl_save(wb, filepath, *, interactive=True):
                 )
             except OutputFileLockedError as locked:
                 raise locked from exc
+
+
+def safe_bytes_save(payload, filepath, *, interactive=True):
+    """Write an already verified workbook with the shared locked-file handling."""
+    filepath = normalize_xlsx_output_path(filepath)
+    base, ext = os.path.splitext(filepath)
+    attempt = 1
+    current_path = filepath
+    while True:
+        try:
+            log_debug_event("workbook_bytes_save_attempt", path=current_path, attempt=attempt)
+            with open(current_path, "wb") as handle:
+                handle.write(payload)
+            log_debug_event("workbook_bytes_save_ok", path=current_path, attempt=attempt)
+            return current_path
+        except PermissionError as exc:
+            try:
+                current_path, attempt = _handle_locked_file(
+                    current_path,
+                    base,
+                    ext,
+                    attempt,
+                    interactive=interactive,
+                    message="The file '{filename}' is currently open in Excel.",
+                )
+            except OutputFileLockedError as locked:
+                raise locked from exc

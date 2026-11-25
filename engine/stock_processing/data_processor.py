@@ -226,10 +226,10 @@ def project_stock_output(frame: pd.DataFrame, plan: StockProcessingPlan) -> pd.D
     return plan.expose_catalog_columns(selected)
 
 
-def calculate_margin(dataframe, sales_column, cost_column):
+def calculate_margin(dataframe, sales_column, cost_column, cost_factor=1.0):
     return np.where(
         dataframe[sales_column] > 0,
-        (dataframe[sales_column] - dataframe[cost_column]) / dataframe[sales_column],
+        (dataframe[sales_column] - dataframe[cost_column] * cost_factor) / dataframe[sales_column],
         0,
     )
 
