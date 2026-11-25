@@ -118,7 +118,9 @@
             "branch_column": "Base",
             "variant_column": "Talle",
             "branch_aliases": {},
-            "code_tokenization": "whole"
+            "code_tokenization": "whole",
+            "sales_values": "line_total",
+            "all_sheets": false
         },
         "output": {
             "quantity_label": "Units Sold",

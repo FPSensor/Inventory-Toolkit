@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 from dataclasses import replace
+from functools import partial
 
 import pandas as pd
 
@@ -12,6 +13,7 @@ from core.configuration_manager import ConfigurationManager
 from core.logger import log, log_debug_event
 from core.progress import report_progress, report_stats, report_warning
 from core.system_utils import normalize_xlsx_output_path, require_input_files
+from core.table_reader import read_table
 from core.telemetry import execution_timer
 from engine.shared.families import build_family_rules
 from engine.stock_processing.contracts import INTERNAL_ARTICLE_COLUMN, INTERNAL_FAMILY_COLUMN, StockProcessingPlan
@@ -124,7 +126,8 @@ def run_stock_processing(args):
     with execution_timer("Stock Input & Cleaning"):
         log.info("Processing Stock data...")
         source_article = overrides.get("stock", {}).get("article", plan.input["article_column"])
-        raw_frame = pd.read_excel(args.stock_processing_raw, dtype={source_article: str})
+        raw_frame = read_table(
+            args.stock_processing_raw, text=[source_article], on_notice=partial(report_warning, args))
         input_rows, input_columns = raw_frame.shape
         try:
             raw_frame = adapt_stock_headers(raw_frame, plan, source_article)
@@ -163,8 +166,8 @@ def run_stock_processing(args):
 
     with execution_timer("Stock Pricing & Valuation"):
         log.info("Processing pricing files...")
-        cost_frame = process_pricing(args.shared_cost, {**plan.pricing, "columns": overrides.get("cost", plan.pricing.get("cost_columns") or plan.pricing["columns"])})
-        sales_frame = process_pricing(args.shared_sales, {**plan.pricing, "columns": overrides.get("sales", plan.pricing.get("sales_columns") or plan.pricing["columns"])})
+        cost_frame = process_pricing(args.shared_cost, {**plan.pricing, "columns": overrides.get("cost", plan.pricing.get("cost_columns") or plan.pricing["columns"])}, partial(report_warning, args))
+        sales_frame = process_pricing(args.shared_sales, {**plan.pricing, "columns": overrides.get("sales", plan.pricing.get("sales_columns") or plan.pricing["columns"])}, partial(report_warning, args))
         log_debug_event(
             "stock_processing_pricing_ready",
             cost_shape=getattr(cost_frame, "shape", None),

@@ -139,6 +139,8 @@ STEPS = {
             field('groups', 'Comparison groups and their locations', 'One group can contain one or more locations. A multi-location group gets a Global block; one-location groups do not duplicate totals.', 'groups'),)),
         SetupStep('yoy_source_values', 'Values in the sales file', 'yoy_reports/settings', (
             field('input.code_tokenization', 'Product and variant codes', 'Keep the full value unless the file adds a description after the code.', 'choice', choices=MATCHING),
+            field('input.sales_values', 'Meaning of the revenue column', 'Use unit price when the file has no line amount; it is multiplied by the quantity.', 'choice', choices=(("Total amount of each line", "line_total"), ("Price of one unit", "unit_price"))),
+            field('input.all_sheets', 'Read every sheet with the same columns', 'Enable it when the file splits sales in several sheets, such as one per year.', 'bool'),
             field('input.branch_aliases', 'Source location and the location it counts for', 'Left: the name in the sales file, such as a deposit. Right: the location used by your comparison groups. Leave empty if not used.', 'mapping')), advanced=True),
         SetupStep('yoy_variants', 'Optional product variants', 'yoy_reports/settings', (
             field('output.include_variants', 'Include variants by default', 'Leave off when products do not use variants.', 'bool'),

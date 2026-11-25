@@ -6,11 +6,25 @@ from core.configuration_manager import ConfigurationManager
 from core.logger import log, log_debug_event
 from core.progress import report_progress, report_stats
 from core.system_utils import normalize_xlsx_output_path
+from core.workflow_errors import ErrorCode, WorkflowError
 from engine.shared.families import build_family_rules
 from engine.yoy_reports.data_processor import process_sales_data
 from engine.yoy_reports.excel_renderer import render_yoy_sales_excel
 from engine.yoy_reports.metrics import configured_branches, resolve_metric_specs
 from engine.yoy_reports.stats import build_yoy_stats
+
+
+def _require_sales(current, previous, start, end, config, notice):
+    """Stop before reporting a fall that only means the file does not cover the period."""
+    branch, names = config["input"]["branch_column"], configured_branches(config)
+    if not current[branch].isin(names).any():
+        raise WorkflowError(
+            ErrorCode.PERIOD_WITHOUT_SALES,
+            f"The sales file has no rows between {start:%Y-%m-%d} and {end:%Y-%m-%d} for the configured "
+            f"locations ({', '.join(names)}). Check the exported dates, the file and the location names.",
+        )
+    if not previous[branch].isin(names).any():
+        notice("The sales file has no rows for the same period of the previous year, so there is nothing to compare.")
 
 
 def generate_sales_report(
@@ -27,6 +41,7 @@ def generate_sales_report(
     on_locked=None,
     progress=None,
     stats=None,
+    warnings=None,
 ):
     report_progress(progress, 0, 3, "Reading sales and selecting comparison periods...")
     yoy_output_path = normalize_xlsx_output_path(yoy_output_path)
@@ -69,6 +84,7 @@ def generate_sales_report(
     else:
         default_family = "Other"
 
+    notice = log.warning if warnings is None else warnings.append
     log.info("Reading data from %s and filtering dates...", yoy_file_path)
     current_frame, previous_frame, previous_start = process_sales_data(
         yoy_file_path,
@@ -78,7 +94,9 @@ def generate_sales_report(
         family_rules,
         default_family=default_family,
         grouping_column=yoy_grouping_col,
+        on_notice=notice,
     )
+    _require_sales(current_frame, previous_frame, yoy_start_dt, yoy_end_dt, yoy_config, notice)
 
     log_debug_event(
         "yoy_frames_ready",

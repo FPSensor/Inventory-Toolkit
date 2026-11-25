@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from functools import partial
 
 import pandas as pd
 
 from core.business_schema import ARTICLE_COLUMN, COST_COLUMN, PRICE_COLUMN, QUANTITY_COLUMN
 from core.data_sanitizer import clean_sku_series
+from core.progress import report_warning
+from core.table_reader import read_table
 from engine.inventory_cross_check.data_processor import SCAN_READING_COLUMN, read_physical_counts
 
 
@@ -20,11 +23,12 @@ class CrossCheckInputs:
 
 
 def read_inputs(args, plan) -> CrossCheckInputs:
+    notice = partial(report_warning, args)
     return CrossCheckInputs(
-        system=_read_system(args.cross_check_system, plan),
-        counts=_read_counts(args.cross_check_count, plan),
-        costs=_read_prices(args.shared_cost, plan.cost_columns, COST_COLUMN, "cost", plan),
-        sales=_read_prices(args.shared_sales, plan.sales_columns, PRICE_COLUMN, "sales", plan),
+        system=_read_system(args.cross_check_system, plan, notice),
+        counts=_read_counts(args.cross_check_count, plan, notice),
+        costs=_read_prices(args.shared_cost, plan.cost_columns, COST_COLUMN, "cost", plan, notice),
+        sales=_read_prices(args.shared_sales, plan.sales_columns, PRICE_COLUMN, "sales", plan, notice),
     )
 
 
@@ -34,8 +38,8 @@ def _require_columns(frame, columns, label):
         raise ValueError(f"The {label} workbook is missing configured columns: {missing}.")
 
 
-def _read_system(path, plan):
-    frame = pd.read_excel(path, dtype={plan.system_article: str})
+def _read_system(path, plan, on_notice):
+    frame = read_table(path, text=[plan.system_article], on_notice=on_notice)
     article, quantity = plan.system_article, plan.system_quantity
     _require_columns(
         frame, (article, quantity, *([plan.system_family] if plan.family_mode == "column" else [])), "system stock")
@@ -51,16 +55,16 @@ def _read_system(path, plan):
     return frame
 
 
-def _read_counts(path, plan):
-    frame = read_physical_counts(path, plan.count_settings, plan.count_columns)
+def _read_counts(path, plan, on_notice):
+    frame = read_physical_counts(path, plan.count_settings, plan.count_columns, on_notice)
     frame = frame.dropna(subset=[SCAN_READING_COLUMN]).copy()
     frame[SCAN_READING_COLUMN] = clean_sku_series(frame[SCAN_READING_COLUMN])
     return frame
 
 
-def _read_prices(path, columns, value_label, label, plan):
+def _read_prices(path, columns, value_label, label, plan, on_notice):
     article, price = columns
-    frame = pd.read_excel(path, dtype={article: str})
+    frame = read_table(path, text=[article], on_notice=on_notice)
     _require_columns(frame, columns, f"{label} price list")
     frame = frame.rename(columns={article: ARTICLE_COLUMN, price: value_label})
     articles = clean_sku_series(frame[ARTICLE_COLUMN])

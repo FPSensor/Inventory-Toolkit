@@ -73,3 +73,32 @@ def test_checking_a_request_never_edits_the_profile(profile, tmp_path):
     config = yoy.check(sales(tmp_path, profile, sales_amounts=True, annual_comparison=True))
     config["input"]["date_column"] = "changed"
     assert yoy.settings(profile) == before
+
+
+def test_a_period_the_file_does_not_cover_is_not_reported_as_a_fall(profile, tmp_path):
+    request = sales(tmp_path, profile, start="2026-03-01", end="2026-03-31")
+    with pytest.raises(WorkflowError) as error:
+        yoy.prepare(request, yoy.check(request)).run()
+    assert error.value.code is ErrorCode.PERIOD_WITHOUT_SALES
+    assert not (tmp_path / "yoy.xlsx").exists()
+
+
+def test_a_missing_previous_year_is_a_warning(profile, tmp_path):
+    request = sales(tmp_path, profile, start="2025-01-01", end="2025-01-31")
+    result = yoy.prepare(request, yoy.check(request)).run()
+    assert len(result.warnings) == 1 and "previous year" in result.warnings[0]
+
+
+def test_csv_sales_by_unit_price(profile, tmp_path):
+    document = paths.profile_configs_root(profile) / "yoy_reports/settings.json"
+    settings = read_document(document)
+    settings["input"]["sales_values"] = "unit_price"
+    write_documents({document: settings})
+    path = tmp_path / "sales.csv"
+    path.write_text("Date;SKU;Location;Quantity;Category;Revenue\n25/01/2026;007;North;1,5;Food;10\n"
+                    "02/01/2025;007;North;2;Food;10\n;;;;;\n", encoding="utf-8")
+    totals = []
+    request = yoy.YoYRequest(profile, str(path), "2026-01-01", "2026-01-31", sales_amounts=True, output=str(tmp_path / "o"))
+    result = yoy.prepare(request, yoy.check(request)).run(stats=totals.append)
+    assert "15.00 vs 20.00 (-25.0%)" in totals[0].render()
+    assert result.output.endswith("o.xlsx")

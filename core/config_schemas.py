@@ -200,6 +200,8 @@ class YoYInputConfig(_StrictConfigModel):
     variant_column: str = Field(default=VARIANT_COLUMN, validation_alias=AliasChoices("variant_column", "size_column"))
     branch_aliases: Dict[str, str] = Field(default_factory=dict)
     code_tokenization: Literal["first_token", "whole"] = "whole"
+    sales_values: Literal["line_total", "unit_price"] = "line_total"
+    all_sheets: bool = False
 
 
 class YoYOutputConfig(_StrictConfigModel):

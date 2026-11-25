@@ -3,9 +3,9 @@ import queue
 import threading
 import tkinter as tk
 
-import pandas as pd
 from tkinter import filedialog
 
+from core.table_reader import FILE_PATTERNS, read_table
 from core.setup_catalog import MODULE_LABELS, STEPS, get_value
 from core.column_assist import advise_columns
 from core.profile_store import save_last_paths
@@ -361,7 +361,7 @@ class SetupWizard(BaseFrame):
     def _load_sample(self):
         if self._loading:
             return
-        path = filedialog.askopenfilename(parent=self, filetypes=[('Excel workbooks', '*.xlsx *.xls')])
+        path = filedialog.askopenfilename(parent=self, filetypes=[('Tables', FILE_PATTERNS)])
         if not path:
             return
         result = queue.Queue()
@@ -372,7 +372,7 @@ class SetupWizard(BaseFrame):
         self.notice.configure(text='Reading sample headers and examples...')
         def worker():
             try:
-                frame = pd.read_excel(path, nrows=5, dtype=str)
+                frame = read_table(path, rows=5).astype("string")
                 result.put((True, {str(column): [str(item) for item in frame[column].dropna().head(5)] for column in frame.columns}))
             except Exception as exc:
                 result.put((False, str(exc)))

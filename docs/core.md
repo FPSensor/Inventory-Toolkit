@@ -123,6 +123,12 @@ Cross-platform/system helpers and safe workbook saving.
 
 ### Safe savers
 
+### Input files
+
+`core/table_reader.py` is the only module that opens input files; a test enforces it. Excel (`.xlsx`, `.xlsm`, `.xls`) and text (`.csv`, `.tsv`, `.txt`) become the same table. Text delimiters and encoding are detected; a semicolon implies a decimal comma. Identity columns keep leading zeroes. Other sheets repeating the first one's headers are reported, or joined when the caller asks. `parse_dates()` decides day/month order from the values and refuses ambiguous dates.
+
+### Saving
+
 `safe_pandas_to_excel()`, `safe_openpyxl_save()` and `safe_bytes_save()` handle output files that are locked/open elsewhere. The caller may pass `on_locked(path)`, which answers whether to save a copy or try again; without it a locked file raises `OutputFileLockedError`. Core and engines never print or read a terminal.
 
 - Interactive CLI callers can retry or save a numbered copy.

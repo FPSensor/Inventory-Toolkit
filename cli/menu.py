@@ -8,7 +8,6 @@ from cli.config_menu import configuration_menu
 from cli.cross_check_launcher import launch_cross_check
 from cli.stock_processing_launcher import launch_stock_processing
 from cli.yoy_reports_launcher import launch_yoy_reports
-from cli.wizard import PANDAS_AVAILABLE
 from cli.workflow_setup import launch_configured
 from cli.profile_overview import show_profile_overview
 from core.optional_debug import debug_available, open_debug_console
@@ -119,15 +118,11 @@ def main():
                         help=argparse.SUPPRESS)
     args, _ = parser.parse_known_args()
 
-    if not PANDAS_AVAILABLE:
-        print("  ⚠️  Warning: Pandas is not installed.")
-
     debug_level = _apply_debug_level(args.debug_level if BUILD.type == "debug" else 1, reset_session_log=True)
     log_debug_event(
         "cli_start",
         version=_VERSION,
         debug_level=debug_level,
-        pandas_available=PANDAS_AVAILABLE,
     )
     if debug_level > 1:
         log.info("Inventory Toolkit %s starting (debug level %s)...", _VERSION, debug_level)

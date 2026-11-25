@@ -7,6 +7,7 @@ import os
 import pandas as pd
 
 from core.logger import log_debug_event, log_exception
+from core.table_reader import read_table
 from engine.stock_processing.contracts import INTERNAL_ARTICLE_COLUMN
 
 def _resolve_pricing_columns(dataframe: pd.DataFrame, pricing_config: dict) -> tuple[str, str, str]:
@@ -18,14 +19,15 @@ def _resolve_pricing_columns(dataframe: pd.DataFrame, pricing_config: dict) -> t
     return configured["article"], configured.get("database", ""), configured["price"]
 
 
-def process_pricing(file_path, pricing_config=None):
+def process_pricing(file_path, pricing_config=None, on_notice=None):
     """Load and pivot one price list into the Stock pipeline's private article key."""
     if not file_path or not os.path.exists(file_path):
         raise FileNotFoundError(f"Required price list is missing: {file_path}")
 
     try:
         pricing_config = pricing_config or {}
-        dataframe = pd.read_excel(file_path, dtype={pricing_config.get("columns", {}).get("article", ""): str})
+        dataframe = read_table(
+            file_path, text=[pricing_config.get("columns", {}).get("article", "")], on_notice=on_notice)
         log_debug_event(
             "pricing_loaded",
             file_path=file_path,

@@ -27,6 +27,7 @@ except ImportError:
     TKINTER_AVAILABLE = False
 
 from core.logger import log, log_debug_event, log_exception
+from core.table_reader import FILE_PATTERNS
 from core.paths import demo_root, profile_root
 _LAST_PATHS_FILE = "last_paths.json"
 
@@ -100,7 +101,7 @@ def ask_file(message: str, default_val: str, is_output: bool = False) -> str:
         else:
             path = filedialog.askopenfilename(
                 title="Select file",
-                filetypes=[("Excel", "*.xlsx *.xls"), ("All files", "*.*")],
+                filetypes=[("Tables", FILE_PATTERNS), ("All files", "*.*")],
             )
         root.destroy()
 

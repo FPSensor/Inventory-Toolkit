@@ -2,8 +2,7 @@
 
 from collections.abc import Callable, Mapping
 
-import pandas as pd
-
+from core.table_reader import read_headers
 from core.workflow_errors import ErrorCode, WorkflowError
 
 
@@ -18,7 +17,7 @@ def choose_input_columns(
     A missing configured column never triggers an automatic fallback. The
     caller may explicitly authorize a default for this run; no profile is edited.
     """
-    columns = set(pd.read_excel(file_path, nrows=0).columns)
+    columns = set(read_headers(file_path))
     resolved = {}
     for field, wanted in configured.items():
         if wanted in columns:

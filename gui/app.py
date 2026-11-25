@@ -25,6 +25,7 @@ from core.setup_service import SetupSession, SetupState
 from core.setup_catalog import MODULE_LABELS
 from core.profile_overview import inspect_profile
 from core.input_doctor import inspect_workflow_inputs
+from core.table_reader import FILE_PATTERNS
 from core.workflow_errors import WorkflowError
 from workflows import cross, stock, yoy
 from gui.setup_wizard import SetupWizard
@@ -479,7 +480,7 @@ class InventoryToolkitGUI(BaseWindow):
             else:
                 f = filedialog.askopenfilename(
                     title="Select file",
-                    filetypes=[("Excel Files", "*.xlsx *.xls"), ("All files", "*.*")],
+                    filetypes=[("Tables", FILE_PATTERNS), ("All files", "*.*")],
                     parent=self)
             if f:
                 var.set(f)

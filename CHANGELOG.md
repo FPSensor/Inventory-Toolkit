@@ -8,6 +8,10 @@ Development changes after `v1.4.1`. The released application version remains `1.
 
 ### Added
 
+- **inputs:** Read Excel, CSV, TSV and text files through one table reader in every workflow. YoY can join sheets with the same columns and multiply unit prices by quantity.
+
+- **yoy: safeguards:** Stop when the file has no sales for the requested period and locations, and warn about an empty previous year, unreadable dates or unread sheets, instead of reporting a false fall. Ambiguous day/month dates are refused.
+
 - **run:** Create any report without questions from `python -m inventory_toolkit run`, with explicit or remembered files, exit statuses and JSON results for schedulers. It uses the same workflows as CLI and GUI.
 
 - **yoy: raw exports:** Add `input.branch_aliases` so deposits count for their store, and `input.code_tokenization` to separate codes from descriptions, without editing the workbook. Both are editable from guided setup. Verify quantity and sales against the total row that some systems append to their exports and stop when they differ.

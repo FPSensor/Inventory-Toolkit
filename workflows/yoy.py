@@ -85,5 +85,5 @@ def _run(request, config, *, progress, stats, warnings, on_locked):
         request.sales, request.output, start, end, config,
         config["input"]["grouping_column" if request.by_family else "item_column"],
         request.by_month, request.has_families or not request.by_family, request.profile, request.variants,
-        on_locked=on_locked, progress=progress, stats=stats,
+        on_locked=on_locked, progress=progress, stats=stats, warnings=warnings,
     )

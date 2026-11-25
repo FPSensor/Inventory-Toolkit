@@ -3,8 +3,8 @@
 from dataclasses import dataclass
 from pathlib import Path
 
-import pandas as pd
 
+from core.table_reader import read_table
 from core.column_assist import ColumnAdvice, advise_columns
 from core.configuration_manager import ConfigurationManager
 from core.workflow_contracts import stock_input, stock_price_columns, cross_article_column
@@ -125,7 +125,7 @@ def inspect_workflow_inputs(profile, module, files, *, include_sales=False,
             results.append(FileInspection(role, path, issue="File is not selected or does not exist."))
             continue
         try:
-            frame = pd.read_excel(path, header=None if required is None else 0, nrows=5)
+            frame = read_table(path, header=required is not None, rows=5)
             if required is None:
                 results.append(FileInspection(role, path, len(frame.columns), len(frame), headerless=True,
                     issue="The scanner file is empty." if frame.empty else None))

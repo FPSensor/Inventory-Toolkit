@@ -5,22 +5,25 @@ import numpy as np
 
 from core.business_schema import REVIEW_PREFIX
 from core.profile_config import DEFAULTS
+from core.table_reader import read_table
 
 SCAN_READING_COLUMN = "__scan_reading"
 SCAN_COUNT_COLUMN = "__scan_count"
 
 
-def read_physical_counts(path, settings, overrides=None):
+def read_physical_counts(path, settings, overrides=None, on_notice=None):
     """Read scanner lines or an explicitly mapped counted-quantity table."""
     if settings.get("count_mode", "scans") == "scans":
-        frame = pd.read_excel(path, header=None, usecols=[0], names=[SCAN_READING_COLUMN], dtype=str)
+        frame = read_table(path, header=False, on_notice=on_notice).iloc[:, :1]
+        frame.columns = [SCAN_READING_COLUMN][:frame.shape[1]]
+        frame = frame.reindex(columns=[SCAN_READING_COLUMN])
         frame[SCAN_COUNT_COLUMN] = 1
         return frame
     columns = overrides or {"article": settings["count_article_column"], "quantity": settings["count_quantity_column"]}
     article, quantity = columns["article"], columns["quantity"]
     if not article or not quantity or article == quantity:
         raise ValueError("Choose distinct product and quantity columns for the physical count table.")
-    frame = pd.read_excel(path, dtype={article: str})
+    frame = read_table(path, text=[article], on_notice=on_notice)
     missing = [column for column in (article, quantity) if column not in frame.columns]
     if missing:
         raise ValueError(f"Physical count is missing configured columns: {missing}")

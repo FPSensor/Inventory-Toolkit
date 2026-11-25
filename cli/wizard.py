@@ -1,14 +1,10 @@
 """Console rendering for the shared, module-specific setup catalog."""
 from pathlib import Path
 from cli.utils import ask_file, clear_screen
+from core.table_reader import read_table
 from core.profile_config import ensure_profile_config
 from core.configuration_errors import ConfigurationError
 
-try:
-    import pandas as pd
-    PANDAS_AVAILABLE = True
-except ImportError:
-    PANDAS_AVAILABLE = False
 
 def initialize_profile_files(configs_path: str) -> None:
     """Compatibility entry point used by profile creation."""
@@ -16,10 +12,10 @@ def initialize_profile_files(configs_path: str) -> None:
 
 
 def _load_columns(path: str) -> tuple[list[str], object | None]:
-    if not path or not PANDAS_AVAILABLE:
+    if not path:
         return [], None
     try:
-        df = pd.read_excel(path, nrows=20)
+        df = read_table(path, rows=20)
         return [str(c) for c in df.columns], df
     except Exception as exc:
         print(f"  ❌ Could not read '{path}': {exc}")

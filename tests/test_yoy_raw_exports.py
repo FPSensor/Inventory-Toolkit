@@ -95,6 +95,7 @@ def test_aliases_are_editable_from_guided_setup(tmp_path, monkeypatch):
     session = SetupSession("shop", "yoy_reports", include_advanced=True)
     session.save_step("yoy_source_values", {
         "input.branch_aliases": {"DSLOCAL": "LOCAL"}, "input.code_tokenization": "first_token",
+        "input.sales_values": "line_total", "input.all_sheets": False,
     })
     step = next(step for step in session.all_steps if step.id == "yoy_source_values")
     saved = session.data(step)["input"]

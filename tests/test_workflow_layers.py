@@ -34,3 +34,12 @@ def test_only_interfaces_talk_to_a_terminal(package):
         if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id in {"print", "input"}
     }
     assert calls == set()
+
+
+def test_only_the_table_reader_opens_input_files():
+    readers = {
+        path.relative_to(ROOT).as_posix() for package in ("core", "engine", "workflows", "cli", "gui", "inventory_toolkit")
+        for path in (ROOT / package).rglob("*.py")
+        if any(name in path.read_text(encoding="utf-8") for name in ("read_excel(", "read_csv(", "ExcelFile("))
+    }
+    assert readers == {"core/table_reader.py"}

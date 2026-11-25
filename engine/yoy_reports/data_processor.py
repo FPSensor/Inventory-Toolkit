@@ -6,6 +6,7 @@ import pandas as pd
 
 from core.logger import log_debug_event
 from core.business_schema import UNMATCHED_FAMILY
+from core.table_reader import parse_dates, read_table
 from engine.shared.families import assign_families
 from engine.yoy_reports.metrics import resolve_metric_specs
 
@@ -36,14 +37,18 @@ def check_exported_totals(dataframe, input_config):
     """
     identity = [input_config["item_column"], input_config["branch_column"]]
     figures = [
-        column for column in (input_config["quantity_column"], input_config.get("sales_column"))
+        column for column in (
+            input_config["quantity_column"],
+            # Adding up unit prices says nothing about the file.
+            None if input_config.get("sales_values") == "unit_price" else input_config.get("sales_column"),
+        )
         if column in dataframe.columns
     ]
     if dataframe.empty or not figures or any(column not in dataframe.columns for column in identity):
         return dataframe
     last = dataframe.iloc[-1]
     is_text = all(isinstance(last[column], str) for column in figures)
-    has_date = pd.notna(last.get(input_config["date_column"]))
+    has_date = pd.notna(pd.to_datetime(last.get(input_config["date_column"]), errors="coerce", format="mixed"))
     if last[identity].notna().any() or (has_date and not is_text):
         return dataframe
     rows = dataframe.iloc[:-1]
@@ -69,17 +74,21 @@ def process_sales_data(
     family_rules=None,
     default_family=UNMATCHED_FAMILY,
     grouping_column=None,
+    on_notice=None,
 ):
     input_config = yoy_config["input"]
     date_column = input_config["date_column"]
     quantity_column = input_config["quantity_column"]
     metric_specs = resolve_metric_specs(yoy_config)
 
-    text_columns = {input_config[key]: str for key in ("item_column", "branch_column", "variant_column") if input_config.get(key)}
+    text_columns = [input_config[key] for key in ("item_column", "branch_column", "variant_column") if input_config.get(key)]
     # Keep figures as stored: a localized total such as "1.234" must not be
     # converted before it is compared with the rows.
-    figures = {input_config[key]: object for key in ("quantity_column", "sales_column") if input_config.get(key)}
-    dataframe = pd.read_excel(yoy_file_path, sheet_name=0, dtype={**figures, **text_columns})
+    figures = [input_config[key] for key in ("quantity_column", "sales_column") if input_config.get(key)]
+    dataframe = read_table(
+        yoy_file_path, text=text_columns, as_stored=figures,
+        all_sheets=input_config.get("all_sheets", False), on_notice=on_notice,
+    )
     log_debug_event(
         "yoy_input_loaded",
         file_path=yoy_file_path,
@@ -118,11 +127,20 @@ def process_sales_data(
     if missing_columns:
         raise ValueError(f"YoY input is missing required columns: {missing_columns}")
 
-    dataframe[date_column] = pd.to_datetime(dataframe[date_column], errors="coerce")
+    dataframe = dataframe.copy()
+    dataframe[date_column] = parse_dates(dataframe[date_column])
+    undated = int(dataframe[date_column].isna().sum())
+    if undated and on_notice:
+        on_notice(f"{undated:,} sales rows have no readable date and were not counted.")
     for metric in metric_specs:
         dataframe[metric.column] = pd.to_numeric(
             dataframe[metric.column], errors="coerce"
         ).fillna(0)
+    sales_column = input_config.get("sales_column")
+    if input_config.get("sales_values") == "unit_price" and sales_column in dataframe.columns:
+        quantities = pd.to_numeric(dataframe[quantity_column], errors="coerce").fillna(0)
+        prices = pd.to_numeric(dataframe[sales_column], errors="coerce").fillna(0)
+        dataframe[sales_column] = quantities * prices
 
     if family_rules is not None:
         item_column = input_config["item_column"]

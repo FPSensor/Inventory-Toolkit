@@ -182,6 +182,10 @@ Engines are intentionally callable from Python. Callers are responsible for supp
 
 New frontends should call engine/core APIs rather than importing CLI prompt functions.
 
+### YoY safeguards and inputs
+
+A period without sales for the configured locations stops with `PERIOD_WITHOUT_SALES` instead of reporting a -100% fall. A previous year without rows, rows without a readable date, and unread sheets with the same columns are warnings. `input.all_sheets` joins those sheets and `input.sales_values: unit_price` multiplies the revenue column by the quantity.
+
 ### YoY raw exports
 
 Column mappings let YoY read an export with its original headers. `input.branch_aliases` counts one source location as another, for example a deposit that sells for its store, before branches are compared. Locations outside the configured groups are ignored. `input.code_tokenization: first_token` keeps the first word of item and variant values when the export joins a code and its description.
