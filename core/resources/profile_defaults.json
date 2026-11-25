@@ -116,7 +116,8 @@
             "grouping_column": "Familias",
             "item_column": "Articulo",
             "branch_column": "Base",
-            "variant_column": "Talle"
+            "variant_column": "Talle",
+            "branch_aliases": {}
         },
         "output": {
             "quantity_label": "Units Sold",

@@ -179,6 +179,12 @@ Engines are intentionally callable from Python. Callers are responsible for supp
 
 New frontends should call engine/core APIs rather than importing CLI prompt functions.
 
+### YoY raw exports
+
+Column mappings let YoY read an export with its original headers. `input.branch_aliases` counts one source location as another, for example a deposit that sells for its store, before branches are compared. Locations outside the configured groups are ignored.
+
+When the last row has no item or location and its figures are text, it is read as the exporting system's own total. Quantity and sales must match it or the report stops; the row itself is never counted.
+
 ### YoY sales amounts and percentages
 
 The `sales` metric sums the configured `input.sales_column`, which must contain a line's total sales amount. It does not multiply that amount by quantity. If the source contains a unit price instead, prepare line amounts in the source before using this metric. Monetary output measures revenue, not average unit price or inflation-adjusted sales.

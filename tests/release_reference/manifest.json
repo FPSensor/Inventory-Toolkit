@@ -1,6 +1,6 @@
 {
     "fixtures": {
-        "core/resources/profile_defaults.json": "37a359834c46117368006a9289663af41ce8afc3c5504ea69df21873c342ab02",
+        "core/resources/profile_defaults.json": "504acb086faf6e9d1de896af7a09804b4c9d8868afb4283eeaa845d5430d231b",
         "core/resources/workbook_labels.json": "9eefc72d3b51dbd0dcbe0516d1ba9c7a06a02cfb119485e9f98b8a403ff44044",
         "examples/demo/cross_check_physical_count.xlsx": "794fdb075051a56cc7060ba8ff27dc162ad17ee22d8c879e741dbb7161d7bbc7",
         "examples/demo/cross_check_system_stock.xls": "2a0fbd3fd38192182aac0b70bed7f9218ddb5965aa8a3d816024037319bb5e62",

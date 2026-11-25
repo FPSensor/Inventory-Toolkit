@@ -1,11 +1,52 @@
 """Data preparation for Year-over-Year sales reports."""
 
+import re
+
 import pandas as pd
 
 from core.logger import log_debug_event
 from core.business_schema import UNMATCHED_FAMILY
 from engine.shared.families import assign_families
 from engine.yoy_reports.metrics import resolve_metric_specs
+
+
+def _exported_number(value):
+    """Read a figure from a totals row, which exports store as localized text."""
+    text = str(value).strip()
+    if not re.fullmatch(r"-?\d{1,3}(\.\d{3})*(,\d+)?|-?\d+(,\d+)?", text):
+        return None
+    return float(text.replace(".", "").replace(",", "."))
+
+
+def check_exported_totals(dataframe, input_config):
+    """Verify and drop the totals row some systems append to a sales export.
+
+    The row identifies itself: no item or location, and figures stored as text.
+    A mismatch means rows were lost, added or could not be read as numbers.
+    """
+    identity = [input_config["item_column"], input_config["branch_column"]]
+    figures = [
+        column for column in (input_config["quantity_column"], input_config.get("sales_column"))
+        if column in dataframe.columns
+    ]
+    if dataframe.empty or not figures or any(column not in dataframe.columns for column in identity):
+        return dataframe
+    last = dataframe.iloc[-1]
+    if last[identity].notna().any() or not all(isinstance(last[column], str) for column in figures):
+        return dataframe
+    rows = dataframe.iloc[:-1]
+    for column in figures:
+        expected = _exported_number(last[column])
+        if expected is None:
+            return dataframe
+        found = pd.to_numeric(rows[column], errors="coerce").fillna(0).sum()
+        if abs(found - expected) > 0.01:
+            raise ValueError(
+                f"Sales file totals do not match: '{column}' adds up to {found:,.2f} but the file's own total "
+                f"row says {expected:,.2f}. Export the file again, or remove the total row if you edited it on purpose."
+            )
+    log_debug_event("yoy_exported_totals_verified", rows=len(rows), columns=figures)
+    return rows
 
 
 def process_sales_data(
@@ -35,6 +76,13 @@ def process_sales_data(
 
     if date_column in dataframe.columns:
         dataframe = dataframe[dataframe[date_column] != date_column]
+    dataframe = check_exported_totals(dataframe, input_config)
+    aliases = input_config.get("branch_aliases") or {}
+    branch_column = input_config["branch_column"]
+    if aliases and branch_column in dataframe.columns:
+        dataframe = dataframe.assign(
+            **{branch_column: dataframe[branch_column].str.strip().replace(aliases)}
+        )
     resolved_grouping_column = grouping_column or input_config["grouping_column"]
     grouping_source_column = (
         input_config["item_column"] if family_rules is not None else resolved_grouping_column
