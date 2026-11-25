@@ -115,7 +115,8 @@ STEPS = {
             field('cleaning.drop_columns', 'Columns to remove', 'Optional export clutter. Required product and quantity columns must be kept.', 'list')), advanced=True),
         SetupStep('stock_matching', 'Price matching', 'stock_processing/settings', (
             field('pricing.article_tokenization', 'Product codes in price lists', 'Keep the full identifier unless the file appends descriptions after a space.', 'choice', choices=MATCHING),
-            field('pricing.aliases', 'Price-origin names and matching locations', 'Map each source origin value to your stable location name.', 'mapping')), advanced=True),
+            field('pricing.aliases', 'Price-origin names and matching locations', 'Map each source origin value to your stable location name.', 'mapping'),
+            field('pricing.variant_columns', 'Variant headers: stock and price list', 'Left: a stock header such as Color or Size. Right: the same field in the price lists. Each stock row then takes the price of its own variant, or the product price when its variant has none. Leave empty to price by product only.', 'mapping')), advanced=True),
         SetupStep('stock_output', 'Workbook detail layout', 'stock_processing/settings', (
             field('output.raw_data_sheet', 'Detail sheet name', 'Name of the processed stock sheet.', 'text'),
             field('output.base_columns', 'Product details to retain', 'One header per line, in output order. Include product/family output names and any variant or description columns you want.', 'list')), advanced=True),

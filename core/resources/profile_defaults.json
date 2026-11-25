@@ -54,7 +54,8 @@
             },
             "cost_columns": null,
             "sales_columns": null,
-            "default_store": ""
+            "default_store": "",
+            "variant_columns": {}
         },
         "output": {
             "quantity_label": "units",

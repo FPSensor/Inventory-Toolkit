@@ -20,15 +20,37 @@ def _resolve_pricing_columns(dataframe: pd.DataFrame, pricing_config: dict) -> t
     return configured["article"], configured.get("database", ""), configured["price"]
 
 
+VARIANT_KEY_PREFIX = "__itk_variant_"
+
+
+def price_key(series: pd.Series, tokenization: str) -> pd.Series:
+    """The matching key of a product, color or size code in stock and price lists."""
+    values = normalize_article_codes(series)
+    if tokenization == "first_token":
+        values = values.str.split().str[0].fillna("")
+    return values
+
+
+def variant_keys(variant_columns) -> list[str]:
+    return [f"{VARIANT_KEY_PREFIX}{index}" for index, _ in enumerate(variant_columns)]
+
+
 def process_pricing(file_path, pricing_config=None, on_notice=None):
-    """Load and pivot one price list into the Stock pipeline's private article key."""
+    """Load and pivot one price list into the Stock pipeline's private article key.
+
+    With ``variant_columns`` the pivot also carries one key per variant column,
+    blank on rows that price the whole product.
+    """
     if not file_path or not os.path.exists(file_path):
         raise FileNotFoundError(f"Required price list is missing: {file_path}")
 
     try:
         pricing_config = pricing_config or {}
+        variants = pricing_config.get("variant_columns") or {}
+        tokenization = pricing_config.get("article_tokenization", "first_token")
         dataframe = read_table(
-            file_path, text=[pricing_config.get("columns", {}).get("article", "")], on_notice=on_notice)
+                file_path, text=[pricing_config.get("columns", {}).get("article", ""), *variants.values()],
+            on_notice=on_notice)
         log_debug_event(
             "pricing_loaded",
             file_path=file_path,
@@ -47,10 +69,14 @@ def process_pricing(file_path, pricing_config=None, on_notice=None):
             dataframe[database_column] = default_store
         dataframe[database_column] = dataframe[database_column].astype(str).str.strip().replace(pricing_config.get("aliases", {}))
 
-        article_values = normalize_article_codes(dataframe[article_column])
-        if pricing_config.get("article_tokenization", "first_token") == "first_token":
-            article_values = article_values.str.split().str[0].fillna("")
+        missing = [column for column in variants.values() if column not in dataframe.columns]
+        if missing:
+            raise ValueError(f"Configured variant columns are absent: {missing}.")
+        article_values = price_key(dataframe[article_column], tokenization)
         dataframe[INTERNAL_ARTICLE_COLUMN] = article_values
+        keys = variant_keys(variants)
+        for key, column in zip(keys, variants.values()):
+            dataframe[key] = price_key(dataframe[column], tokenization)
         dataframe = dataframe[article_values.ne("")].copy()
         log_debug_event(
             "pricing_columns_resolved",
@@ -69,7 +95,7 @@ def process_pricing(file_path, pricing_config=None, on_notice=None):
         # A blank price is a missing price, not a price of zero.
         dataframe[value_column] = values.where(written)
         if on_notice:
-            distinct = dataframe.groupby([INTERNAL_ARTICLE_COLUMN, database_column])[value_column].nunique()
+            distinct = dataframe.groupby([INTERNAL_ARTICLE_COLUMN, *keys, database_column])[value_column].nunique()
             conflicting = distinct[distinct.gt(1)].index.get_level_values(0).unique()
             if len(conflicting):
                 preview = ", ".join(map(str, conflicting[:10])) + ("..." if len(conflicting) > 10 else "")
@@ -78,7 +104,7 @@ def process_pricing(file_path, pricing_config=None, on_notice=None):
                     f"price for the same store ({preview}); their average is used.")
         pivot = pd.pivot_table(
             dataframe,
-            index=INTERNAL_ARTICLE_COLUMN,
+            index=[INTERNAL_ARTICLE_COLUMN, *keys],
             columns=database_column,
             values=value_column,
             aggfunc="mean",

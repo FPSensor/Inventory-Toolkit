@@ -50,3 +50,41 @@ def test_stock_reports_missing_prices_and_unclear_quantities(tmp_path, monkeypat
     text = "\n".join(warnings)
     assert "2 quantities" in text and "STORE" in text
     assert "1 products with stock have no cost price" in text
+
+
+def test_each_variant_takes_its_own_price(tmp_path, monkeypatch):
+    monkeypatch.setattr(app_paths, "PROFILES_ROOT", tmp_path / "profiles")
+    configs = tmp_path / "profiles" / "variants" / "configs"
+    (configs / "general").mkdir(parents=True)
+    (configs / "general" / "network.json").write_text(json.dumps({
+        "version": 3, "active": ["STORE"], "regional_groups": {}, "stock_database_columns": {},
+    }), encoding="utf-8")
+    (configs / "stock_processing").mkdir()
+    (configs / "stock_processing" / "settings.json").write_text(json.dumps({
+        "version": 3,
+        "cleaning": {"text_columns": ["Color", "Talle"], "drop_columns": [], "numeric_columns": ["STORE"]},
+        "pricing": {
+            "columns": {"article": "Artículo", "database": "Base", "price": "Precio"},
+            "aliases": {}, "article_tokenization": "first_token",
+            "variant_columns": {"Color": "Color", "Talle": "Talle"},
+        },
+        "output": {"raw_data_sheet": "Datos", "base_columns": ["Artículo", "Color", "Talle", "Familias"], "summaries": []},
+    }), encoding="utf-8")
+    raw, price = tmp_path / "raw.xlsx", tmp_path / "price.xlsx"
+    pd.DataFrame({
+        "Artículo": ["AA-1"] * 3, "Color": ["00", "00", "B2"], "Talle": ["40", "XXXL", "40"], "STORE": [1, 1, 1],
+    }).to_excel(raw, index=False)
+    pd.DataFrame({
+        "Artículo": ["AA-1 TEE"] * 3, "Color": [None, "00 BLACK", "00 BLACK"], "Talle": [None, "40 40", "XXXL XXXL"],
+        "Base": ["STORE"] * 3, "Precio": [100.0, 100.0, 250.0],
+    }).to_excel(price, index=False)
+    warnings = []
+    result = run_stock_processing(Namespace(
+        stock_processing_raw=str(raw), shared_cost=str(price), shared_sales=str(price),
+        stock_processing_out=str(tmp_path / "out.xlsx"), stock_processing_profile="variants", warnings=warnings,
+    ))
+    frame = pd.read_excel(result, sheet_name="Datos", dtype={"Color": str, "Talle": str})
+    # XXXL has its own price; B2 has none, so the product's own row applies, not
+    # the average of its variants.
+    assert frame["STORE.Costo"].tolist() == [100, 250, 100]
+    assert any("1 stock rows have no cost price for their variant" in message for message in warnings)

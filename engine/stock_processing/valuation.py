@@ -11,6 +11,7 @@ from core.business_schema import (
     UNIT_COST_PREFIX,
     UNIT_SALES_PREFIX,
 )
+from engine.stock_processing.pricing import VARIANT_KEY_PREFIX
 from engine.stock_processing.contracts import INTERNAL_ARTICLE_COLUMN, INTERNAL_FAMILY_COLUMN, StockProcessingPlan
 
 
@@ -19,27 +20,46 @@ def _merge_price_table(
     price_frame: pd.DataFrame | None,
     *,
     prefix: str,
-) -> pd.DataFrame:
+) -> tuple[pd.DataFrame, np.ndarray]:
+    """Attach one list's unit prices; mark the variant rows priced by product."""
+    none = np.zeros(len(stock_frame), dtype=bool)
     if price_frame is None:
-        return stock_frame
+        return stock_frame, none
 
-    renames = {
-        column: f"{prefix}{column}"
-        for column in price_frame.columns
-        if column != INTERNAL_ARTICLE_COLUMN
-    }
-    prepared = price_frame.rename(columns=renames)
-    return pd.merge(stock_frame, prepared, on=INTERNAL_ARTICLE_COLUMN, how="left")
+    keys = [column for column in price_frame.columns if column.startswith(VARIANT_KEY_PREFIX)]
+    stores = [column for column in price_frame.columns if column != INTERNAL_ARTICLE_COLUMN and column not in keys]
+    renames = {store: f"{prefix}{store}" for store in stores}
+    if not keys:
+        prepared = price_frame.rename(columns=renames)
+        return pd.merge(stock_frame, prepared, on=INTERNAL_ARTICLE_COLUMN, how="left"), none
+
+    # A variant's own price wins. Otherwise the product price applies: the rows
+    # without variant, or the average of its variants when there are none.
+    is_variant = price_frame[keys].ne("").any(axis=1)
+    variants = price_frame[is_variant].rename(columns=renames)
+    whole = price_frame[~is_variant].groupby(INTERNAL_ARTICLE_COLUMN)[stores].mean()
+    fallback = whole.combine_first(price_frame.groupby(INTERNAL_ARTICLE_COLUMN)[stores].mean())
+    result = pd.merge(stock_frame, variants, on=[INTERNAL_ARTICLE_COLUMN, *keys], how="left")
+    product = fallback.rename(columns=renames).reindex(result[INTERNAL_ARTICLE_COLUMN]).set_axis(result.index)
+    columns = list(renames.values())
+    by_product = result[keys].ne("").any(axis=1) & result[columns].isna().all(axis=1) & product.notna().any(axis=1)
+    result[columns] = result[columns].fillna(product)
+    return result, by_product.to_numpy()
 
 
 def attach_unit_prices(
     stock_frame: pd.DataFrame,
     cost_frame: pd.DataFrame | None,
     sales_frame: pd.DataFrame | None,
-) -> tuple[pd.DataFrame, list[str]]:
-    """Attach cost/sales unit prices and normalize missing values."""
-    result = _merge_price_table(stock_frame, cost_frame, prefix=UNIT_COST_PREFIX)
-    result = _merge_price_table(result, sales_frame, prefix=UNIT_SALES_PREFIX)
+    stocked: pd.Series | None = None,
+) -> tuple[pd.DataFrame, list[str], list[str]]:
+    """Attach cost/sales unit prices and normalize missing values.
+
+    ``stocked`` marks the rows with stock, the only ones worth a warning.
+    """
+    stocked = np.ones(len(stock_frame), dtype=bool) if stocked is None else stocked.to_numpy()
+    result, cost_fallbacks = _merge_price_table(stock_frame, cost_frame, prefix=UNIT_COST_PREFIX)
+    result, sales_fallbacks = _merge_price_table(result, sales_frame, prefix=UNIT_SALES_PREFIX)
 
     unit_price_columns = [
         column
@@ -48,7 +68,13 @@ def attach_unit_prices(
     ]
     if unit_price_columns:
         result[unit_price_columns] = result[unit_price_columns].fillna(-1).astype(float)
-    return result, unit_price_columns
+    notes = [
+        f"{count} stock rows have no {label} price for their variant; the product price is used."
+        for count, label in (
+            (int((cost_fallbacks & stocked).sum()), "cost"), (int((sales_fallbacks & stocked).sum()), "sales"))
+        if count
+    ]
+    return result, unit_price_columns, notes
 
 
 def missing_price_warnings(stock_frame: pd.DataFrame, plan: StockProcessingPlan) -> list[str]:

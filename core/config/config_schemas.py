@@ -90,6 +90,7 @@ class PricingConfig(_StrictConfigModel):
     cost_columns: PricingColumns | None = None
     sales_columns: PricingColumns | None = None
     default_store: str = ""
+    variant_columns: Dict[str, str] = Field(default_factory=dict)
 
 
 class StockInputConfig(_StrictConfigModel):

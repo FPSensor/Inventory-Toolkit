@@ -29,7 +29,7 @@ from engine.stock_processing.data_processor import (
     validate_stock_network,
 )
 from engine.stock_processing.excel_renderer import build_summary, render_stock_excel
-from engine.stock_processing.pricing import process_pricing
+from engine.stock_processing.pricing import price_key, process_pricing, variant_keys
 from engine.stock_processing.valuation import (
     attach_unit_prices,
     calculate_inventory_values,
@@ -129,7 +129,8 @@ def run_stock_processing(args):
         log.info("Processing Stock data...")
         source_article = overrides.get("stock", {}).get("article", plan.input["article_column"])
         raw_frame = read_table(
-            args.stock_processing_raw, text=[source_article], on_notice=partial(report_warning, args))
+            args.stock_processing_raw, text=[source_article, *(plan.pricing.get("variant_columns") or {})],
+            on_notice=partial(report_warning, args))
         input_rows, input_columns = raw_frame.shape
         try:
             raw_frame = adapt_stock_headers(raw_frame, plan, source_article)
@@ -181,11 +182,23 @@ def run_stock_processing(args):
             sales_columns=list(sales_frame.columns) if sales_frame is not None else None,
         )
 
-        stock_frame, unit_price_columns = attach_unit_prices(
+        variants = plan.pricing.get("variant_columns") or {}
+        missing = [column for column in variants if column not in stock_frame.columns]
+        if missing:
+            raise ValueError(f"Stock is missing the variant columns used for prices: {missing}.")
+        keys = variant_keys(variants)
+        for key, column in zip(keys, variants):
+            stock_frame[key] = price_key(stock_frame[column], plan.pricing.get("article_tokenization", "first_token"))
+        stores = [store for store in plan.active_stores if store in stock_frame.columns]
+        stock_frame, unit_price_columns, price_notes = attach_unit_prices(
             stock_frame,
             cost_frame,
             sales_frame,
+            stocked=stock_frame[stores].ne(0).any(axis=1),
         )
+        stock_frame = stock_frame.drop(columns=keys)
+        for message in price_notes:
+            report_warning(args, message)
         log_debug_event(
             "stock_processing_pricing_merged",
             shape=stock_frame.shape,
