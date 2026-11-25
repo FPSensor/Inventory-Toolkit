@@ -57,7 +57,7 @@ It then calls the Cross Check engine. Article normalization/business reconciliat
 
 `cli/stock_processing_launcher.py` collects raw stock, price lists, and output path, then calls `engine/stock_processing/`.
 
-Store mappings, family rules, cleaning rules, pricing mappings, and summary layout come from the active profile.
+Store mappings, family rules, cleaning rules, pricing mappings, and summary layout come from the active profile. Each run asks whether to include unit prices in addition to totals; Enter keeps totals only.
 
 ### YoY Reports
 

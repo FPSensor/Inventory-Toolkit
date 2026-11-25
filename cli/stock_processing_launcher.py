@@ -66,6 +66,15 @@ def launch_stock_processing(active_profile: str) -> None:
         input("  Press Enter to return to the menu...")
         return
 
+    while True:
+        answer = input(
+            "  Include unit prices in the detail, in addition to totals? [y/N]: "
+        ).strip().lower()
+        if answer in ("y", "n", ""):
+            break
+        print("  Enter 'Y' or 'N'.")
+    include_unit_prices = answer == "y"
+
     save_last_paths(active_profile, {
         "stock_processing": {
             "stock": stock_file,
@@ -82,6 +91,7 @@ def launch_stock_processing(active_profile: str) -> None:
         cost_file=cost_file,
         sales_file=sales_file,
         output_file=out_file,
+        include_unit_prices=include_unit_prices,
     )
     print(f"\n  🚀 Processing inventory...  (Output: {out_file})")
 
@@ -92,6 +102,7 @@ def launch_stock_processing(active_profile: str) -> None:
         stock_processing_out=out_file,
         stock_processing_profile=active_profile,
         column_overrides=overrides,
+        include_unit_prices=include_unit_prices,
         progress=show_progress,
         stats=show_stats,
     )

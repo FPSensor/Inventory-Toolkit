@@ -30,7 +30,6 @@ from engine.stock_processing.pricing import process_pricing
 from engine.stock_processing.valuation import (
     attach_unit_prices,
     calculate_inventory_values,
-    remove_unit_prices,
 )
 
 
@@ -206,8 +205,9 @@ def run_stock_processing(args):
         )
 
         stock_frame = calculate_inventory_values(stock_frame, plan)
-        stock_frame = remove_unit_prices(stock_frame, unit_price_columns)
-        result_frame = project_stock_output(stock_frame, plan)
+        result_frame = project_stock_output(
+            stock_frame, plan, include_unit_prices=getattr(args, "include_unit_prices", False)
+        )
         log_debug_event(
             "stock_processing_result_ready",
             shape=result_frame.shape,

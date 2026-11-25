@@ -7,7 +7,12 @@ from collections.abc import Mapping
 import numpy as np
 import pandas as pd
 
-from core.business_schema import COST_COLUMN, SALES_VALUE_LABEL
+from core.business_schema import (
+    COST_COLUMN,
+    SALES_VALUE_LABEL,
+    UNIT_COST_PREFIX,
+    UNIT_SALES_PREFIX,
+)
 from core.logger import log_debug_event
 from engine.shared.families import assign_families
 from engine.stock_processing.contracts import (
@@ -212,12 +217,26 @@ def classify_stock_families(
     return result
 
 
-def project_stock_output(frame: pd.DataFrame, plan: StockProcessingPlan) -> pd.DataFrame:
-    """Select the profile-owned final layout and restore catalog-facing labels."""
+def project_stock_output(
+    frame: pd.DataFrame,
+    plan: StockProcessingPlan,
+    *,
+    include_unit_prices: bool = False,
+) -> pd.DataFrame:
+    """Select the profile-owned final layout and restore catalog-facing labels.
+
+    Unit prices are shown as used by the valuation: -1 means the article has no
+    price in that store. Regional groups have no unit price of their own.
+    """
     final_column_order = [plan.internal_base_column(column) for column in plan.base_columns]
     for entity in plan.entities_to_value:
+        unit_prices = (
+            [f"{UNIT_COST_PREFIX}{entity}", f"{UNIT_SALES_PREFIX}{entity}"]
+            if include_unit_prices and entity not in plan.regional_groups
+            else []
+        )
         final_column_order.extend(
-            [entity, f"{entity}.{COST_COLUMN}", f"{entity}.{SALES_VALUE_LABEL}"]
+            [entity, *unit_prices, f"{entity}.{COST_COLUMN}", f"{entity}.{SALES_VALUE_LABEL}"]
         )
 
     selected = frame[

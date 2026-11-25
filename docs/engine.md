@@ -104,6 +104,10 @@ Stock Processing now treats profile vocabulary as an input/output boundary rathe
 9. project the configured output layout and restore the profile-owned article/family labels;
 10. render configured summary sheets + raw-data sheet.
 
+### Unit prices
+
+Reports contain totals. Each run can also include unit prices (`args.include_unit_prices`, default off): the CLI asks and the GUI offers an unchecked option. The detail sheet then shows `PrecioUnit.Costo.<store>` and `PrecioUnit.Venta.<store>` next to each active store, where `-1` means the article has no price there. Totals do not change. With a template whose data sheet does not own those columns, they are added to its right, outside the range of its PivotTables.
+
 ### Report templates
 
 With `output.template`, the profile's `.xlsx` owns the design and the engine replaces its data. The data sheet (`output.raw_data_sheet`) is rewritten using the template's columns and styles, each PivotTable and its cache are rebuilt, and sheets named in `output.summaries` are filled below their header. Calculated fields are evaluated from the template; `cost_factor` does **not** change them, so both must be kept in agreement by the profile owner.

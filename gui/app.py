@@ -646,6 +646,11 @@ class InventoryToolkitGUI(BaseWindow):
              ).pack(anchor="w", padx=15, pady=(10, 2))
         self._file_row(self.tab_stock, "4. Output report name:",    self.sp_out, is_output=True)
 
+        self.sp_unit_prices = tk.BooleanVar(value=False)
+        check_class = ctk.CTkCheckBox if USE_CTK else ttk.Checkbutton
+        check_class(self.tab_stock, text="Include unit prices in the detail, in addition to totals",
+                    variable=self.sp_unit_prices).pack(anchor="w", padx=20, pady=4)
+
         if USE_CTK:
             ctk.CTkButton(self.tab_stock, text="▶  Run Stock Processing & Valuation",
                           fg_color="#007bff", hover_color="#0069d9", height=40,
@@ -698,6 +703,7 @@ class InventoryToolkitGUI(BaseWindow):
             stock_processing_out=out,
             stock_processing_profile=self.active_profile.get(),
             non_interactive=True,
+            include_unit_prices=self.sp_unit_prices.get(),
             column_overrides=overrides,
             warnings=warnings,
         )

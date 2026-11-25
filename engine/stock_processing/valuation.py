@@ -92,7 +92,3 @@ def calculate_inventory_values(
         )
 
     return result
-
-
-def remove_unit_prices(stock_frame: pd.DataFrame, unit_price_columns: list[str]) -> pd.DataFrame:
-    return stock_frame.drop(columns=unit_price_columns, errors="ignore")

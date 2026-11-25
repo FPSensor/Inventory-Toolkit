@@ -6,7 +6,14 @@ from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill
 from openpyxl.utils.dataframe import dataframe_to_rows
 
-from core.business_schema import COST_COLUMN, FAMILY_COLUMN, MARGIN_PREFIX, SALES_VALUE_LABEL
+from core.business_schema import (
+    COST_COLUMN,
+    FAMILY_COLUMN,
+    MARGIN_PREFIX,
+    SALES_VALUE_LABEL,
+    UNIT_COST_PREFIX,
+    UNIT_SALES_PREFIX,
+)
 from core.logger import log, log_debug_event
 from core.system_utils import safe_openpyxl_save
 from engine.stock_processing.data_processor import calculate_margin
@@ -184,6 +191,7 @@ def render_stock_excel(
         index: "#,##0.00"
         for index, column in enumerate(stock_frame.columns, 1)
         if str(column).endswith((f".{COST_COLUMN}", f".{SALES_VALUE_LABEL}"))
+        or str(column).startswith((UNIT_COST_PREFIX, UNIT_SALES_PREFIX))
     }
     raw_formats.update({index: quantity_format for index, column in enumerate(stock_frame.columns, 1) if column in quantity_columns})
     apply_excel_formatting(data_worksheet, is_summary=False, column_formats=raw_formats)

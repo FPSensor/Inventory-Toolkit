@@ -19,9 +19,10 @@ from openpyxl.cell.cell import ILLEGAL_CHARACTERS_RE
 from openpyxl.utils import get_column_letter, range_boundaries
 from openpyxl.utils.cell import coordinate_from_string, column_index_from_string
 
+from core.business_schema import UNIT_COST_PREFIX, UNIT_SALES_PREFIX
 from core.logger import log, log_debug_event
 from core.system_utils import safe_bytes_save
-from core.workbook_package import MAIN, WorkbookPackage, serialize_xml, tag
+from core.workbook_package import MAIN, WorkbookPackage, parse_xml, serialize_xml, tag
 from engine.stock_processing.pivot_formulas import evaluate
 
 _DATA_MARKER = "__ITK_ROWS__"
@@ -129,6 +130,19 @@ class _Sheet:
         head, tail = serialize_xml(self.root).split(f"<!--{_DATA_MARKER}-->".encode())
         self.package.parts[self.part] = head + "".join(rows).encode("utf-8") + tail
 
+    def append_headers(self, count, names):
+        """Add header cells after the template's own, in the style of the last one."""
+        header = next(row for row in self.data if row.get("r") == "1")
+        for cell in list(header):
+            if column_index_from_string(coordinate_from_string(cell.get("r"))[0]) > count and names:
+                header.remove(cell)
+        for column, name in enumerate(names, count + 1):
+            header.append(parse_xml(_cell(1, column, name, self.style(1, count)).replace(
+                "<c ", f'<c xmlns="{MAIN}" ', 1
+            ).encode("utf-8")))
+        if names:
+            header.attrib.pop("spans", None)
+
     def row(self, number, cells):
         return f'<{self.prefix}row r="{number}">{"".join(cells)}</{self.prefix}row>'
 
@@ -143,6 +157,11 @@ def _shared_strings(package):
 
 
 def _replace_data_sheet(sheet: _Sheet, strings, frame: pd.DataFrame):
+    """Write the data and return the template headers, their values, and the size.
+
+    Unit prices requested for one run and absent from the template are placed to
+    the right, outside the range read by its PivotTables.
+    """
     if any(True for _ in sheet.root.iter(tag("tablePart"))):
         raise ReportTemplateError(f"Template data sheet '{sheet.name}' must be a plain range, not an Excel table.")
     headers = []
@@ -158,9 +177,17 @@ def _replace_data_sheet(sheet: _Sheet, strings, frame: pd.DataFrame):
     if frame.empty:
         raise ReportTemplateError("There are no stock rows to place in the report template.")
 
-    sheet.require_replaceable(2, range(1, len(headers) + 1))
-    columns = [_column_values(frame[header]) for header in headers]
-    styles = [sheet.style(2, index) for index in range(1, len(headers) + 1)]
+    extra = [
+        column for column in frame.columns
+        if str(column).startswith((UNIT_COST_PREFIX, UNIT_SALES_PREFIX)) and column not in headers
+    ]
+    width = len(headers) + len(extra)
+    sheet.require_replaceable(2, range(1, width + 1))
+    if any(column > len(headers) and len(cell) for column, cell in sheet.rows[1].items()) and extra:
+        raise ReportTemplateError(f"Template data sheet '{sheet.name}' has content to the right of its headers.")
+    sheet.append_headers(len(headers), extra)
+    columns = [_column_values(frame[header]) for header in (*headers, *extra)]
+    styles = [sheet.style(2, min(index, len(headers))) for index in range(1, width + 1)]
     last_row = len(frame) + 1
     rows = [
         sheet.row(number, [
@@ -169,7 +196,7 @@ def _replace_data_sheet(sheet: _Sheet, strings, frame: pd.DataFrame):
         ])
         for number, values in enumerate(zip(*(values for _numeric, values in columns)), 2)
     ]
-    last_column = get_column_letter(len(headers))
+    last_column = get_column_letter(width)
     auto_filter = sheet.root.find(tag("autoFilter"))
     if auto_filter is not None:
         for child in list(auto_filter):
@@ -180,8 +207,8 @@ def _replace_data_sheet(sheet: _Sheet, strings, frame: pd.DataFrame):
         frozen_rows = int(float(pane.get("ySplit", 0)))
         frozen_columns = int(float(pane.get("xSplit", 0)))
         pane.set("topLeftCell", f"{get_column_letter(frozen_columns + 1)}{frozen_rows + 1}")
-    sheet.write(2, rows, last_row, len(headers))
-    return headers, dict(zip(headers, columns)), last_row
+    sheet.write(2, rows, last_row, width)
+    return headers, dict(zip(headers, columns)), last_row, width
 
 
 # Pivot caches -----------------------------------------------------------
@@ -522,7 +549,7 @@ def fill_template(template_path, frame, summaries, raw_data_sheet, *, family_col
             index for index, field in enumerate(fields) if field.find(tag("items")) is not None
         )
 
-    headers, columns, last_row = _replace_data_sheet(
+    headers, columns, last_row, width = _replace_data_sheet(
         _Sheet(package, raw_data_sheet, sheets[raw_data_sheet]), strings, frame
     )
     data = frame[headers]
@@ -551,7 +578,7 @@ def fill_template(template_path, frame, summaries, raw_data_sheet, *, family_col
                 f"Template sheet '{name}' contains fixed numbers that this report does not update."
             )
 
-    _update_workbook(package, workbook_part, raw_data_sheet, len(headers), last_row)
+    _update_workbook(package, workbook_part, raw_data_sheet, width, last_row)
     package.validate()
     return package.to_bytes(), warnings
 

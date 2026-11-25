@@ -195,20 +195,21 @@ def _profile(tmp_path, template):
     return root
 
 
-def _run(tmp_path, warnings=None):
+def _run(tmp_path, warnings=None, **options):
     stock, price, output = tmp_path / "s.xlsx", tmp_path / "p.xlsx", tmp_path / "o.xlsx"
     pd.DataFrame({"SKU": ["R1", "B1"], "Local": [2, 3]}).to_excel(stock, index=False)
-    pd.DataFrame({"SKU": ["R1", "B1"], "Base": ["Local"] * 2, "Precio": [10.0, 20.0]}).to_excel(price, index=False)
-    return run_stock(stock, price, output, warnings), output
+    prices = pd.DataFrame({"SKU": ["R1", "B1"], "Base": ["Local"] * 2, "Precio": [10.0, 20.0]})
+    (prices.iloc[:1] if options else prices).to_excel(price, index=False)
+    return run_stock(stock, price, output, warnings, **options), output
 
 
-def run_stock(stock, price, output, warnings=None):
+def run_stock(stock, price, output, warnings=None, **options):
     from engine.stock_processing.generator import run_stock_processing
 
     return run_stock_processing(Namespace(
         stock_processing_raw=str(stock), shared_cost=str(price), shared_sales=str(price),
         stock_processing_out=str(output), stock_processing_profile="report", non_interactive=True,
-        warnings=[] if warnings is None else warnings,
+        warnings=[] if warnings is None else warnings, **options,
     ))
 
 
@@ -254,6 +255,63 @@ def test_template_settings_are_editable_from_guided_setup(tmp_path, monkeypatch)
     saved = json.loads((root / "configs" / "stock_processing" / "settings.json").read_text(encoding="utf-8"))["output"]
     assert (saved["template"], saved["cost_factor"], saved["hidden_families"]) == ("templates/r.xlsx", 1.245, ["Bolsas"])
     assert saved["summaries"][0]["sheet_name"] == "Fijo"
+
+
+def _unit_columns(values):
+    return [value for value in values if str(value).startswith("PrecioUnit.")]
+
+
+@pytest.mark.parametrize("template", ["", "report.xlsx"])
+def test_unit_prices_are_opt_in_and_do_not_change_totals(tmp_path, monkeypatch, template):
+    monkeypatch.setattr(app_paths, "PROFILES_ROOT", tmp_path / "profiles")
+    root = _profile(tmp_path, template)
+    if template:
+        build_template(root / template)
+    _run(tmp_path, include_unit_prices=False)
+    totals = pd.read_excel(tmp_path / "o.xlsx", sheet_name="Base")
+    _run(tmp_path, include_unit_prices=True)
+    detailed = pd.read_excel(tmp_path / "o.xlsx", sheet_name="Base")
+
+    expected = ["PrecioUnit.Costo.Local", "PrecioUnit.Venta.Local"]
+    assert _unit_columns(totals) == []
+    assert _unit_columns(detailed) == expected
+    assert detailed[expected].values.tolist() == [[10, 10], [-1, -1]]
+    pd.testing.assert_frame_equal(detailed[totals.columns], totals)
+    if template:
+        workbook = load_workbook(tmp_path / "o.xlsx")
+        assert list(detailed.columns[-2:]) == expected
+        assert workbook["Resumen A"]._pivots[0].cache.cacheSource.worksheetSource.ref == "A1:E3"
+        assert workbook["Base"].auto_filter.ref == "A1:G3"
+    else:
+        assert list(detailed.columns) == ["SKU", "Rubro", "Local", *expected, "Local.Costo", "Local.Venta"]
+
+
+@pytest.mark.parametrize("answers, expected", [([""], False), (["n"], False), (["Y"], True), (["salame", "y"], True)])
+def test_console_asks_for_unit_prices_and_defaults_to_totals(tmp_path, monkeypatch, answers, expected):
+    from cli import stock_processing_launcher as launcher
+    from engine.stock_processing import generator
+
+    monkeypatch.setattr(app_paths, "PROFILES_ROOT", tmp_path / "profiles")
+    _profile(tmp_path, "")
+    stock, price, output = tmp_path / "s.xlsx", tmp_path / "p.xlsx", tmp_path / "o.xlsx"
+    pd.DataFrame({"SKU": ["R1"], "Local": [2]}).to_excel(stock, index=False)
+    pd.DataFrame({"SKU": ["R1"], "Base": ["Local"], "Precio": [10.0]}).to_excel(price, index=False)
+    files, replies, received = iter(map(str, (stock, price, price, output))), iter(answers), []
+    monkeypatch.setattr(launcher, "ask_file", lambda *_args, **_kwargs: next(files))
+    monkeypatch.setattr(launcher, "clear_screen", lambda: None)
+    monkeypatch.setattr("builtins.input", lambda prompt="": next(replies) if "unit prices" in prompt else "")
+    monkeypatch.setattr(generator, "run_stock_processing", lambda args: received.append(args.include_unit_prices))
+    launcher.launch_stock_processing("report")
+    assert received == [expected]
+
+
+def test_unit_prices_never_overwrite_template_content(tmp_path, template):
+    workbook = load_workbook(template)
+    workbook["Base"]["F1"] = "nota"
+    edited = tmp_path / "edited.xlsx"
+    workbook.save(edited)
+    with pytest.raises(ReportTemplateError):
+        fill(edited, FRAME.assign(**{"PrecioUnit.Costo.Local": 1.0}))
 
 
 @pytest.mark.parametrize("template, message", [("missing.xlsx", "not found"), ("../../outside.xlsx", "inside the profile")])
