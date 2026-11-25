@@ -47,6 +47,34 @@ def test_a_total_that_does_not_match_stops_the_report(tmp_path, total, column):
         process_sales_data(export(tmp_path, total), START, END, config())
 
 
+@pytest.mark.parametrize("rows, total", [
+    ([1000.5, 200.25], "1.200,75"), ([1000.5, 200.25], "1,200.75"), ([1000.5, 200.25], "1200.75"),
+    ([0.734, 0.5], "1.234"), ([0.734, 0.5], "1,234"), ([1000, 234], "1.234"), ([1000, 234], "1,234"),
+    ([-5, 1], "-4"),
+])
+def test_totals_are_read_in_any_number_format(tmp_path, rows, total):
+    lines = [("LOCAL", "A1", pd.Timestamp("2026-01-02"), value, value) for value in rows]
+    current, _, _ = process_sales_data(export(tmp_path, (None, None, "2", total, total), lines), START, END, config())
+    assert len(current) == len(rows)
+    with pytest.raises(ValueError, match="do not match"):
+        process_sales_data(export(tmp_path, (None, None, "2", total, total), lines[:1]), START, END, config())
+
+
+def test_a_numeric_total_without_date_is_verified(tmp_path):
+    lines = [("LOCAL", "A1", pd.Timestamp("2026-01-02"), 2, 5.5)]
+    current, _, _ = process_sales_data(export(tmp_path, (None, None, None, 2, 5.5), lines), START, END, config())
+    assert len(current) == 1
+    with pytest.raises(ValueError, match="do not match"):
+        process_sales_data(export(tmp_path, (None, None, None, 3, 5.5), lines), START, END, config())
+
+
+def test_a_dated_sale_without_item_or_location_is_not_a_total(tmp_path):
+    lines = [("LOCAL", "A1", pd.Timestamp("2026-01-02"), 2, 5.5)]
+    current, _, _ = process_sales_data(
+        export(tmp_path, (None, None, pd.Timestamp("2026-01-03"), 7, 1), lines), START, END, config())
+    assert current["Unidades"].sum() == 9
+
+
 def test_quantities_that_cannot_be_read_are_caught_by_the_total(tmp_path):
     rows = [("LOCAL", "A1", pd.Timestamp("2026-01-02"), "1.200,5", 10)]
     with pytest.raises(ValueError, match="do not match"):
