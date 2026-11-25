@@ -46,7 +46,7 @@ Scanner data may concatenate an unknown-length article code, size, color, or oth
 
 A fixed slice is invalid because article lengths vary.
 
-The algorithm uses the system-stock article master as evidence:
+The algorithm uses the known articles as evidence: those in system stock and in either price list, so a counted product without a system row is not cut down to a shorter article. Article keys ignore case everywhere, including price lists and ignored articles.
 
 1. sanitize the raw scanner value;
 2. if the full value is a known article, keep it;
@@ -58,9 +58,9 @@ This behavior must not be replaced by heuristic truncation.
 
 ### Reconciliation behavior
 
-The engine supports consolidation and partial-count modes. Difference arithmetic follows `reconciliation.ignore_negative_system_stock_when_counted`: the default preserves counted quantity for counted articles with negative system stock; disabling it always computes physical minus system stock. System quantity comes from `input.quantity_column`. Both settings belong to the Cross Check profile.
+System stock is always added up to one row per product: counts carry no store or database, so joining repeated system rows would repeat the whole count on each. The engine supports a partial-count mode. Difference arithmetic follows `reconciliation.ignore_negative_system_stock_when_counted`: the default preserves counted quantity for counted articles with negative system stock; disabling it always computes physical minus system stock. System quantity comes from `input.quantity_column`. Both settings belong to the Cross Check profile.
 
-Unknown/review data stays visible in output rather than being silently discarded.
+Unknown/review data stays visible in output rather than being silently discarded. Quantities and prices are read in local formats such as `1.234,5`; values that could mean two things, such as `1.234`, and system rows with quantity but no product are reported as warnings with their rows. A scanner file with more than one filled column or no readings is refused. Differences whose product has no price, and products with conflicting prices, are named in warnings because their value would otherwise be 0 or an average.
 
 ### Output
 
@@ -203,6 +203,8 @@ Each branch/category comparison uses `(current_amount - previous_amount) / previ
 ## Physical count formats
 
 Cross Check `input.count_mode` defaults to `scans`: one headerless row means one physical unit. `quantities` reads a headered table using `count_article_column` and `count_quantity_column`; each row contributes its actual nonnegative, finite quantity. Invalid or unidentified nonzero counts stop with source Excel rows. `input.matching` can be `longest_prefix` (existing scanner behavior) or `exact` (no suffix inference). `reconciliation.quantity_tolerance` defaults to zero and may be increased deliberately for fractional measurement noise. Cost and sale valuations use the resulting quantity difference without integer truncation.
+
+When price lists hold one price per store, set `price_lists.cost.store_column`, `price_lists.sales.store_column` and the system stock `input.store_column`. A deposit named in `general/network` `stock_database_columns` counts for its store. If system stock belongs to one store, differences are valued with that store's prices; a product without a price there is valued at 0 and named in a warning, as in Stock Processing. A list without prices for that store stops the run. Without these columns, or with stock from several stores, prices are averaged and a warning says so.
 
 ## Stock layouts and simple price lists
 

@@ -5,7 +5,7 @@ from __future__ import annotations
 from core.business_schema import DIFFERENCE_COLUMN
 from core.config.configuration_manager import ConfigurationManager
 from core.runtime.logger import log, log_debug_event
-from core.runtime.progress import report_progress, report_stats
+from core.runtime.progress import report_progress, report_stats, report_warning
 from core.files.system_utils import normalize_xlsx_output_path, require_input_files, safe_pandas_to_excel
 from core.runtime.telemetry import execution_timer
 from engine.inventory_cross_check.contracts import CrossCheckPlan
@@ -39,8 +39,9 @@ def run_cross_check(args):
     report_progress(progress, 1, 3, "Files loaded. Matching and reconciling articles...")
 
     with execution_timer("Data Transformation & Matching"):
-        result = reconcile(
-            inputs, plan, consolidate=args.cross_check_consolidate, partial=args.cross_check_partial)
+        result = reconcile(inputs, plan, partial=args.cross_check_partial)
+    for message in result.warnings:
+        report_warning(args, message)
     differences = result.report[DIFFERENCE_COLUMN]
     report_progress(progress, 2, 3, "Reconciliation complete. Writing workbook...")
 

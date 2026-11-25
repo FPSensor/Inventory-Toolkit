@@ -145,6 +145,7 @@ class CrossCheckFilters(_StrictConfigModel):
 class PriceListColumns(_StrictConfigModel):
     article_column: str = ARTICLE_COLUMN
     price_column: str = PRICE_COLUMN
+    store_column: str = ""
 
 
 class CrossCheckPriceLists(_StrictConfigModel):
@@ -160,6 +161,7 @@ class CrossCheckInput(_StrictConfigModel):
     count_article_column: str = ""
     count_quantity_column: str = ""
     matching: Literal["longest_prefix", "exact"] = "longest_prefix"
+    store_column: str = ""
     quantity_column: str = DEFAULTS["cross_check/settings"]["input"]["quantity_column"]
 
     @field_validator("quantity_column")

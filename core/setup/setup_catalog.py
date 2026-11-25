@@ -70,7 +70,8 @@ STEPS = {
     'cross_check': (CATALOG, classification_step('cross_check'), FAMILIES,
         SetupStep('cross_input', 'System stock columns', 'cross_check/settings', (
             field('input.article_column', 'Product code', ARTICLE_HELP, hint_key='article_hints'),
-            field('input.quantity_column', 'Recorded quantity', 'Quantity currently recorded for each product.', hint_key='qty_hints')), sample='system'),
+            field('input.quantity_column', 'Recorded quantity', 'Quantity currently recorded for each product.', hint_key='qty_hints'),
+            field('input.store_column', 'Store or database', "Optional. The column that names the store or database of each row, such as 'Base'. With it, differences are valued with the prices of the counted store instead of an average of every store.", optional=True)), sample='system'),
         SetupStep('cross_count_mode', 'How was the physical count recorded?', 'cross_check/settings', (
             field('input.count_mode', 'Count format', 'Scanner: one headerless line per unit. Quantity table: a product code and its counted quantity on each row.', 'choice', choices=(("One scanner reading per unit", "scans"), ("Table with counted quantities", "quantities"))),
             field('input.matching', 'Product matching', 'Exact matching never guesses a product from a longer code. Prefix matching supports scanner suffixes.', 'choice', choices=(("Exact product codes", "exact"), ("Longest known prefix", "longest_prefix"))))),
@@ -80,10 +81,12 @@ STEPS = {
             condition=('input.count_mode', 'quantities'), sample='count'),
         SetupStep('cross_cost', 'Cost price columns', 'cross_check/settings', (
             field('price_lists.cost.article_column', 'Product code', ARTICLE_HELP, hint_key='article_hints'),
-            field('price_lists.cost.price_column', 'Unit cost', PRICE_HELP, hint_key='price_hints')), sample='cost'),
+            field('price_lists.cost.price_column', 'Unit cost', PRICE_HELP, hint_key='price_hints'),
+            field('price_lists.cost.store_column', 'Store or database', 'Optional. The column that names the store or database of each price. Leave empty when the list has one price per product.', optional=True)), sample='cost'),
         SetupStep('cross_sales', 'Sales price columns', 'cross_check/settings', (
             field('price_lists.sales.article_column', 'Product code', ARTICLE_HELP, hint_key='article_hints'),
-            field('price_lists.sales.price_column', 'Unit sales price', PRICE_HELP, hint_key='price_hints')), sample='sales'),
+            field('price_lists.sales.price_column', 'Unit sales price', PRICE_HELP, hint_key='price_hints'),
+            field('price_lists.sales.store_column', 'Store or database', 'Optional. The column that names the store or database of each price. Leave empty when the list has one price per product.', optional=True)), sample='sales'),
         SetupStep('cross_policy', 'Reconciliation preferences', 'cross_check/settings', (
             field('reconciliation.ignore_negative_system_stock_when_counted', 'Ignore negative system stock when counted', 'Use the counted quantity instead of subtracting negative system stock.', 'bool'),
             field('reconciliation.quantity_tolerance', 'Ignore differences smaller than this amount', 'Zero keeps every nonzero difference. A small positive tolerance can ignore fractional measurement noise.', 'number'),

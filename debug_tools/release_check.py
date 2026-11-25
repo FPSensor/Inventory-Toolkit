@@ -377,7 +377,6 @@ def _run_cross_demo(cross_system_override: str | None, output: Path) -> None:
             shared_sales=str(demo / "shared_sales_price_list.xlsx"),
             cross_check_out=str(output),
             cross_check_profile="demo",
-            cross_check_consolidate=True,
             cross_check_partial=False,
         )
     )

@@ -145,6 +145,15 @@ Development changes after `v1.4.1`. The released application version remains `1.
 
 ### Fixed
 
+- **cross: double count:** Always add system stock up to one row per product. Without consolidation, the former default, each repeated row received the whole physical count: the demo reported 2,119 counted units instead of 797 and a cost surplus of 1,010,648 instead of a shortage of 166,176. The consolidation question and checkbox are removed.
+
+- **cross: matching:** Recognize scanner readings of products that have no system stock row but appear in a price list, instead of sending them to review with no value, and ignore case in product codes, price lists and ignored articles. In the demo, 9 readings are now valued surpluses. Refuse scanner files with several filled columns or none.
+
+- **cross: store prices:** Value differences with the prices of the counted store when the price lists and system stock name it, through the optional `store_column` settings in guided setup, instead of averaging every store. The demo profile uses them: its cost total moves from −166,175 with averaged prices to −289,758 with Plaza Oeste prices.
+
+- **cross, stock: numbers:** Read quantities and prices in local formats such as `1.234,5`, and warn with row numbers about ambiguous values such as `1.234`, quantities without a product, products with conflicting prices and stock or differences without a price, which are valued at 0. A blank price is a missing price, not zero.
+
+
 - **core: checkpoints:** Reject incomplete checkpoint document entries instead of interpreting missing content/checksum fields as an intentionally absent file. Damaged snapshot metadata cannot silently remove live profile metadata.
 
 - **core: isolation:** Scope CLI preflight and workbook inspection to the selected workflow, so another enabled module with damaged settings does not block it. Keep profile diagnostics aligned with enabled metrics, including revenue-only YoY configurations that do not consume quantity.

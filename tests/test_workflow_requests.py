@@ -29,7 +29,7 @@ def test_cross_check_from_request_to_report(profile, tmp_path):
     pd.DataFrame(["A", "A"]).to_excel(tmp_path / "count.xlsx", index=False, header=False)
     request = cross.CrossRequest(
         profile, save(tmp_path / "system.xlsx", SKU=["A"], Quantity=[1]), str(tmp_path / "count.xlsx"),
-        prices, prices, output=str(tmp_path / "result"), consolidate=True)
+        prices, prices, output=str(tmp_path / "result"))
     result = cross.prepare(request, cross.check(request)).run()
     assert result.output.endswith("result.xlsx") and pd.read_excel(result.output)["Diferencia"].tolist() == [1]
     assert set(load_last_paths(profile)["cross_check"]) == {"system", "count", "cost", "sales", "out"}

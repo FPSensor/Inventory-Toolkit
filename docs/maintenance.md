@@ -84,7 +84,7 @@ Restore validates the saved documents first and creates a safety copy of the cur
 | Configured header missing | Module setup mapping and selected workbook headers. Explicit per-run fallback does not rewrite the profile. |
 | Input file not found | Saved path, current machine and current working directory for relative paths. |
 | Workbook cannot be saved | Excel/open-file lock and output-directory permissions. |
-| Unexpected quantities | Source rows, quantity mappings, duplicate records, consolidation options and excluded products. |
+| Unexpected quantities | Source rows, quantity mappings, duplicate records, partial-count mode and excluded products. |
 | Unexpected category | Source-category mode or longest-prefix rules and configured default category. |
 | Unexpected YoY amount | Line-revenue column, selected date range, report group membership and enabled metric blocks. |
 | Development action unavailable | `build.prop` type and whether the optional `debug_tools` package is present. |

@@ -23,7 +23,7 @@ The tests create temporary profiles through `create_profile`, then save each vis
 Coverage per business:
 
 - Stock quantities, source categories, preserved product identifiers and purchase/retail valuations for every location.
-- Four Cross Check combinations: consolidation on/off and partial count on/off, with independently specified expected differences and valuations.
+- Both Cross Check modes, partial count on and off, with independently specified expected differences and valuations.
 - Sixty-four YoY combinations: full/monthly reports, annual comparison on/off, variants on/off, revenue on/off, item/category grouping, and provided/generated categories. Verify sheet count, one current quantity block per sheet, independently expected current quantities, and metric selection.
 
 These are automated setup-service and engine checks, not a claim that a person manually completed every graphical page. Existing scanner, prefix, negative-stock and input-recovery tests cover additional contracts. Real widget tests cover desktop navigation separately.

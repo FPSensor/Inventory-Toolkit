@@ -49,7 +49,7 @@ Two intentionally undisplayed commands also exist:
 - cost list;
 - sales list;
 - output path;
-- consolidation/partial-count options.
+- partial-count option.
 
 It then calls the Cross Check engine. Article normalization/business reconciliation stays inside `engine/inventory_cross_check/`.
 
@@ -70,7 +70,7 @@ Store mappings, family rules, cleaning rules, pricing mappings, and summary layo
 ```bash
 python -m inventory_toolkit run stock --profile NAME --stock a.xlsx --cost b.xlsx --sales c.xlsx --output report.xlsx
 python -m inventory_toolkit run yoy --profile NAME --start 2026-11-01 --end 2026-11-30 --no-has-families --sales-amounts
-python -m inventory_toolkit run cross --profile NAME --consolidate --json
+python -m inventory_toolkit run cross --profile NAME --partial-count --json
 ```
 
 Files and output default to the last ones used by the profile; use `run REPORT --help` for every option. The exit status is 0 when the report was created, 1 when it failed and 2 for an invalid command. `--json` prints the output path and warnings, or a stable error code. Nothing is asked: a missing column or a workbook open in another program is an error.

@@ -32,7 +32,6 @@ def test_cross_rejects_xls_output_before_input_validation():
                 shared_sales="missing-sales.xlsx",
                 cross_check_out="result.xls",
                 cross_check_profile="demo",
-                cross_check_consolidate=False,
                 cross_check_partial=False,
             )
         )

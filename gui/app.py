@@ -496,7 +496,6 @@ class InventoryToolkitGUI(BaseWindow):
         self.cc_cost   = tk.StringVar()
         self.cc_sales  = tk.StringVar()
         self.cc_out    = tk.StringVar(value="Cross_Check_Output.xlsx")
-        self.cc_consol = tk.BooleanVar(value=False)
         self.cc_partial= tk.BooleanVar(value=False)
 
         _lbl(self.tab_cc, text="Input Files", font=("Arial", 11, "bold") if not USE_CTK else None
@@ -513,16 +512,12 @@ class InventoryToolkitGUI(BaseWindow):
         opts = BaseFrame(self.tab_cc)
         opts.pack(fill="x", padx=15, pady=10)
         if USE_CTK:
-            ctk.CTkCheckBox(opts, text="Consolidate multiple databases", variable=self.cc_consol
-                            ).pack(side="left", padx=10)
             ctk.CTkCheckBox(opts, text="Partial count (scanned only)", variable=self.cc_partial
                             ).pack(side="left", padx=10)
             ctk.CTkButton(self.tab_cc, text="▶  Run Inventory Cross Check",
                           fg_color="#28a745", hover_color="#218838", height=40,
                           command=self._exec_cc).pack(pady=18)
         else:
-            ttk.Checkbutton(opts, text="Consolidate databases", variable=self.cc_consol
-                            ).pack(side="left", padx=10)
             ttk.Checkbutton(opts, text="Partial count filter", variable=self.cc_partial
                             ).pack(side="left", padx=10)
             ttk.Button(self.tab_cc, text="▶  Run Inventory Cross Check",
@@ -538,7 +533,6 @@ class InventoryToolkitGUI(BaseWindow):
             cost=self.cc_cost.get(),
             sales=self.cc_sales.get(),
             output=self.cc_out.get(),
-            consolidate=self.cc_consol.get(),
             partial_count=self.cc_partial.get(),
         ), "Cross Check completed!")
 

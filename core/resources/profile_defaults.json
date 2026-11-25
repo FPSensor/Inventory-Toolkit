@@ -84,6 +84,7 @@
             "count_article_column": "",
             "count_quantity_column": "",
             "matching": "longest_prefix",
+            "store_column": "",
             "quantity_column": "Cantidad"
         },
         "reconciliation": {
@@ -99,11 +100,13 @@
         "price_lists": {
             "cost": {
                 "article_column": "Artículo",
-                "price_column": "Precio"
+                "price_column": "Precio",
+                "store_column": ""
             },
             "sales": {
                 "article_column": "Artículo",
-                "price_column": "Precio"
+                "price_column": "Precio",
+                "store_column": ""
             }
         }
     },

@@ -72,11 +72,11 @@ def test_business_stock_quantities_categories_and_valuations(business):
 
 def test_business_cross_options_preserve_reconciliation(business):
     case, profile, files, root = business
-    for consolidate, partial in product((False, True), repeat=2):
-        output = root / f'cross-{consolidate}-{partial}.xlsx'
+    for partial in (False, True):
+        output = root / f'cross-{partial}.xlsx'
         args = SimpleNamespace(cross_check_system=files['system'], cross_check_count=files['count'],
             shared_cost=files['prices'], shared_sales=files['prices'], cross_check_out=str(output),
-            cross_check_profile=profile, cross_check_consolidate=consolidate,
+            cross_check_profile=profile,
             cross_check_partial=partial)
         assert run_cross_check(args) == str(output)
         frame = pd.read_excel(output)

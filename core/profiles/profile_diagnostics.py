@@ -166,14 +166,15 @@ def inspect_configuration(profile):
     if cross:
         module = 'cross_check'
         source = cross['input']
-        mapping = {'product': source['article_column'] or catalog.get('article', ''), 'quantity': source['quantity_column']}
+        mapping = {'product': source['article_column'] or catalog.get('article', ''), 'quantity': source['quantity_column'],
+                   'store': source['store_column']}
         if source['family_mode'] == 'column':
             mapping['category'] = source['family_column']
-        columns(mapping, module, 'cross_input')
+        columns(mapping, module, 'cross_input', optional=('store',))
         if source['count_mode'] == 'quantities':
             columns({'product': source['count_article_column'], 'quantity': source['count_quantity_column']}, module, 'cross_count_columns')
         for side in ('cost', 'sales'):
-            columns(cross['price_lists'][side], module, f'cross_{side}')
+            columns(cross['price_lists'][side], module, f'cross_{side}', optional=('store_column',))
 
     yoy = documents.get('yoy_reports/settings')
     if yoy:

@@ -23,10 +23,12 @@ class CrossCheckPlan:
     system_article: str
     system_quantity: str
     system_family: str
+    system_store: str
+    store_of_database: Mapping[str, str]
     count_settings: Mapping[str, Any]
     count_columns: Mapping[str, str] | None
-    cost_columns: tuple[str, str]
-    sales_columns: tuple[str, str]
+    cost_columns: tuple[str, str, str]
+    sales_columns: tuple[str, str, str]
     exact_matching: bool
     first_token_prices: bool
     ignored_articles: tuple[str, ...]
@@ -42,7 +44,9 @@ class CrossCheckPlan:
 
         def prices(side):
             columns = overrides.get(side, settings["price_lists"].get(side, {}))
-            return columns.get("article_column", ARTICLE_COLUMN), columns.get("price_column", PRICE_COLUMN)
+            configured = settings["price_lists"].get(side, {})
+            return (columns.get("article_column", ARTICLE_COLUMN), columns.get("price_column", PRICE_COLUMN),
+                    columns.get("store_column", configured.get("store_column", "")))
 
         return cls(
             article_label=labels["article"],
@@ -53,6 +57,10 @@ class CrossCheckPlan:
             system_article=system.get("article", source["article_column"] or labels["article"]),
             system_quantity=system.get("quantity", source["quantity_column"]),
             system_family=system.get("family", source["family_column"]),
+            system_store=system.get("store", source["store_column"]),
+            # A deposit's stock belongs to the store it supplies.
+            store_of_database={
+                deposit: store for store, deposit in config.get_network_config()["stock_database_columns"].items()},
             count_settings=source,
             count_columns=overrides.get("count"),
             cost_columns=prices("cost"),

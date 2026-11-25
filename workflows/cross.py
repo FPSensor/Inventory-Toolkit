@@ -23,7 +23,6 @@ class CrossRequest:
     cost: str
     sales: str
     output: str = ""
-    consolidate: bool = False
     partial_count: bool = False
 
 
@@ -42,12 +41,14 @@ def check(request: CrossRequest, confirm_column=None) -> dict:
         "system": choose_columns(
             request.system,
             {"article": cross_article_column(config), "quantity": source["quantity_column"],
+             **({"store": source["store_column"]} if source["store_column"] else {}),
              **category_source_columns(config, MODULE)},
             {**catalog, "quantity": defaults["input"]["quantity_column"]}, confirm_column,
         ),
-        "cost": choose_columns(request.cost, lists["cost"], defaults["price_lists"]["cost"], confirm_column),
-        "sales": choose_columns(request.sales, lists["sales"], defaults["price_lists"]["sales"], confirm_column),
     }
+    for side, path in (("cost", request.cost), ("sales", request.sales)):
+        configured = {role: header for role, header in lists[side].items() if header}
+        columns[side] = choose_columns(path, configured, defaults["price_lists"][side], confirm_column)
     if source["count_mode"] == "quantities":
         columns["count"] = choose_columns(
             request.count,
@@ -72,7 +73,6 @@ def _run(request, columns, *, progress, stats, warnings, on_locked):
         shared_sales=request.sales,
         cross_check_out=request.output,
         cross_check_profile=request.profile,
-        cross_check_consolidate=request.consolidate,
         cross_check_partial=request.partial_count,
         column_overrides=columns,
         on_locked=on_locked,

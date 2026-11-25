@@ -24,7 +24,6 @@ def launch_cross_check(active_profile: str) -> None:
         request = replace(
             request,
             output=ask_file("\n5. Output file name", saved.get("out") or "Cross_Check_Results.xlsx", is_output=True),
-            consolidate=ask_option("Consolidate quantities from multiple databases?"),
             partial_count=ask_option("Filter by scanned articles only (partial count)?"),
         )
         run_job(cross.prepare(request, columns, show_notice))

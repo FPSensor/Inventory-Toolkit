@@ -20,7 +20,7 @@ from core.runtime.logger import get_session_log_path
 from core.files.data_sanitizer import clean_sku_series, sanitize_dataframe
 from core.files.system_utils import InvalidExcelOutputPathError, normalize_xlsx_output_path
 from engine.shared.families import assign_families, build_family_rules, assign_family
-from engine.inventory_cross_check.data_processor import normalize_article, calculate_difference
+from engine.inventory_cross_check.data_processor import build_article_index, calculate_difference, normalize_article
 from engine.stock_processing.contracts import StockProcessingPlan
 from engine.stock_processing.data_processor import (
     calculate_margin,
@@ -145,17 +145,17 @@ class IntegrityAuditor:
 
         # Invariant 4: Physical count normalization against Master Base
         master_base = ["ABCD-100", "ABCD-100-M", "SKU-A-XL"]
-        master_set = set(master_base)
+        article_index = build_article_index(master_base)
 
-        self.assert_check("Exact match in master article list", normalize_article("ABCD-100", master_base, master_set) == "ABCD-100")
-        self.assert_check("Longest matching prefix available", normalize_article("ABCD-100-M-RED", master_base, master_set) == "ABCD-100-M")
-        self.assert_check("Unmatched item marked as REVISAR", normalize_article("99999-NOPE", master_base, master_set) == "REVISAR | 99999-NOPE")
+        self.assert_check("Exact match in master article list", normalize_article("ABCD-100", article_index) == "ABCD-100")
+        self.assert_check("Longest matching prefix available", normalize_article("ABCD-100-M-RED", article_index) == "ABCD-100-M")
+        self.assert_check("Unmatched item marked as REVISAR", normalize_article("99999-NOPE", article_index) == "REVISAR | 99999-NOPE")
 
         master_with_blank = ["", *master_base]
-        master_with_blank_set = {article.upper() for article in master_with_blank}
+        index_with_blank = build_article_index(master_with_blank)
         self.assert_check(
             "Empty master article cannot absorb unknown scanner reading",
-            normalize_article("99999-NOPE", master_with_blank, master_with_blank_set)
+            normalize_article("99999-NOPE", index_with_blank)
             == "REVISAR | 99999-NOPE",
         )
 
