@@ -11,7 +11,7 @@ from core.business_schema import (
     UNIT_COST_PREFIX,
     UNIT_SALES_PREFIX,
 )
-from engine.stock_processing.contracts import INTERNAL_ARTICLE_COLUMN, StockProcessingPlan
+from engine.stock_processing.contracts import INTERNAL_ARTICLE_COLUMN, INTERNAL_FAMILY_COLUMN, StockProcessingPlan
 
 
 def _merge_price_table(
@@ -49,6 +49,31 @@ def attach_unit_prices(
     if unit_price_columns:
         result[unit_price_columns] = result[unit_price_columns].fillna(-1).astype(float)
     return result, unit_price_columns
+
+
+def missing_price_warnings(stock_frame: pd.DataFrame, plan: StockProcessingPlan) -> list[str]:
+    """Name the stocked products that a store values at 0 for lack of a price."""
+    messages = []
+    for prefix, label in ((UNIT_COST_PREFIX, "cost"), (UNIT_SALES_PREFIX, "sales")):
+        # Hidden families stay out of the report, so their prices do not matter.
+        reported = ~stock_frame[INTERNAL_FAMILY_COLUMN].isin(plan.hidden_families)
+        unpriced = pd.Series(False, index=stock_frame.index)
+        units = 0.0
+        for store in plan.active_stores:
+            if store in plan.regional_groups or store not in stock_frame.columns:
+                continue
+            price_column = f"{prefix}{store}"
+            prices = stock_frame[price_column] if price_column in stock_frame.columns else -1
+            missing = reported & stock_frame[store].ne(0) & (prices <= 0)
+            units += float(stock_frame.loc[missing, store].sum())
+            unpriced |= missing
+        products = stock_frame.loc[unpriced, INTERNAL_ARTICLE_COLUMN].drop_duplicates()
+        if len(products):
+            preview = ", ".join(map(str, products.head(10))) + ("..." if len(products) > 10 else "")
+            messages.append(
+                f"{len(products)} products with stock have no {label} price in at least one store, "
+                f"so {units:,.6g} units are valued at 0: {preview}.")
+    return messages
 
 
 def calculate_inventory_values(

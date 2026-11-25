@@ -13,6 +13,12 @@ from core.business_schema import (
     UNIT_COST_PREFIX,
     UNIT_SALES_PREFIX,
 )
+from core.files.data_sanitizer import (
+    describe_unclear_numbers,
+    normalize_article_codes,
+    parse_numbers,
+    read_quantities,
+)
 from core.runtime.logger import log_debug_event
 from engine.shared.families import assign_families
 from engine.stock_processing.contracts import (
@@ -27,8 +33,7 @@ def _normalize_text(series: pd.Series) -> pd.Series:
 
 
 def _normalize_numeric(series: pd.Series) -> pd.Series:
-    normalized = series.astype(str).str.replace(",", ".", regex=False).str.strip()
-    numeric = pd.to_numeric(normalized, errors="coerce").fillna(0)
+    numeric = read_quantities(series)[0].astype(float)
     # Keep exact whole quantities integral without truncating measured quantities.
     bounds = np.iinfo(np.int64)
     if np.isfinite(numeric).all() and numeric.between(bounds.min, bounds.max).all() and numeric.mod(1).eq(0).all():
@@ -50,7 +55,7 @@ def adapt_stock_headers(raw_frame, plan, source_article):
         if unknown.any():
             rows = [int(position) + 2 for position in np.flatnonzero(unknown.to_numpy())[:20]]
             raise ValueError(f"Stock has unknown or missing locations at Excel rows {rows}.")
-        amounts = pd.to_numeric(frame[quantity].astype(str).str.replace(",", ".", regex=False), errors="coerce")
+        amounts, _ = parse_numbers(frame[quantity])
         if not np.isfinite(amounts).all():
             raise ValueError("Long stock contains missing or invalid numeric quantities.")
         if source_article != plan.article_column and plan.article_column in frame.columns:
@@ -108,7 +113,7 @@ def prepare_stock_frame(raw_frame: pd.DataFrame, plan: StockProcessingPlan) -> p
 
     # The article is an identity key, so it is normalized at the boundary even
     # when a profile forgot to repeat it in cleaning.text_columns.
-    frame[plan.article_column] = _normalize_text(frame[plan.article_column])
+    frame[plan.article_column] = normalize_article_codes(frame[plan.article_column])
     frame = frame.rename(columns={plan.article_column: INTERNAL_ARTICLE_COLUMN})
 
     log_debug_event(
@@ -119,6 +124,27 @@ def prepare_stock_frame(raw_frame: pd.DataFrame, plan: StockProcessingPlan) -> p
         article_internal_column=INTERNAL_ARTICLE_COLUMN,
     )
     return frame
+
+
+def quantity_warnings(raw_frame: pd.DataFrame, plan: StockProcessingPlan) -> list[str]:
+    """Describe quantities whose reading is a guess, with their source rows."""
+    if plan.input.get("format") == "long":
+        quantity = plan.input["quantity_column"]
+        sources = {quantity: raw_frame[quantity]} if quantity in raw_frame.columns else {}
+    else:
+        headers = dict(plan.input["quantity_columns"])
+        names = dict.fromkeys((*plan.numeric_columns, *plan.active_stores, *plan.stock_database_columns.values()))
+        sources = {
+            headers.get(column, column): raw_frame[column]
+            for column in names if column in raw_frame.columns and column not in plan.drop_columns
+        }
+    messages = []
+    for header, values in sources.items():
+        if not pd.api.types.is_numeric_dtype(values):
+            message = describe_unclear_numbers(header, read_quantities(values)[1])
+            if message:
+                messages.append(message)
+    return messages
 
 
 def remove_unidentified_stock(raw_frame: pd.DataFrame, plan: StockProcessingPlan) -> tuple[pd.DataFrame, str | None]:
@@ -132,7 +158,7 @@ def remove_unidentified_stock(raw_frame: pd.DataFrame, plan: StockProcessingPlan
     with_quantity = pd.Series(False, index=raw_frame.index)
     row_totals = pd.Series(0.0, index=raw_frame.index)
     if quantities:
-        numeric = raw_frame[quantities].apply(pd.to_numeric, errors="coerce").fillna(0)
+        numeric = raw_frame[quantities].apply(lambda column: read_quantities(column)[0])
         with_quantity = numeric.ne(0).any(axis=1)
         row_totals = numeric.sum(axis=1)
     affected = raw_frame.index[missing & with_quantity]

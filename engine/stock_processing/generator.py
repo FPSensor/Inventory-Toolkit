@@ -23,6 +23,7 @@ from engine.stock_processing.data_processor import (
     classify_stock_families,
     merge_stock_database_columns,
     prepare_stock_frame,
+    quantity_warnings,
     project_stock_output,
     remove_unidentified_stock,
     validate_stock_network,
@@ -32,6 +33,7 @@ from engine.stock_processing.pricing import process_pricing
 from engine.stock_processing.valuation import (
     attach_unit_prices,
     calculate_inventory_values,
+    missing_price_warnings,
 )
 
 
@@ -131,6 +133,7 @@ def run_stock_processing(args):
         input_rows, input_columns = raw_frame.shape
         try:
             raw_frame = adapt_stock_headers(raw_frame, plan, source_article)
+            unclear_quantities = quantity_warnings(raw_frame, plan)
             raw_frame, missing_article_warning = remove_unidentified_stock(raw_frame, plan)
             stock_frame = prepare_stock_frame(raw_frame, plan)
             validate_stock_network(stock_frame, plan)
@@ -140,6 +143,8 @@ def run_stock_processing(args):
             ) from exc
         excluded_rows = input_rows - len(raw_frame)
         report_warning(args, missing_article_warning)
+        for message in unclear_quantities:
+            report_warning(args, message)
         log_debug_event("stock_processing_input_loaded", shape=raw_frame.shape, columns=list(raw_frame.columns))
     report_progress(progress, 1, 4, "Stock loaded and cleaned. Classifying stores and families...")
 
@@ -193,6 +198,8 @@ def run_stock_processing(args):
             unit_price_column_count=len(unit_price_columns),
         )
 
+        for message in missing_price_warnings(stock_frame, plan):
+            report_warning(args, message)
         stock_frame = calculate_inventory_values(stock_frame, plan)
         result_frame = project_stock_output(
             stock_frame, plan, include_unit_prices=getattr(args, "include_unit_prices", False)

@@ -6,6 +6,7 @@ import os
 
 import pandas as pd
 
+from core.files.data_sanitizer import describe_unclear_numbers, normalize_article_codes, parse_numbers
 from core.runtime.logger import log_debug_event, log_exception
 from core.files.table_reader import read_table
 from engine.stock_processing.contracts import INTERNAL_ARTICLE_COLUMN
@@ -46,12 +47,11 @@ def process_pricing(file_path, pricing_config=None, on_notice=None):
             dataframe[database_column] = default_store
         dataframe[database_column] = dataframe[database_column].astype(str).str.strip().replace(pricing_config.get("aliases", {}))
 
-        article_values = dataframe[article_column].astype(str)
+        article_values = normalize_article_codes(dataframe[article_column])
         if pricing_config.get("article_tokenization", "first_token") == "first_token":
-            article_values = article_values.str.split(" ").str[0]
-        else:
-            article_values = article_values.str.strip()
+            article_values = article_values.str.split().str[0].fillna("")
         dataframe[INTERNAL_ARTICLE_COLUMN] = article_values
+        dataframe = dataframe[article_values.ne("")].copy()
         log_debug_event(
             "pricing_columns_resolved",
             file_path=file_path,
@@ -59,7 +59,23 @@ def process_pricing(file_path, pricing_config=None, on_notice=None):
             database_column=database_column,
             value_column=value_column,
         )
-        dataframe[value_column] = pd.to_numeric(dataframe[value_column], errors="raise")
+        values, ambiguous = parse_numbers(dataframe[value_column])
+        written = dataframe[value_column].notna() & dataframe[value_column].astype(str).str.strip().ne("")
+        if values.isna().any():
+            rows = [int(label) + 2 for label in values.index[values.isna()][:20]]
+            raise ValueError(f"unreadable prices in column '{value_column}' at rows {rows}")
+        if on_notice:
+            on_notice(describe_unclear_numbers(value_column, ambiguous, "prices"))
+        # A blank price is a missing price, not a price of zero.
+        dataframe[value_column] = values.where(written)
+        if on_notice:
+            distinct = dataframe.groupby([INTERNAL_ARTICLE_COLUMN, database_column])[value_column].nunique()
+            conflicting = distinct[distinct.gt(1)].index.get_level_values(0).unique()
+            if len(conflicting):
+                preview = ", ".join(map(str, conflicting[:10])) + ("..." if len(conflicting) > 10 else "")
+                on_notice(
+                    f"'{os.path.basename(file_path)}': {len(conflicting)} products have more than one "
+                    f"price for the same store ({preview}); their average is used.")
         pivot = pd.pivot_table(
             dataframe,
             index=INTERNAL_ARTICLE_COLUMN,
