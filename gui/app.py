@@ -28,7 +28,7 @@ except ImportError:
 
 from core.business_schema import ARTICLE_COLUMN, DATABASE_ORIGIN_COLUMN, DEFAULT_FAMILY, FAMILY_COLUMN, PRICE_COLUMN, RAW_DATA_SHEET, VARIANT_COLUMN
 from core.configuration_manager import ConfigurationManager
-from core.workflow_contracts import stock_input, stock_price_columns, cross_article_column, category_source_columns
+from core.workflow_contracts import cross_article_column, category_source_columns
 from core.input_columns import choose_input_columns
 from core.profile_config import DEFAULTS
 from core.logger import log
@@ -37,7 +37,6 @@ from core.system_utils import InvalidExcelOutputPathError, normalize_xlsx_output
 from core.profile_config import ensure_profile_config as initialize_profile_files
 from core.profile_store import save_json, load_json, load_last_paths, save_last_paths
 from engine.inventory_cross_check.generator import run_cross_check
-from engine.stock_processing.generator import run_stock_processing
 from engine.yoy_reports.generator import generate_sales_report
 from engine.yoy_reports.metrics import select_run_metrics
 from core.setup_service import SetupSession, SetupState
@@ -45,6 +44,8 @@ from core.setup_catalog import MODULE_LABELS
 from core.profile_overview import inspect_profile
 from core.input_doctor import inspect_workflow_inputs
 from core.workflow_errors import WorkflowError
+from workflows import stock
+from workflows.base import RunResult
 from gui.setup_wizard import SetupWizard
 
 
@@ -351,15 +352,17 @@ class InventoryToolkitGUI(BaseWindow):
             self._manage_workflows)
         workspace.pack(fill='both', expand=True)
 
+    def _confirm_column(self, file_path, field, wanted, default):
+        return messagebox.askyesno(
+            "Missing configured column",
+            f"{file_path}\n\nColumn '{wanted}' for {field} is absent.\n"
+            f"Try default '{default}' for this run?",
+            parent=self,
+        )
+
     def _select_columns(self, file_path, configured, defaults):
-        def confirm(field, wanted, default):
-            return messagebox.askyesno(
-                "Missing configured column",
-                f"{file_path}\n\nColumn '{wanted}' for {field} is absent.\n"
-                f"Try default '{default}' for this run?",
-                parent=self,
-            )
-        return choose_input_columns(file_path, configured, defaults, confirm)
+        return choose_input_columns(file_path, configured, defaults,
+            lambda *question: self._confirm_column(file_path, *question))
 
     # ── Tabs ──────────────────────────────────────────────────────────────────
 
@@ -662,52 +665,23 @@ class InventoryToolkitGUI(BaseWindow):
             ).pack(pady=(0, 14))
 
     def _exec_stock(self):
-        if not self._require_idle():
+        if not self._require_idle() or not self._gate_setup("stock_processing"):
             return
-        if not self._gate_setup("stock_processing"):
-            return
-        files = [self.sp_raw.get(), self.sp_cost.get(), self.sp_sales.get()]
-        for f in files:
-            if not f or not os.path.exists(f):
-                self._notify("error", "Missing File",
-                                     f"Required file not found:\n'{f}'", parent=self)
-                return
-        out = self._resolve_xlsx_output(self.sp_out.get(), "Stock_Valuation_Report.xlsx")
-        if not out:
-            return
-        try:
-            cm = ConfigurationManager(self.active_profile.get(), module="stock_processing")
-            pricing = cm.get_stock_pricing()["columns"]
-            defaults = DEFAULTS["stock_processing/settings"]["pricing"]["columns"]
-            overrides = {
-                "stock": self._select_columns(self.sp_raw.get(),
-                    {"article": stock_input(cm)["article_column"], **category_source_columns(cm, "stock_processing")},
-                    {"article": DEFAULTS["general/catalog"]["columns"]["article"], "family": DEFAULTS["general/catalog"]["columns"]["family"]}),
-                "cost": self._select_columns(self.sp_cost.get(), stock_price_columns(cm, "cost", required_only=True), defaults),
-                "sales": self._select_columns(self.sp_sales.get(), stock_price_columns(cm, "sales", required_only=True), defaults),
-            }
-        except Exception as exc:
-            self._handle_error(exc)
-            return
-        try:
-            save_last_paths(self.active_profile.get(), {"stock_processing": {
-                "stock": self.sp_raw.get(), "cost": self.sp_cost.get(), "sales": self.sp_sales.get(), "out": out}})
-        except Exception as exc:
-            self._handle_error(exc)
-            return
-        warnings = []
-        args = Namespace(
-            stock_processing_raw=self.sp_raw.get(),
-            shared_cost=self.sp_cost.get(),
-            shared_sales=self.sp_sales.get(),
-            stock_processing_out=out,
-            stock_processing_profile=self.active_profile.get(),
-            non_interactive=True,
-            include_unit_prices=self.sp_unit_prices.get(),
-            column_overrides=overrides,
-            warnings=warnings,
+        request = stock.StockRequest(
+            profile=self.active_profile.get(),
+            stock=self.sp_raw.get(),
+            cost=self.sp_cost.get(),
+            sales=self.sp_sales.get(),
+            output=self.sp_out.get(),
+            unit_prices=self.sp_unit_prices.get(),
         )
-        self._run_async(lambda progress, stats: run_stock_processing(args), "Stock Processing completed!", warnings=warnings, progress_target=args)
+        try:
+            job = stock.prepare(request, stock.check(request, self._confirm_column),
+                notify=lambda message: self._notify("warning", "Output File", message, parent=self))
+        except Exception as exc:
+            self._handle_error(exc)
+            return
+        self._run_async(lambda progress, stats: job.run(progress=progress, stats=stats), "Stock Processing completed!")
 
     # ── Tab 3: YoY Reports ────────────────────────────────────────────────────
 
@@ -1176,14 +1150,17 @@ class InventoryToolkitGUI(BaseWindow):
             drain_updates()
             self._set_busy(False)
             if kind == "success":
-                out_path = payload
+                # Workflows not migrated yet return a path and fill the caller's list.
+                migrated = isinstance(payload, RunResult)
+                out_path = payload.output if migrated else payload
+                notes = payload.warnings if migrated else warnings
                 self._set_status(f"✅ Done in {elapsed:.1f}s  |  {out_path}")
                 self._finish_progress(True)
                 self._record_result(out_path, run_profile, elapsed)
                 self._notify("info",
                     "Done",
                     f"{success_msg}\n\nTime: {elapsed:.1f}s\nOutput: {out_path}"
-                    + ("\n\nWarnings:\n" + "\n".join(warnings) if warnings else ""),
+                    + ("\n\nWarnings:\n" + "\n".join(notes) if notes else ""),
                     parent=self,
                 )
             else:

@@ -12,7 +12,10 @@ flowchart TD
     B --> G["GUI package"]
     C --> S["Shared configuration and setup services"]
     G --> S
-    S --> E["Independent report engines"]
+    C --> W["Shared workflows"]
+    G --> W
+    W --> S
+    W --> E["Independent report engines"]
     E --> X["Excel reports"]
 ```
 
@@ -30,12 +33,22 @@ Presentation code may:
 - perform lightweight pre-flight checks;
 - inspect workbook headers for setup/autodetection;
 - present Configuration Hub and Guided Setup;
-- call engines;
+- request a workflow and show its result;
 - display progress/errors.
 
 Presentation code should **not** reimplement stock reconciliation, family classification, valuation formulas, or YoY calculations.
 
 The GUI must not rely on terminal input. Long-running GUI operations execute away from the Tk main thread and UI updates return to the main thread.
+
+### Use cases — `workflows/`
+
+Each workflow turns a request into a report through the same steps for every interface:
+
+1. `check(request, confirm_column)` verifies files and headers, asking the interface only about default columns;
+2. `prepare(request, columns, notify)` settles the output name and remembers the selection;
+3. `job.run(progress, stats)` runs the engine and returns a `RunResult` with the output, duration and warnings, or raises. It asks nothing, so it can run on any thread.
+
+Workflows never print, read a terminal or import an interface. `tests/test_workflow_layers.py` enforces these boundaries and lists the modules still calling engines directly; entries may only be removed. Stock Processing is migrated; Cross Check and YoY are pending.
 
 ### Infrastructure — `core/`
 

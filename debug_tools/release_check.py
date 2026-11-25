@@ -78,6 +78,7 @@ def _quick_gate() -> None:
         "core",
         "cli",
         "engine",
+        "workflows",
         "gui",
         "tools",
         "tests",

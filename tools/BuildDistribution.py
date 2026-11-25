@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from core.build import BUILD
 
-SOURCE_DIRS = ("inventory_toolkit", "cli", "core", "engine", "gui", "debug_tools", "tools", "tests", "docs")
+SOURCE_DIRS = ("inventory_toolkit", "cli", "core", "engine", "gui", "workflows", "debug_tools", "tools", "tests", "docs")
 ROOT_FILES = (
     "build.prop", "requirements.txt", "pytest.ini", "README.md", "CHANGELOG.md",
     "LICENSE", "Inventory Toolkit.sh", "Inventory Toolkit.bat", "Setup Environment.bat",

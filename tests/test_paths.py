@@ -7,6 +7,7 @@ import sys
 
 from cli import profiles as cli_profiles
 from cli import cross_check_launcher, stock_processing_launcher, yoy_reports_launcher
+from core.workflow_errors import ErrorCode, WorkflowError
 from cli.utils import input_default, load_last_paths, save_last_paths, validate_files_exist
 from core import paths as app_paths
 from core.configuration_manager import ConfigurationManager
@@ -120,6 +121,10 @@ def test_cross_check_demo_prompts_resolve_bundled_inputs_from_foreign_cwd(tmp_pa
     assert input_default("demo", "my-count.xlsx", "cross_check_physical_count.xlsx") == "my-count.xlsx"
 
 
+def _stop_after_inputs(*_args):
+    raise WorkflowError(ErrorCode.INPUT_FILE_MISSING, "stop")
+
+
 def test_stock_demo_prompts_resolve_bundled_inputs_from_foreign_cwd(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(stock_processing_launcher, "clear_screen", lambda: None)
@@ -131,7 +136,7 @@ def test_stock_demo_prompts_resolve_bundled_inputs_from_foreign_cwd(tmp_path, mo
         return default
 
     monkeypatch.setattr(stock_processing_launcher, "ask_file", accept_default)
-    monkeypatch.setattr(stock_processing_launcher, "validate_files_exist", lambda _paths: False)
+    monkeypatch.setattr(stock_processing_launcher.stock, "check", _stop_after_inputs)
     monkeypatch.setattr("builtins.input", lambda _prompt: "")
 
     stock_processing_launcher.launch_stock_processing("demo")
