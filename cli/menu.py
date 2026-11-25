@@ -14,14 +14,6 @@ from cli.profile_overview import show_profile_overview
 from core.optional_debug import debug_available, open_debug_console
 from core.logger import log, log_debug_event, set_debug_level
 
-try:
-    from engine import stock_processing
-    from engine import inventory_cross_check
-    MODULES_LOADED = True
-except ImportError as e:
-    MODULES_LOADED = False
-    _import_error = e
-
 _VERSION = BUILD.version
 
 _LOGO = r"""
@@ -130,16 +122,11 @@ def main():
     if not PANDAS_AVAILABLE:
         print("  ⚠️  Warning: Pandas is not installed.")
 
-    if not MODULES_LOADED:
-        print(f"  ⚠️  Warning: Could not load engine modules ({_import_error}).")
-        input("  Press Enter to continue in degraded mode...")
-
     debug_level = _apply_debug_level(args.debug_level if BUILD.type == "debug" else 1, reset_session_log=True)
     log_debug_event(
         "cli_start",
         version=_VERSION,
         debug_level=debug_level,
-        modules_loaded=MODULES_LOADED,
         pandas_available=PANDAS_AVAILABLE,
     )
     if debug_level > 1:

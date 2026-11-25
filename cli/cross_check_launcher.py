@@ -1,135 +1,29 @@
-"""
-cross_check_launcher.py — Inventory Cross Check module launcher.
+"""Inventory Cross Check in the console: ask, request the workflow, show the result."""
 
-Remembers file paths used in the previous run so the user does not
-have to retype them on every execution.
-"""
+from dataclasses import replace
 
-import time
-from argparse import Namespace
-
-from cli.progress import show_progress, show_stats
-from cli.utils import (
-    clear_screen, ask_file, validate_files_exist,
-    load_last_paths, save_last_paths,
-    confirm_default_column, input_default,
-)
-from core.workflow_contracts import stock_input, stock_price_columns, cross_article_column, category_source_columns
-from core.input_columns import choose_input_columns
-from core.configuration_manager import ConfigurationManager
-from core.profile_config import DEFAULTS
-from core.logger import log, log_debug_event, log_exception
-from core.system_utils import InvalidExcelOutputPathError, normalize_xlsx_output_path
+from cli.utils import ask_file, clear_screen, input_default, load_last_paths
+from cli.workflow_runner import ask_option, confirm_column, run_job, show_notice, workflow_screen
+from workflows import cross
 
 
 def launch_cross_check(active_profile: str) -> None:
     clear_screen()
-    log_debug_event("cross_check_cli_open", profile=active_profile)
     print(f"  🔄  INVENTORY CROSS CHECK  —  Profile: [{active_profile}]\n")
-
-    last = load_last_paths(active_profile)
-    cc   = last.get("cross_check", {})
-
-    system_file = ask_file("1. System stock file", input_default(active_profile, cc.get("system"), "cross_check_system_stock.xls"))
-    count_file = ask_file("2. Physical count file", input_default(active_profile, cc.get("count"), "cross_check_physical_count.xlsx"))
-    cost_file = ask_file("3. Cost price list", input_default(active_profile, cc.get("cost"), "shared_cost_list.xlsx"))
-    sales_file = ask_file("4. Sales price list", input_default(active_profile, cc.get("sales"), "shared_sales_price_list.xlsx"))
-
-    if not validate_files_exist([system_file, count_file, cost_file, sales_file]):
-        print("\n  ⚠️  Operation cancelled — required files are missing.")
-        input("  Press Enter to return to the menu...")
-        return
-
-    try:
-        config = ConfigurationManager(active_profile, module="cross_check")
-        cross_config = config.get_cross_check_config()
-        mappings = cross_config["price_lists"]
-        defaults = DEFAULTS["cross_check/settings"]["price_lists"]
-        overrides = {
-            "system": choose_input_columns(
-                system_file,
-                {"article": cross_article_column(config),
-                 "quantity": cross_config["input"]["quantity_column"], **category_source_columns(config, "cross_check")},
-                {"article": DEFAULTS["general/catalog"]["columns"]["article"],
-                 "quantity": DEFAULTS["cross_check/settings"]["input"]["quantity_column"], "family": DEFAULTS["general/catalog"]["columns"]["family"]},
-                confirm_default_column,
-            ),
-            "cost": choose_input_columns(cost_file, mappings["cost"], defaults["cost"], confirm_default_column),
-            "sales": choose_input_columns(sales_file, mappings["sales"], defaults["sales"], confirm_default_column),
-        }
-        if cross_config["input"]["count_mode"] == "quantities":
-            overrides["count"] = choose_input_columns(count_file,
-                {"article": cross_config["input"]["count_article_column"], "quantity": cross_config["input"]["count_quantity_column"]},
-                {"article": DEFAULTS["general/catalog"]["columns"]["article"], "quantity": cross_config["input"]["quantity_column"], **category_source_columns(config, "cross_check")}, confirm_default_column)
-    except Exception as exc:
-        print(f"\n  ❌ Input column validation: {exc}")
-        input("  Press Enter to return...")
-        return
-
-    out_file = ask_file("\n5. Output file name", cc.get("out") or "Cross_Check_Results.xlsx", is_output=True)
-    try:
-        out_file = normalize_xlsx_output_path(out_file, notify=lambda message: print(f"  ⚠️  {message}"))
-    except InvalidExcelOutputPathError as exc:
-        log.error("Invalid output path: %s", exc)
-        print(f"\n  ❌ {exc}")
-        input("  Press Enter to return to the menu...")
-        return
-
-    save_last_paths(active_profile, {
-        "cross_check": {
-            "system": system_file,
-            "count":  count_file,
-            "cost":   cost_file,
-            "sales":  sales_file,
-            "out":    out_file,
-        }
-    })
-
-    print("\n  ─ Cross Check options ─")
-    resp_ds      = input("  Consolidate quantities from multiple databases? [Y/N, default N]: ").strip().upper()
-    flag_consolidate = resp_ds == "Y"
-
-    resp_partial = input("  Filter by scanned articles only (partial count)? [Y/N, default N]: ").strip().upper()
-    flag_partial = resp_partial == "Y"
-
-    log_debug_event(
-        "cross_check_cli_parameters",
+    saved = load_last_paths(active_profile).get("cross_check", {})
+    request = cross.CrossRequest(
         profile=active_profile,
-        system_file=system_file,
-        count_file=count_file,
-        cost_file=cost_file,
-        sales_file=sales_file,
-        output_file=out_file,
-        consolidate=flag_consolidate,
-        partial=flag_partial,
+        system=ask_file("1. System stock file", input_default(active_profile, saved.get("system"), "cross_check_system_stock.xls")),
+        count=ask_file("2. Physical count file", input_default(active_profile, saved.get("count"), "cross_check_physical_count.xlsx")),
+        cost=ask_file("3. Cost price list", input_default(active_profile, saved.get("cost"), "shared_cost_list.xlsx")),
+        sales=ask_file("4. Sales price list", input_default(active_profile, saved.get("sales"), "shared_sales_price_list.xlsx")),
     )
-    print(f"\n  🚀 Cross-checking data...  (Output: {out_file})")
-
-    args = Namespace(
-        cross_check_system=system_file,
-        cross_check_count=count_file,
-        shared_cost=cost_file,
-        shared_sales=sales_file,
-        cross_check_out=out_file,
-        cross_check_profile=active_profile,
-        cross_check_consolidate=flag_consolidate,
-        cross_check_partial=flag_partial,
-        column_overrides=overrides,
-        progress=show_progress,
-        stats=show_stats,
-    )
-
-    try:
-        from engine.inventory_cross_check.generator import run_cross_check
-        start = time.time()
-        final_out = run_cross_check(args)
-        if final_out:
-            elapsed = time.time() - start
-            log_debug_event("cross_check_cli_complete", output=final_out, elapsed_seconds=round(elapsed, 4))
-            print(f"\n  ✅ Done in {elapsed:.2f}s  →  {final_out}")
-    except ImportError as e:
-        log_exception("Missing modules: %s", e)
-    except Exception as e:
-        log_exception("Critical Cross Check error: %s", e)
-
-    input("\n  Press Enter to return to the menu...")
+    with workflow_screen(active_profile):
+        columns = cross.check(request, confirm_column)
+        request = replace(
+            request,
+            output=ask_file("\n5. Output file name", saved.get("out") or "Cross_Check_Results.xlsx", is_output=True),
+            consolidate=ask_option("Consolidate quantities from multiple databases?"),
+            partial_count=ask_option("Filter by scanned articles only (partial count)?"),
+        )
+        run_job(cross.prepare(request, columns, show_notice))

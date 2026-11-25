@@ -7,6 +7,7 @@ import pytest
 
 from core.progress import ProgressEvent, StatsEvent
 from gui import app
+from workflows.base import RunResult
 
 
 class Variable:
@@ -69,6 +70,7 @@ class View:
     _set_busy = app.InventoryToolkitGUI._set_busy
     _require_idle = app.InventoryToolkitGUI._require_idle
     _run_async = app.InventoryToolkitGUI._run_async
+    _run_workflow = app.InventoryToolkitGUI._run_workflow
     _show_progress = app.InventoryToolkitGUI._show_progress
     _show_stats = app.InventoryToolkitGUI._show_stats
     _finish_progress = app.InventoryToolkitGUI._finish_progress
@@ -161,7 +163,7 @@ def test_run_blocks_overlap_and_restores_controls_after_completion(monkeypatch, 
         if failure:
             raise RuntimeError("Cannot save output")
         stats(StatsEvent(("Rows: 2",)))
-        return "report.xlsx"
+        return RunResult("report.xlsx", 0.1)
 
     real_thread = app.threading.Thread
     threads = []
@@ -213,7 +215,7 @@ def test_worker_start_failure_unlocks_controls(monkeypatch, dialogs):
         raise RuntimeError("Cannot start worker")
 
     monkeypatch.setattr(app.threading, "Thread", lambda **_: SimpleNamespace(start=fail_start))
-    view._run_async(lambda *_: "report.xlsx", "Completed")
+    view._run_async(lambda *_: RunResult("report.xlsx", 0.1), "Completed")
     assert not view._busy
     assert view.profile_menu.state == "readonly"
     assert dialogs[-1][0] == "error"
@@ -256,7 +258,7 @@ def test_final_stats_are_drained_again_after_completion_arrives(monkeypatch, dia
 
     def work(_progress, stats):
         stats(StatsEvent(("Rows: 2",)))
-        return "report.xlsx"
+        return RunResult("report.xlsx", 0.1)
 
     view._run_async(work, "Completed")
     view.pending.pop(0)()

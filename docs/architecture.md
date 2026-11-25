@@ -44,11 +44,11 @@ The GUI must not rely on terminal input. Long-running GUI operations execute awa
 
 Each workflow turns a request into a report through the same steps for every interface:
 
-1. `check(request, confirm_column)` verifies files and headers, asking the interface only about default columns;
-2. `prepare(request, columns, notify)` settles the output name and remembers the selection;
+1. `check(request, confirm_column)` verifies files, options and headers, asking the interface only about default columns, and remembers the selected inputs;
+2. `prepare(request, columns, notify)` settles and remembers the output name;
 3. `job.run(progress, stats)` runs the engine and returns a `RunResult` with the output, duration and warnings, or raises. It asks nothing, so it can run on any thread.
 
-Workflows never print, read a terminal or import an interface. `tests/test_workflow_layers.py` enforces these boundaries and lists the modules still calling engines directly; entries may only be removed. Stock Processing is migrated; Cross Check and YoY are pending.
+Workflows never print, read a terminal or import an interface. `tests/test_workflow_layers.py` enforces these boundaries: `cli/` and `gui/` cannot import `engine/`.
 
 ### Infrastructure — `core/`
 

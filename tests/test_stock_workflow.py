@@ -57,7 +57,7 @@ def test_an_invalid_output_is_rejected_before_remembering_it(request_):
 
     with pytest.raises(InvalidExcelOutputPathError):
         stock.prepare(replace(request_, output="report.xls"), {})
-    assert load_last_paths("report") == {}
+    assert "out" not in load_last_paths("report").get("stock_processing", {})
 
 
 def test_warnings_are_returned_instead_of_printed(request_, tmp_path, capsys):

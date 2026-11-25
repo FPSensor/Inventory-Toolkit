@@ -11,9 +11,10 @@ The CLI gathers user intent and files, manages profiles/configuration, then dele
 - `config_menu.py` — domain-oriented Configuration Hub and current-profile validation.
 - `wizard.py` — module-oriented Guided Setup and Excel-column autodetection.
 - `debug_menu.py` — source-compatibility wrapper for the optional `debug_tools.console` package.
-- `cross_check_launcher.py` — Cross Check prompts/pre-flight + engine invocation.
+- `cross_check_launcher.py` — Cross Check prompts + shared workflow.
 - `stock_processing_launcher.py` — Stock Processing prompts + shared workflow.
-- `yoy_reports_launcher.py` — YoY prompts/pre-flight + engine invocation.
+- `yoy_reports_launcher.py` — YoY prompts + shared workflow.
+- `workflow_runner.py` — shared questions, workflow execution and error display.
 - `utils.py` — presentation/file-dialog helpers, remembered paths and application-owned demo suggestions.
 - `progress.py` — compact stage/percentage output and separate final statistics.
 

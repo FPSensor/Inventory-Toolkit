@@ -5,17 +5,6 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
-# Modules still waiting for their workflow. Entries may only be removed.
-PENDING = {
-    ("cli/cross_check_launcher.py", "engine.inventory_cross_check.generator"),
-    ("cli/menu.py", "engine"),
-    ("cli/yoy_reports_launcher.py", "engine.yoy_reports.generator"),
-    ("cli/yoy_reports_launcher.py", "engine.yoy_reports.metrics"),
-    ("gui/app.py", "engine.inventory_cross_check.generator"),
-    ("gui/app.py", "engine.yoy_reports.generator"),
-    ("gui/app.py", "engine.yoy_reports.metrics"),
-}
-
 
 def imports(package, forbidden):
     found = set()
@@ -27,15 +16,11 @@ def imports(package, forbidden):
     return found
 
 
-def test_interfaces_reach_engines_only_through_workflows():
-    assert imports("cli", {"engine"}) | imports("gui", {"engine"}) == PENDING
-
-
 @pytest.mark.parametrize("package, forbidden", [
     ("core", {"engine", "workflows", "cli", "gui"}),
     ("engine", {"workflows", "cli", "gui"}),
     ("workflows", {"cli", "gui", "tkinter", "customtkinter"}),
-    ("cli", {"gui"}), ("gui", {"cli"}),
+    ("cli", {"gui", "engine"}), ("gui", {"cli", "engine"}),
 ])
 def test_layers_only_depend_on_the_ones_below(package, forbidden):
     assert imports(package, forbidden) == set()

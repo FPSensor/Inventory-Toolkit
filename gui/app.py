@@ -4,48 +4,29 @@ import os
 from core.build import BUILD
 from core.module_preferences import enabled_modules, set_enabled_modules
 import sys
-import json
 import queue
 import threading
 import subprocess
 from pathlib import Path
 import time
-from copy import deepcopy
-from argparse import Namespace
 
 import tkinter as tk
-from tkinter import filedialog, messagebox, simpledialog
+from tkinter import filedialog, messagebox
 
-from gui.widgets import (ctk, ttk, USE_CTK, BaseWindow, BaseToplevel, BaseFrame,
-    BaseButton, BaseLabel, BaseEntry, BaseTextbox, BaseScrollable,
-    _btn, _lbl, _entry, _pack_btn, apply_dark_theme, set_text_scale, COLORS)
+from gui.widgets import (ctk, ttk, USE_CTK, BaseWindow, BaseFrame,
+    BaseTextbox, BaseScrollable,
+    _btn, _lbl, _entry, apply_dark_theme, set_text_scale, COLORS)
 
-try:
-    import pandas as pd
-    PANDAS_AVAILABLE = True
-except ImportError:
-    PANDAS_AVAILABLE = False
-
-from core.business_schema import ARTICLE_COLUMN, DATABASE_ORIGIN_COLUMN, DEFAULT_FAMILY, FAMILY_COLUMN, PRICE_COLUMN, RAW_DATA_SHEET, VARIANT_COLUMN
 from core.configuration_manager import ConfigurationManager
-from core.workflow_contracts import cross_article_column, category_source_columns
-from core.input_columns import choose_input_columns
-from core.profile_config import DEFAULTS
 from core.logger import log
 from core import paths as app_paths
-from core.system_utils import InvalidExcelOutputPathError, normalize_xlsx_output_path
-from core.profile_config import ensure_profile_config as initialize_profile_files
-from core.profile_store import save_json, load_json, load_last_paths, save_last_paths
-from engine.inventory_cross_check.generator import run_cross_check
-from engine.yoy_reports.generator import generate_sales_report
-from engine.yoy_reports.metrics import select_run_metrics
+from core.profile_store import load_last_paths
 from core.setup_service import SetupSession, SetupState
 from core.setup_catalog import MODULE_LABELS
 from core.profile_overview import inspect_profile
 from core.input_doctor import inspect_workflow_inputs
 from core.workflow_errors import WorkflowError
-from workflows import stock
-from workflows.base import RunResult
+from workflows import cross, stock, yoy
 from gui.setup_wizard import SetupWizard
 
 
@@ -360,10 +341,6 @@ class InventoryToolkitGUI(BaseWindow):
             parent=self,
         )
 
-    def _select_columns(self, file_path, configured, defaults):
-        return choose_input_columns(file_path, configured, defaults,
-            lambda *question: self._confirm_column(file_path, *question))
-
     # ── Tabs ──────────────────────────────────────────────────────────────────
 
     def _build_tabs(self):
@@ -485,16 +462,6 @@ class InventoryToolkitGUI(BaseWindow):
         self.yoy_file.set(saved.get("file", ""))
         self.yoy_out.set(saved.get("out") or str(output.get("default_path", "yoy_analysis.xlsx")))
 
-    def _resolve_xlsx_output(self, value: str, default: str):
-        try:
-            return normalize_xlsx_output_path(
-                value.strip() or default,
-                notify=lambda message: self._notify("warning", "Output File", message, parent=self),
-            )
-        except InvalidExcelOutputPathError as exc:
-            self._notify("error", "Invalid Output File", str(exc), parent=self)
-            return None
-
     def _file_row(self, parent, label_text: str, var: tk.StringVar,
                   is_output: bool = False, row: int = 0):
         """Single file-input row: label + entry + Browse button."""
@@ -563,72 +530,16 @@ class InventoryToolkitGUI(BaseWindow):
             ).pack(pady=(0, 14))
 
     def _exec_cc(self):
-        if not self._require_idle():
-            return
-        if not self._gate_setup("cross_check"):
-            return
-        if not PANDAS_AVAILABLE:
-            self._notify("error", "Missing Dependency", "pandas is required.", parent=self)
-            return
-        files = [self.cc_sys.get(), self.cc_count.get(), self.cc_cost.get(), self.cc_sales.get()]
-        for f in files:
-            if not f or not os.path.exists(f):
-                self._notify("error", "Missing File",
-                                     f"Required file not found:\n'{f}'", parent=self)
-                return
-
-        if PANDAS_AVAILABLE:
-            try:
-                cm = ConfigurationManager(self.active_profile.get(), module="cross_check")
-                cross_config = cm.get_cross_check_config()
-                mappings = cross_config["price_lists"]
-                defaults = DEFAULTS["cross_check/settings"]["price_lists"]
-                overrides = {
-                    "system": self._select_columns(self.cc_sys.get(),
-                        { "article": cross_article_column(cm),
-                          "quantity": cross_config["input"]["quantity_column"], **category_source_columns(cm, "cross_check")},
-                        {"article": DEFAULTS["general/catalog"]["columns"]["article"],
-                         "quantity": DEFAULTS["cross_check/settings"]["input"]["quantity_column"], "family": DEFAULTS["general/catalog"]["columns"]["family"]}),
-                    "cost": self._select_columns(self.cc_cost.get(), mappings["cost"], defaults["cost"]),
-                    "sales": self._select_columns(self.cc_sales.get(), mappings["sales"], defaults["sales"]),
-                }
-                if cross_config["input"]["count_mode"] == "quantities":
-                    overrides["count"] = self._select_columns(self.cc_count.get(),
-                        {"article": cross_config["input"]["count_article_column"], "quantity": cross_config["input"]["count_quantity_column"]},
-                        {"article": DEFAULTS["general/catalog"]["columns"]["article"], "quantity": cross_config["input"]["quantity_column"], **category_source_columns(cm, "cross_check")})
-            except Exception as exc:
-                self._notify("error",
-                    "Cross Check Preflight Error",
-                    str(exc),
-                    parent=self,
-                )
-                return
-
-
-        out = self._resolve_xlsx_output(self.cc_out.get(), "Cross_Check_Output.xlsx")
-        if not out:
-            return
-
-        try:
-            save_last_paths(self.active_profile.get(), {"cross_check": {
-                "system": self.cc_sys.get(), "count": self.cc_count.get(),
-                "cost": self.cc_cost.get(), "sales": self.cc_sales.get(), "out": out}})
-        except Exception as exc:
-            self._handle_error(exc)
-            return
-        args = Namespace(
-            cross_check_system=self.cc_sys.get(),
-            cross_check_count=self.cc_count.get(),
-            shared_cost=self.cc_cost.get(),
-            shared_sales=self.cc_sales.get(),
-            cross_check_out=out,
-            cross_check_profile=self.active_profile.get(),
-            cross_check_consolidate=self.cc_consol.get(),
-            cross_check_partial=self.cc_partial.get(),
-            non_interactive=True,
-            column_overrides=overrides,
-        )
-        self._run_async(lambda progress, stats: run_cross_check(args), "Cross Check completed!", progress_target=args)
+        self._run_workflow("cross_check", cross, lambda: cross.CrossRequest(
+            profile=self.active_profile.get(),
+            system=self.cc_sys.get(),
+            count=self.cc_count.get(),
+            cost=self.cc_cost.get(),
+            sales=self.cc_sales.get(),
+            output=self.cc_out.get(),
+            consolidate=self.cc_consol.get(),
+            partial_count=self.cc_partial.get(),
+        ), "Cross Check completed!")
 
     # ── Tab 2: Stock Processing ───────────────────────────────────────────────
 
@@ -665,23 +576,14 @@ class InventoryToolkitGUI(BaseWindow):
             ).pack(pady=(0, 14))
 
     def _exec_stock(self):
-        if not self._require_idle() or not self._gate_setup("stock_processing"):
-            return
-        request = stock.StockRequest(
+        self._run_workflow("stock_processing", stock, lambda: stock.StockRequest(
             profile=self.active_profile.get(),
             stock=self.sp_raw.get(),
             cost=self.sp_cost.get(),
             sales=self.sp_sales.get(),
             output=self.sp_out.get(),
             unit_prices=self.sp_unit_prices.get(),
-        )
-        try:
-            job = stock.prepare(request, stock.check(request, self._confirm_column),
-                notify=lambda message: self._notify("warning", "Output File", message, parent=self))
-        except Exception as exc:
-            self._handle_error(exc)
-            return
-        self._run_async(lambda progress, stats: job.run(progress=progress, stats=stats), "Stock Processing completed!")
+        ), "Stock Processing completed!")
 
     # ── Tab 3: YoY Reports ────────────────────────────────────────────────────
 
@@ -825,97 +727,32 @@ class InventoryToolkitGUI(BaseWindow):
         self.after(100, poll)
 
     def _exec_yoy(self):
-        if not self._require_idle():
-            return
-        if not self._gate_setup("yoy_reports"):
-            return
-        f_path = self.yoy_file.get().strip()
-        if not f_path or not os.path.exists(f_path):
-            self._notify("error", "Missing File", "Sales data file not found.", parent=self)
-            return
+        self._run_workflow("yoy_reports", yoy, lambda: yoy.YoYRequest(
+            profile=self.active_profile.get(),
+            sales=self.yoy_file.get().strip(),
+            start=self.yoy_start.get(),
+            end=self.yoy_end.get(),
+            by_family=self.yoy_group.get() == "Family",
+            has_families=self.yoy_has_fam.get(),
+            sales_amounts=self.yoy_sales_amounts.get(),
+            by_month=self.yoy_seg.get(),
+            annual_comparison=self.yoy_compare.get(),
+            variants=self.yoy_variants.get(),
+            output=self.yoy_out.get(),
+        ), "YoY Sales Report generated!")
 
-        if not PANDAS_AVAILABLE:
-            self._notify("error", "Missing Dependency", "pandas is required.", parent=self)
+    def _run_workflow(self, module, workflow, build_request, success_msg):
+        """Read every control and ask on the UI thread; only the job runs off it."""
+        if not self._require_idle() or not self._gate_setup(module):
             return
-
         try:
-            s_dt = pd.to_datetime(self.yoy_start.get().strip(), format="%Y-%m-%d")
-            e_dt = pd.to_datetime(self.yoy_end.get().strip(),   format="%Y-%m-%d")
-            if s_dt > e_dt:
-                self._notify("error", "Date Error", "Start date must be before end date.", parent=self)
-                return
-            e_dt = e_dt + pd.Timedelta(days=1, seconds=-1)
-        except Exception as err:
-            self._notify("error", "Invalid Date", f"Dates must be YYYY-MM-DD format:\n{err}", parent=self)
-            return
-
-        try:
-            config_manager = ConfigurationManager(self.active_profile.get(), module="yoy_reports")
-            yoy_config = deepcopy(config_manager.get_yoy_reports_config())
+            request = build_request()
+            job = workflow.prepare(request, workflow.check(request, self._confirm_column),
+                lambda message: self._notify("warning", "Output File", message, parent=self))
         except Exception as exc:
             self._handle_error(exc)
             return
-        if not yoy_config or "input" not in yoy_config:
-            self._notify("error", "Config Error",
-                                 f"YoY config missing for profile '{self.active_profile.get()}'.\n"
-                                 "Run the Setup Wizard or edit YoY Reports in Config Hub.", parent=self)
-            return
-
-        try:
-            yoy_config = select_run_metrics(yoy_config, self.yoy_sales_amounts.get())
-        except ValueError as exc:
-            self._handle_error(exc)
-            return
-
-        input_config = yoy_config["input"]
-        grouping_column = (
-            input_config["grouping_column"]
-            if self.yoy_group.get() == "Family"
-            else input_config["item_column"]
-        )
-        out = self._resolve_xlsx_output(
-            self.yoy_out.get(), yoy_config["output"].get("default_path", "yoy_analysis.xlsx")
-        )
-        if not out:
-            return
-
-        # Capture every Tk variable on the UI thread before starting the worker.
-        segmented = self.yoy_seg.get()
-        if not segmented:
-            yoy_config["output"]["annual_comparison"] = self.yoy_compare.get()
-        has_families = self.yoy_has_fam.get()
-        profile = self.active_profile.get()
-        include_variants = self.yoy_variants.get()
-        required_fields = ["date_column", "branch_column"]
-        required_fields += ["quantity_column" if m == "units" else "sales_column" for m in yoy_config["output"]["metrics"]]
-        required_fields.append("grouping_column" if self.yoy_group.get() == "Family" and has_families else "item_column")
-        if include_variants:
-            required_fields.append("variant_column")
-        try:
-            resolved = self._select_columns(f_path,
-                {key: yoy_config["input"][key] for key in dict.fromkeys(required_fields)},
-                DEFAULTS["yoy_reports/settings"]["input"])
-            yoy_config["input"].update(resolved)
-            grouping_column = yoy_config["input"]["grouping_column" if self.yoy_group.get() == "Family" else "item_column"]
-        except Exception as exc:
-            self._handle_error(exc)
-            return
-
-        try:
-            save_last_paths(profile, {"yoy_reports": {"file": f_path, "out": out}})
-        except Exception as exc:
-            self._notify("error", "Path Persistence Error", str(exc), parent=self)
-            return
-
-        def task(progress, stats):
-            return generate_sales_report(
-                f_path, out, s_dt, e_dt, yoy_config, grouping_column,
-                segmented, has_families, profile, include_variants,
-                non_interactive=True,
-                progress=progress,
-                stats=stats,
-            )
-        self._run_async(task, "YoY Sales Report generated!")
+        self._run_async(lambda progress, stats: job.run(progress=progress, stats=stats), success_msg)
 
     # ── Status bar & async runner ─────────────────────────────────────────────
 
@@ -1083,7 +920,7 @@ class InventoryToolkitGUI(BaseWindow):
             self._locked_controls = []
             self._running_profile = None
 
-    def _run_async(self, func, success_msg: str, warnings=None, progress_target=None):
+    def _run_async(self, func, success_msg: str):
         """Run engine work off-thread while keeping every Tk call on the UI thread."""
         if not self._require_idle():
             return
@@ -1113,16 +950,7 @@ class InventoryToolkitGUI(BaseWindow):
 
         def worker():
             try:
-                if progress_target is not None:
-                    progress_target.progress = progress_queue.put
-                    progress_target.stats = stats_queue.put
-                out_path = func(progress_queue.put, stats_queue.put)
-                if not out_path:
-                    raise RuntimeError(
-                        "The operation finished without producing an output file. "
-                        "Check logs/session.log for the validation error."
-                    )
-                result_queue.put(("success", out_path, time.time() - t_start))
+                result_queue.put(("success", func(progress_queue.put, stats_queue.put), time.time() - t_start))
             except Exception as exc:
                 log.error(f"Async error: {exc}")
                 result_queue.put(("error", exc, time.time() - t_start))
@@ -1150,17 +978,14 @@ class InventoryToolkitGUI(BaseWindow):
             drain_updates()
             self._set_busy(False)
             if kind == "success":
-                # Workflows not migrated yet return a path and fill the caller's list.
-                migrated = isinstance(payload, RunResult)
-                out_path = payload.output if migrated else payload
-                notes = payload.warnings if migrated else warnings
+                out_path = payload.output
                 self._set_status(f"✅ Done in {elapsed:.1f}s  |  {out_path}")
                 self._finish_progress(True)
                 self._record_result(out_path, run_profile, elapsed)
                 self._notify("info",
                     "Done",
                     f"{success_msg}\n\nTime: {elapsed:.1f}s\nOutput: {out_path}"
-                    + ("\n\nWarnings:\n" + "\n".join(notes) if notes else ""),
+                    + ("\n\nWarnings:\n" + "\n".join(payload.warnings) if payload.warnings else ""),
                     parent=self,
                 )
             else:

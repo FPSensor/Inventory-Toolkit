@@ -8,7 +8,8 @@ import sys
 from cli import profiles as cli_profiles
 from cli import cross_check_launcher, stock_processing_launcher, yoy_reports_launcher
 from core.workflow_errors import ErrorCode, WorkflowError
-from cli.utils import input_default, load_last_paths, save_last_paths, validate_files_exist
+from workflows.base import require_files
+from cli.utils import input_default, load_last_paths, save_last_paths
 from core import paths as app_paths
 from core.configuration_manager import ConfigurationManager
 from gui.app import InventoryToolkitGUI
@@ -96,7 +97,7 @@ def test_user_relative_paths_still_follow_caller_cwd(tmp_path, monkeypatch):
     user_file.write_bytes(b"placeholder")
     monkeypatch.chdir(tmp_path)
 
-    assert validate_files_exist(["relative-input.xlsx"])
+    require_files({"Input": "relative-input.xlsx"})
 
 
 def test_cross_check_demo_prompts_resolve_bundled_inputs_from_foreign_cwd(tmp_path, monkeypatch):
@@ -110,7 +111,7 @@ def test_cross_check_demo_prompts_resolve_bundled_inputs_from_foreign_cwd(tmp_pa
         return default
 
     monkeypatch.setattr(cross_check_launcher, "ask_file", accept_default)
-    monkeypatch.setattr(cross_check_launcher, "validate_files_exist", lambda _paths: False)
+    monkeypatch.setattr(cross_check_launcher.cross, "check", _stop_after_inputs)
     monkeypatch.setattr("builtins.input", lambda _prompt: "")
 
     cross_check_launcher.launch_cross_check("demo")
@@ -150,7 +151,6 @@ def test_stock_demo_prompts_resolve_bundled_inputs_from_foreign_cwd(tmp_path, mo
 def test_yoy_demo_prompt_resolves_bundled_input_from_foreign_cwd(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(yoy_reports_launcher, "load_last_paths", lambda _profile: {})
-    monkeypatch.setattr(yoy_reports_launcher, "save_last_paths", lambda *_args: None)
     offered = []
 
     def accept_default(_prompt, default):
@@ -158,12 +158,8 @@ def test_yoy_demo_prompt_resolves_bundled_input_from_foreign_cwd(tmp_path, monke
         return default
 
     monkeypatch.setattr(yoy_reports_launcher, "ask_file", accept_default)
-    def reject_header(*_args, **_kwargs):
-        raise ValueError("stop after selecting input")
-
-    monkeypatch.setattr(yoy_reports_launcher.pd, "read_excel", reject_header)
-    responses = iter(("i", "", ""))
-    monkeypatch.setattr("builtins.input", lambda _prompt: next(responses))
+    monkeypatch.setattr(yoy_reports_launcher.yoy, "check_file", _stop_after_inputs)
+    monkeypatch.setattr("builtins.input", lambda _prompt: "")
 
     yoy_reports_launcher.launch_yoy_reports("demo")
 

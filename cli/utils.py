@@ -6,7 +6,6 @@ Provides:
   • ask_yes_no(message)            → bool
   • ask_file(message, default, is_output) → str
   • load_last_paths / save_last_paths   — per-profile path persistence
-  • validate_files_exist(file_list) → bool
   • open_in_editor(path)           — cross-platform (Linux / macOS / Windows)
   • load_json / save_json
 """
@@ -118,25 +117,6 @@ def ask_file(message: str, default_val: str, is_output: bool = False) -> str:
 
 
 # ── Path persistence ──────────────────────────────────────────────────────────
-
-# ── File validation ───────────────────────────────────────────────────────────
-
-def validate_files_exist(file_list: list) -> bool:
-    all_ok = True
-    missing = []
-    for fp in file_list:
-        if fp and not os.path.isfile(fp):
-            log.error(f"File not found: '{fp}'")
-            missing.append(fp)
-            all_ok = False
-    log_debug_event(
-        "file_validation",
-        requested=len(file_list),
-        missing=missing,
-        ok=all_ok,
-    )
-    return all_ok
-
 
 # ── Editor — cross-platform ───────────────────────────────────────────────────
 

@@ -206,17 +206,12 @@ def test_cli_full_report_comparison_is_opt_in_and_reuses_last_paths(tmp_path, mo
     monkeypatch.setattr(app_paths, "PROFILES_ROOT", tmp_path / "profiles")
     config = _config(metrics=["units"], annual_comparison=True)
     monkeypatch.setattr(
-        "cli.yoy_reports_launcher.ConfigurationManager",
+        "workflows.yoy.ConfigurationManager",
         lambda profile, **_kwargs: type("Manager", (), {"get_yoy_reports_config": lambda self: config})(),
     )
-    monkeypatch.setattr(
-        "cli.yoy_reports_launcher.pd.read_excel",
-        lambda *_args, **_kwargs: pd.DataFrame(columns=config["input"].values()),
-    )
-    monkeypatch.setattr(
-        "cli.yoy_reports_launcher.choose_input_columns",
-        lambda _file, configured, _defaults, _confirm: configured,
-    )
+    sales = tmp_path / "sales.xlsx"
+    pd.DataFrame(columns=config["input"].values()).to_excel(sales, index=False)
+    monkeypatch.chdir(tmp_path)
     requested_defaults = []
 
     def choose_file(message, default, is_output=False):
@@ -320,16 +315,16 @@ def test_cli_selects_only_requested_metric_columns(tmp_path, monkeypatch, answer
     monkeypatch.setattr(app_paths, 'PROFILES_ROOT', tmp_path / 'profiles')
     config = _config()
     original = deepcopy(config)
-    monkeypatch.setattr('cli.yoy_reports_launcher.ConfigurationManager',
-        lambda **_kwargs: type('Manager', (), {'get_yoy_reports_config': lambda self: config})())
+    monkeypatch.setattr('workflows.yoy.ConfigurationManager',
+        lambda _profile, **_kwargs: type('Manager', (), {'get_yoy_reports_config': lambda self: config})())
     monkeypatch.setattr('cli.yoy_reports_launcher.ask_file',
         lambda _message, _default, is_output=False: str(tmp_path / ('output.xlsx' if is_output else 'input.xlsx')))
-    monkeypatch.setattr('cli.yoy_reports_launcher.pd.read_excel', lambda *_args, **_kwargs: pd.DataFrame())
+    (tmp_path / 'input.xlsx').touch()
     fields = []
     def choose(_file, configured, _defaults, _confirm):
         fields.extend(configured)
         return configured
-    monkeypatch.setattr('cli.yoy_reports_launcher.choose_input_columns', choose)
+    monkeypatch.setattr('workflows.base.choose_input_columns', choose)
     captured = []
     monkeypatch.setattr('engine.yoy_reports.generator.generate_sales_report',
         lambda _file, out, _start, _end, selected, *_args, **_kwargs: captured.append(selected) or out)

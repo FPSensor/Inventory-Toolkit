@@ -72,7 +72,7 @@ Development changes after `v1.4.1`. The released application version remains `1.
 
 ### Changed
 
-- **workflows: stock:** Prepare and run Stock Processing once for every interface. CLI and GUI request the shared workflow and show its result instead of each validating columns, resolving paths and building engine arguments. Missing files are reported together, warnings appear after completion in the console, and a run without a report is an explicit error. Reports are unchanged.
+- **workflows:** Prepare and run Stock Processing, Cross Check and YoY once for every interface. CLI and GUI request a shared workflow and show its result instead of each validating columns, resolving paths and building engine arguments. Missing files are reported together, selected inputs are remembered even when a run stops, yes/no questions reject other answers, warnings appear after completion in the console, and a run without a report is an explicit error. Reports are unchanged.
 
 - **debug: sources:** Remove trailing whitespace inherited by the relocated integrity/stress tools so the complete development diff passes Git whitespace verification. Runtime behavior is unchanged.
 
