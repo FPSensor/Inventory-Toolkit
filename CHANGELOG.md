@@ -8,6 +8,8 @@ Development changes after `v1.4.1`. The released application version remains `1.
 
 ### Added
 
+- **run:** Create any report without questions from `python -m inventory_toolkit run`, with explicit or remembered files, exit statuses and JSON results for schedulers. It uses the same workflows as CLI and GUI.
+
 - **yoy: raw exports:** Add `input.branch_aliases` so deposits count for their store, and `input.code_tokenization` to separate codes from descriptions, without editing the workbook. Both are editable from guided setup. Verify quantity and sales against the total row that some systems append to their exports and stop when they differ.
 
 - **stock: templates:** Let a profile own an Excel report template. Native PivotTables, calculated fields, styles and summaries are rebuilt from each run's data; layouts that cannot be rebuilt faithfully are rejected and every generated package is structurally verified before saving. Adds the `lxml` dependency.

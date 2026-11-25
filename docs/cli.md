@@ -63,6 +63,18 @@ Store mappings, family rules, cleaning rules, pricing mappings, and summary layo
 
 `cli/yoy_reports_launcher.py` collects the historical sales workbook, date range, segmentation/options, and output path, then calls `engine/yoy_reports/`. Enabled unit/sales metrics, annual-comparison behavior, and the default variant-breakdown choice come from the active profile; the CLI may override variant breakdown for a single run.
 
+## Unattended reports
+
+`run` creates a report without questions, in every build:
+
+```bash
+python -m inventory_toolkit run stock --profile NAME --stock a.xlsx --cost b.xlsx --sales c.xlsx --output report.xlsx
+python -m inventory_toolkit run yoy --profile NAME --start 2026-11-01 --end 2026-11-30 --no-has-families --sales-amounts
+python -m inventory_toolkit run cross --profile NAME --consolidate --json
+```
+
+Files and output default to the last ones used by the profile; use `run REPORT --help` for every option. The exit status is 0 when the report was created, 1 when it failed and 2 for an invalid command. `--json` prints the output path and warnings, or a stable error code. Nothing is asked: a missing column or a workbook open in another program is an error.
+
 ## Progress and final statistics
 
 All three workflows print compact stage/percentage updates during normal operation. Debug mode is not required. Cross Check has three stages, Stock four, and YoY three; YoY also advances within its rendering stage as sheets finish. The percentage indicates work stages, not elapsed time or a remaining-time estimate, and reaches 100% after the workbook has been saved.

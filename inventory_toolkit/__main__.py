@@ -11,7 +11,11 @@ def main(argv=None):
     if argv and argv[0] in {'doctor', 'history'}:
         from inventory_toolkit.maintenance import main as maintenance
         return maintenance(argv)
+    if argv and argv[0] == 'run':
+        from inventory_toolkit.run import main as run
+        return run(argv[1:])
     parser = argparse.ArgumentParser(description="Inventory Toolkit", epilog=
+        "Unattended reports: run {stock,cross,yoy} --profile NAME. "
         "Profile maintenance: doctor --profile NAME; history {list,create,restore} --profile NAME")
     parser.add_argument("--interface", choices=("cli", "gui"), default=BUILD.default_control)
     parser.add_argument("--version", action="version", version=BUILD.version)
