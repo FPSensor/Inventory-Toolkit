@@ -1,9 +1,9 @@
 import pytest
 
-from core import paths
-from core.configuration_manager import ConfigurationManager
-from core.profile_creation import create_profile, profile_slug
-from core.module_preferences import enabled_modules
+from core.runtime import paths
+from core.config.configuration_manager import ConfigurationManager
+from core.profiles.profile_creation import create_profile, profile_slug
+from core.profiles.module_preferences import enabled_modules
 
 
 def test_neutral_profile_creation_selects_workflows_without_company_defaults(tmp_path, monkeypatch):

@@ -7,8 +7,8 @@ from functools import partial
 
 import pandas as pd
 
-from core.configuration_manager import ConfigurationManager
-from core.profile_config import DEFAULTS
+from core.config.configuration_manager import ConfigurationManager
+from core.config.profile_config import DEFAULTS
 from core.workflow_errors import ErrorCode, WorkflowError
 from workflows.base import Job, choose_columns, remember, require_files, settle_output
 

@@ -1,7 +1,7 @@
 """Console setup gating and structured, explicit recovery decisions."""
 from cli.wizard import run_module_setup
-from core.setup_service import SetupSession, SetupState
-from core.configuration_errors import ConfigurationError
+from core.setup.setup_service import SetupSession, SetupState
+from core.config.configuration_errors import ConfigurationError
 from core.workflow_errors import WorkflowError
 
 

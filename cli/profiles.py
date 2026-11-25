@@ -9,14 +9,14 @@ Linear new-profile flow:
 """
 
 import os
-from core.build import BUILD
-from core.module_preferences import set_enabled_modules
-from core.setup_catalog import MODULE_LABELS
+from core.runtime.build import BUILD
+from core.profiles.module_preferences import set_enabled_modules
+from core.setup.setup_catalog import MODULE_LABELS
 import sys
 from cli.utils import clear_screen, load_json, save_json, ask_yes_no
 from cli.wizard import initialize_profile_files, run_setup_wizard
-from core import paths as app_paths
-from core.setup_service import initialize_setup
+from core.runtime import paths as app_paths
+from core.setup.setup_service import initialize_setup
 
 
 # ── Internal helpers ──────────────────────────────────────────────────────────
@@ -41,7 +41,7 @@ def _list_profiles():
 # ── New profile ───────────────────────────────────────────────────────────────
 
 def _create_new_profile() -> str | None:
-    from core.profile_creation import create_profile
+    from core.profiles.profile_creation import create_profile
     print("\n  CREATE A PROFILE — choose only what you use\n")
     name = input("  Profile name (Enter cancels): ").strip()
     if not name:

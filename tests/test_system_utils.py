@@ -1,6 +1,6 @@
 import pytest
 
-from core.system_utils import (
+from core.files.system_utils import (
     InvalidExcelOutputPathError,
     OutputFileLockedError,
     normalize_xlsx_output_path,
@@ -72,7 +72,7 @@ def test_xlsx_output_path_warns_only_when_appending_extension():
 
 
 def test_empty_output_uses_module_default_without_warning(tmp_path, monkeypatch):
-    from core import paths
+    from core.runtime import paths
     from workflows.base import settle_output
     from workflows.stock import StockRequest
 

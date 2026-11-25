@@ -4,12 +4,12 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 import re
 
-from core import paths
-from core.configuration_manager import _CONFIG_MODELS
-from core.json_documents import read_document
-from core.profile_config import validate_config_header
-from core.profile_metadata import validate_metadata
-from core.setup_catalog import MODULE_LABELS
+from core.runtime import paths
+from core.config.configuration_manager import _CONFIG_MODELS
+from core.config.json_documents import read_document
+from core.config.profile_config import validate_config_header
+from core.profiles.profile_metadata import validate_metadata
+from core.setup.setup_catalog import MODULE_LABELS
 
 
 @dataclass(frozen=True)

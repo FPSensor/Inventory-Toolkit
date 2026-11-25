@@ -4,11 +4,11 @@ from dataclasses import dataclass
 from pathlib import Path
 
 
-from core.table_reader import read_table
-from core.column_assist import ColumnAdvice, advise_columns
-from core.configuration_manager import ConfigurationManager
+from core.files.table_reader import read_table
+from core.setup.column_assist import ColumnAdvice, advise_columns
+from core.config.configuration_manager import ConfigurationManager
 from core.workflow_contracts import stock_input, stock_price_columns, cross_article_column
-from core.setup_catalog import MODULE_LABELS, field
+from core.setup.setup_catalog import MODULE_LABELS, field
 
 
 @dataclass(frozen=True)

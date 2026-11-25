@@ -9,8 +9,8 @@ import os
 
 def clear_screen():
     os.system("cls" if os.name == "nt" else "clear")
-from core.logger import get_session_log_path, log, log_debug_event
-from core.paths import APPLICATION_ROOT, TOOLS_ROOT
+from core.runtime.logger import get_session_log_path, log, log_debug_event
+from core.runtime.paths import APPLICATION_ROOT, TOOLS_ROOT
 
 ROOT = APPLICATION_ROOT
 

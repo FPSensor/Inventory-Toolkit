@@ -9,12 +9,12 @@ from openpyxl import load_workbook
 import pandas as pd
 import pytest
 
-from core import paths
+from core.runtime import paths
 from core.business_schema import DIFFERENCE_COLUMN, COST_TOTAL_COLUMN, SALES_TOTAL_COLUMN
-from core.configuration_manager import ConfigurationManager
-from core.profile_creation import create_profile
-from core.setup_catalog import get_value
-from core.setup_service import SetupSession, SetupState
+from core.config.configuration_manager import ConfigurationManager
+from core.profiles.profile_creation import create_profile
+from core.setup.setup_catalog import get_value
+from core.setup.setup_service import SetupSession, SetupState
 from engine.stock_processing.generator import run_stock_processing
 from engine.inventory_cross_check.generator import run_cross_check
 from engine.yoy_reports.generator import generate_sales_report

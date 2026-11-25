@@ -2,9 +2,9 @@
 import json
 import sys
 
-from core import paths
-from core.profile_creation import create_profile
-from core.profile_history import create_checkpoint
+from core.runtime import paths
+from core.profiles.profile_creation import create_profile
+from core.profiles.profile_history import create_checkpoint
 from inventory_toolkit.maintenance import main
 
 

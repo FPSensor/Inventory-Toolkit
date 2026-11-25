@@ -1,6 +1,6 @@
 # Configuration checkpoints
 
-`core.profile_history` keeps at most ten local checkpoints under `profiles/<id>/.history/`. A checkpoint contains `profile.json` and the six current configuration documents. Workbooks, remembered paths, logs and archived legacy data are excluded. History is ignored by Git and source distributions.
+`core.profiles.profile_history` keeps at most ten local checkpoints under `profiles/<id>/.history/`. A checkpoint contains `profile.json` and the six current configuration documents. Workbooks, remembered paths, logs and archived legacy data are excluded. History is ignored by Git and source distributions.
 
 Creating a checkpoint requires the known configuration documents to exist. Existing profiles without metadata remain supported; checkpoints record its absence and restore that absence exactly. Restoring verifies the checkpoint format, owned document paths, content checksums, profile metadata and enabled schema-v3 documents before replacing anything. Disabled workflow settings are retained verbatim, including invalid JSON that is intentionally not active.
 

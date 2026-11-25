@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from core.business_schema import ARTICLE_COLUMN, PRICE_COLUMN
-from core.configuration_manager import ConfigurationManager
+from core.config.configuration_manager import ConfigurationManager
 from engine.shared.families import build_family_rules
 
 

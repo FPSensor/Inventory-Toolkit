@@ -1,8 +1,8 @@
 """Embedded profile onboarding: a name and only the workflows you need."""
 import tkinter as tk
 
-from core.profile_creation import create_profile, profile_slug
-from core.setup_catalog import MODULE_LABELS
+from core.profiles.profile_creation import create_profile, profile_slug
+from core.setup.setup_catalog import MODULE_LABELS
 from gui.widgets import BaseFrame, BaseScrollable, USE_CTK, ctk, ttk, _btn, _lbl, _entry, COLORS
 
 

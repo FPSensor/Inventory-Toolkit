@@ -6,8 +6,8 @@ import os
 
 import pandas as pd
 
-from core.logger import log_debug_event, log_exception
-from core.table_reader import read_table
+from core.runtime.logger import log_debug_event, log_exception
+from core.files.table_reader import read_table
 from engine.stock_processing.contracts import INTERNAL_ARTICLE_COLUMN
 
 def _resolve_pricing_columns(dataframe: pd.DataFrame, pricing_config: dict) -> tuple[str, str, str]:

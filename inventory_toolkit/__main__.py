@@ -3,7 +3,7 @@ import argparse
 import importlib
 import sys
 
-from core.build import BUILD
+from core.runtime.build import BUILD
 
 
 def main(argv=None):

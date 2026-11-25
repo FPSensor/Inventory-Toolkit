@@ -2,7 +2,7 @@
 
 import pandas as pd
 
-from core import input_doctor
+from core.setup import input_doctor
 
 
 class Config:
@@ -73,8 +73,8 @@ def test_stock_detects_missing_configured_store_and_deposit(tmp_path, monkeypatc
 
 
 def test_inspection_does_not_load_another_enabled_broken_workflow(tmp_path, monkeypatch):
-    from core import paths
-    from core.profile_creation import create_profile
+    from core.runtime import paths
+    from core.profiles.profile_creation import create_profile
     monkeypatch.setattr(paths, 'PROFILES_ROOT', tmp_path)
     profile = create_profile('Independent inspection', '', ['cross_check', 'yoy_reports'])
     (paths.profile_configs_root(profile) / 'yoy_reports/settings.json').write_text('bad JSON')

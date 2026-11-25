@@ -2,11 +2,11 @@
 from cli.utils import clear_screen
 from cli.wizard import run_module_setup
 from cli.profile_recovery import profile_recovery_menu
-from core.configuration_manager import ConfigurationManager
-from core.module_preferences import enabled_modules, set_enabled_modules
-from core.profile_overview import inspect_profile
-from core.setup_catalog import MODULE_LABELS
-from core.setup_service import SetupSession
+from core.config.configuration_manager import ConfigurationManager
+from core.profiles.module_preferences import enabled_modules, set_enabled_modules
+from core.profiles.profile_overview import inspect_profile
+from core.setup.setup_catalog import MODULE_LABELS
+from core.setup.setup_service import SetupSession
 
 
 def select_workflows(profile):

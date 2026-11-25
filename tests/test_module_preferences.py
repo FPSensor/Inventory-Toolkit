@@ -1,11 +1,11 @@
 import pytest
 
-from core import paths
-from core.configuration_manager import ConfigurationManager
-from core.module_preferences import enabled_modules, set_enabled_modules
-from core.profile_config import ensure_profile_config
-from core.profile_overview import inspect_profile
-from core.setup_service import SetupSession
+from core.runtime import paths
+from core.config.configuration_manager import ConfigurationManager
+from core.profiles.module_preferences import enabled_modules, set_enabled_modules
+from core.config.profile_config import ensure_profile_config
+from core.profiles.profile_overview import inspect_profile
+from core.setup.setup_service import SetupSession
 from core.workflow_errors import WorkflowError, ErrorCode
 
 
@@ -28,8 +28,8 @@ def test_disabled_module_is_not_required_or_loaded(tmp_path, monkeypatch):
 
 @pytest.mark.parametrize('payload', [[], False, {'enabled_modules': [[]]}, {'enabled_modules': [1]}, {'enabled_modules': []}])
 def test_damaged_metadata_produces_a_configuration_error(tmp_path, monkeypatch, payload):
-    from core.json_documents import write_documents
-    from core.configuration_errors import ConfigurationFileError
+    from core.config.json_documents import write_documents
+    from core.config.configuration_errors import ConfigurationFileError
     monkeypatch.setattr(paths, 'PROFILES_ROOT', tmp_path)
     write_documents({paths.profile_root('damaged') / 'profile.json': payload})
     with pytest.raises(ConfigurationFileError):

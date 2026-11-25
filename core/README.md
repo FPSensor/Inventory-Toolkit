@@ -2,18 +2,15 @@
 
 Cross-cutting services used by CLI, GUI, and engines.
 
-## Current modules
+## Packages
 
-- `business_schema.py` — centralized external workbook/business labels.
-- `config_schemas.py` — strict Pydantic schema-v3 models.
-- `configuration_manager.py` — profile loading/caching/typed accessors.
-- `profile_config.py` — JSON-backed defaults, strict schema headers, paths, initialization, readiness.
-- `resource_config.py` / `resources/` — bundled UTF-8 JSON defaults, report labels and column hints.
-- `progress.py` — optional engine progress events and separate final statistics.
-- `data_sanitizer.py` — shared value normalization.
-- `logger.py` — runtime debug levels + forensic `logs/session.log`.
-- `telemetry.py` — execution-stage timing helper.
-- `system_utils.py` — safe saving/system helpers and locked-output handling.
+- `config/` — strict schema-v3 models, profile loading and typed access, bundled defaults, JSON documents and configuration errors.
+- `profiles/` — neutral profile creation, enabled workflows, remembered selections, diagnostics and restore points.
+- `setup/` — guided steps, review state, sample-header advice and input inspection.
+- `files/` — the single input reader, header selection, value cleanup, report saving and workbook packages.
+- `runtime/` — build capabilities, application paths, logging, timing, progress events and optional developer tools.
+- `resources/` — bundled UTF-8 JSON defaults, report labels and column hints.
+- `business_schema.py`, `workflow_contracts.py`, `workflow_errors.py` — external labels, resolved input headers and stable error codes.
 
 Core should provide infrastructure, not duplicate workflow-specific calculations.
 

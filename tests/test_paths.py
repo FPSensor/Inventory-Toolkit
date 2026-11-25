@@ -10,8 +10,8 @@ from cli import cross_check_launcher, stock_processing_launcher, yoy_reports_lau
 from core.workflow_errors import ErrorCode, WorkflowError
 from workflows.base import require_files
 from cli.utils import input_default, load_last_paths, save_last_paths
-from core import paths as app_paths
-from core.configuration_manager import ConfigurationManager
+from core.runtime import paths as app_paths
+from core.config.configuration_manager import ConfigurationManager
 from gui.app import InventoryToolkitGUI
 
 
@@ -202,7 +202,7 @@ def test_cli_entrypoint_imports_cleanly_from_foreign_cwd(tmp_path):
 
 def test_invalid_remembered_paths_are_reported_without_rewriting(tmp_path, monkeypatch):
     import pytest
-    from core.configuration_errors import ConfigurationFileError
+    from core.config.configuration_errors import ConfigurationFileError
     monkeypatch.setattr(app_paths, 'PROFILES_ROOT', tmp_path)
     path = tmp_path / 'broken' / 'last_paths.json'
     path.parent.mkdir()

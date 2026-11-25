@@ -5,8 +5,8 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from core import paths as app_paths
-from core.profile_config import DEFAULTS, _write, config_path
+from core.runtime import paths as app_paths
+from core.config.profile_config import DEFAULTS, _write, config_path
 from engine.inventory_cross_check.generator import run_cross_check
 from engine.stock_processing.generator import run_stock_processing
 
@@ -281,7 +281,7 @@ def test_cross_check_price_article_tokenization_controls_valuation(
 def test_catalog_column_contract_rejects_empty_or_colliding_names():
     from pydantic import ValidationError
 
-    from core.config_schemas import CatalogConfig
+    from core.config.config_schemas import CatalogConfig
 
     with pytest.raises(ValidationError):
         CatalogConfig.model_validate(

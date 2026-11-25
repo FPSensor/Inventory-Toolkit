@@ -8,10 +8,10 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass, replace
 from typing import Any
 
-from core.input_columns import choose_input_columns
-from core.logger import log_debug_event
-from core.profile_store import load_last_paths, save_last_paths
-from core.system_utils import normalize_xlsx_output_path
+from core.files.input_columns import choose_input_columns
+from core.runtime.logger import log_debug_event
+from core.profiles.profile_store import load_last_paths, save_last_paths
+from core.files.system_utils import normalize_xlsx_output_path
 from core.workflow_errors import ErrorCode, WorkflowError
 
 # (file, field, configured header, default header) -> use the default this time?

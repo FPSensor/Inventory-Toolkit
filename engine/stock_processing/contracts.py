@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Any, Mapping
 
 from core.business_schema import ARTICLE_COLUMN, FAMILY_COLUMN, RAW_DATA_SHEET
-from core.configuration_manager import ConfigurationManager
+from core.config.configuration_manager import ConfigurationManager
 from core.workflow_contracts import stock_input
 
 INTERNAL_ARTICLE_COLUMN = "__itk_article"

@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-APPLICATION_ROOT = Path(__file__).resolve().parents[1]
+APPLICATION_ROOT = Path(__file__).resolve().parents[2]
 PROFILES_ROOT = APPLICATION_ROOT / "profiles"
 EXAMPLES_ROOT = APPLICATION_ROOT / "examples"
 LOGS_ROOT = APPLICATION_ROOT / "logs"

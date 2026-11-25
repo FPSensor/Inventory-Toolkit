@@ -4,7 +4,7 @@ import os
 from pathlib import Path
 import tempfile
 
-from core.configuration_errors import ConfigurationFileError
+from core.config.configuration_errors import ConfigurationFileError
 
 
 def _unique_object(pairs):

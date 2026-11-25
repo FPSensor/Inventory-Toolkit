@@ -6,8 +6,8 @@ import pandas as pd
 import pytest
 from openpyxl import load_workbook
 
-from core import paths as app_paths
-from core.workbook_package import WorkbookPackage, WorkbookPackageError
+from core.runtime import paths as app_paths
+from core.files.workbook_package import WorkbookPackage, WorkbookPackageError
 from engine.stock_processing.excel_renderer import build_summary, render_stock_excel
 from engine.stock_processing.pivot_formulas import PivotFormulaError, evaluate
 from engine.stock_processing.template_renderer import ReportTemplateError, fill_template
@@ -242,7 +242,7 @@ def test_hidden_families_with_stock_are_reported(tmp_path, monkeypatch, hidden, 
 
 
 def test_template_settings_are_editable_from_guided_setup(tmp_path, monkeypatch):
-    from core.setup_service import SetupSession
+    from core.setup.setup_service import SetupSession
 
     monkeypatch.setattr(app_paths, "PROFILES_ROOT", tmp_path / "profiles")
     root = _profile(tmp_path, "")

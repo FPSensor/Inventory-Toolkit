@@ -5,7 +5,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from core import paths
+from core.runtime import paths
 from gui import app
 
 

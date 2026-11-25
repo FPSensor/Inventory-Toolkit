@@ -9,12 +9,12 @@ from functools import partial
 import pandas as pd
 
 from core.business_schema import COST_COLUMN, SALES_VALUE_LABEL
-from core.configuration_manager import ConfigurationManager
-from core.logger import log, log_debug_event
-from core.progress import report_progress, report_stats, report_warning
-from core.system_utils import normalize_xlsx_output_path, require_input_files
-from core.table_reader import read_table
-from core.telemetry import execution_timer
+from core.config.configuration_manager import ConfigurationManager
+from core.runtime.logger import log, log_debug_event
+from core.runtime.progress import report_progress, report_stats, report_warning
+from core.files.system_utils import normalize_xlsx_output_path, require_input_files
+from core.files.table_reader import read_table
+from core.runtime.telemetry import execution_timer
 from engine.shared.families import build_family_rules
 from engine.stock_processing.contracts import INTERNAL_ARTICLE_COLUMN, INTERNAL_FAMILY_COLUMN, StockProcessingPlan
 from engine.stock_processing.data_processor import (

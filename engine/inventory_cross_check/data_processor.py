@@ -4,8 +4,8 @@ import pandas as pd
 import numpy as np
 
 from core.business_schema import REVIEW_PREFIX
-from core.profile_config import DEFAULTS
-from core.table_reader import read_table
+from core.config.profile_config import DEFAULTS
+from core.files.table_reader import read_table
 
 SCAN_READING_COLUMN = "__scan_reading"
 SCAN_COUNT_COLUMN = "__scan_count"

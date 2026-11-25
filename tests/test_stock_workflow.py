@@ -4,9 +4,9 @@ import json
 import pandas as pd
 import pytest
 
-from core import paths as app_paths
-from core.profile_store import load_last_paths
-from core.system_utils import InvalidExcelOutputPathError
+from core.runtime import paths as app_paths
+from core.profiles.profile_store import load_last_paths
+from core.files.system_utils import InvalidExcelOutputPathError
 from core.workflow_errors import ErrorCode, WorkflowError
 from tests.test_report_template import _profile
 from workflows import stock

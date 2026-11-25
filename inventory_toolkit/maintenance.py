@@ -23,11 +23,11 @@ def main(argv):
     args = parser.parse_args(argv)
     try:
         if args.command == 'doctor':
-            from core.profile_diagnostics import inspect_configuration
+            from core.profiles.profile_diagnostics import inspect_configuration
             report = inspect_configuration(args.profile)
             print(json.dumps(report.as_dict(), indent=2, ensure_ascii=False) if args.json else report.render())
             return 0 if report.healthy else 1
-        from core.profile_history import create_checkpoint, list_checkpoints, restore_checkpoint
+        from core.profiles.profile_history import create_checkpoint, list_checkpoints, restore_checkpoint
         if args.action == 'list':
             identifiers = list_checkpoints(args.profile)
             print('\n'.join(identifiers) if identifiers else 'No local checkpoints yet.')

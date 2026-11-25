@@ -1,9 +1,9 @@
 """Console rendering for the shared, module-specific setup catalog."""
 from pathlib import Path
 from cli.utils import ask_file, clear_screen
-from core.table_reader import read_table
-from core.profile_config import ensure_profile_config
-from core.configuration_errors import ConfigurationError
+from core.files.table_reader import read_table
+from core.config.profile_config import ensure_profile_config
+from core.config.configuration_errors import ConfigurationError
 
 
 def initialize_profile_files(configs_path: str) -> None:
@@ -59,9 +59,9 @@ def run_setup_wizard(profile_dir: str, profile_name: str = "") -> None:
 
 def run_module_setup(profile: str, module: str, step_id: str | None = None, *, include_advanced=False, single_page=False) -> None:
     """Configure one workflow through the shared page contract, saving each page."""
-    from core.setup_service import SetupSession
-    from core.setup_catalog import get_value, MODULE_LABELS
-    from core.column_assist import advise_columns
+    from core.setup.setup_service import SetupSession
+    from core.setup.setup_catalog import get_value, MODULE_LABELS
+    from core.setup.column_assist import advise_columns
 
     session = SetupSession(profile, module, include_advanced=include_advanced)
     pending = step_id or session.first_pending()

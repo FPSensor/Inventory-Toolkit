@@ -4,7 +4,7 @@ import json
 import pandas as pd
 import pytest
 
-from core import paths
+from core.runtime import paths
 from inventory_toolkit.__main__ import main
 from tests.test_report_template import _profile
 from workflows import stock

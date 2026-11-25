@@ -1,6 +1,6 @@
 import sys
-from core.build import BUILD
-from core.module_preferences import enabled_modules
+from core.runtime.build import BUILD
+from core.profiles.module_preferences import enabled_modules
 import argparse
 from cli.utils import clear_screen
 from cli.profiles import select_profile
@@ -10,8 +10,8 @@ from cli.stock_processing_launcher import launch_stock_processing
 from cli.yoy_reports_launcher import launch_yoy_reports
 from cli.workflow_setup import launch_configured
 from cli.profile_overview import show_profile_overview
-from core.optional_debug import debug_available, open_debug_console
-from core.logger import log, log_debug_event, set_debug_level
+from core.runtime.optional_debug import debug_available, open_debug_console
+from core.runtime.logger import log, log_debug_event, set_debug_level
 
 _VERSION = BUILD.version
 

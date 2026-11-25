@@ -1,8 +1,8 @@
 """Dark desktop workspace with shared engines and guided setup."""
 
 import os
-from core.build import BUILD
-from core.module_preferences import enabled_modules, set_enabled_modules
+from core.runtime.build import BUILD
+from core.profiles.module_preferences import enabled_modules, set_enabled_modules
 import sys
 import queue
 import threading
@@ -17,15 +17,15 @@ from gui.widgets import (ctk, ttk, USE_CTK, BaseWindow, BaseFrame,
     BaseTextbox, BaseScrollable,
     _btn, _lbl, _entry, apply_dark_theme, set_text_scale, COLORS)
 
-from core.configuration_manager import ConfigurationManager
-from core.logger import log
-from core import paths as app_paths
-from core.profile_store import load_last_paths
-from core.setup_service import SetupSession, SetupState
-from core.setup_catalog import MODULE_LABELS
-from core.profile_overview import inspect_profile
-from core.input_doctor import inspect_workflow_inputs
-from core.table_reader import FILE_PATTERNS
+from core.config.configuration_manager import ConfigurationManager
+from core.runtime.logger import log
+from core.runtime import paths as app_paths
+from core.profiles.profile_store import load_last_paths
+from core.setup.setup_service import SetupSession, SetupState
+from core.setup.setup_catalog import MODULE_LABELS
+from core.profiles.profile_overview import inspect_profile
+from core.setup.input_doctor import inspect_workflow_inputs
+from core.files.table_reader import FILE_PATTERNS
 from core.workflow_errors import WorkflowError
 from workflows import cross, stock, yoy
 from gui.setup_wizard import SetupWizard

@@ -14,8 +14,8 @@ from core.business_schema import (
     UNIT_COST_PREFIX,
     UNIT_SALES_PREFIX,
 )
-from core.logger import log, log_debug_event
-from core.system_utils import safe_openpyxl_save
+from core.runtime.logger import log, log_debug_event
+from core.files.system_utils import safe_openpyxl_save
 from engine.stock_processing.data_processor import calculate_margin
 
 MAX_COLUMN_WIDTH = 50

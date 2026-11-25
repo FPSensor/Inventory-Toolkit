@@ -7,17 +7,17 @@ from copy import deepcopy
 from pathlib import Path
 from typing import Any, Dict, Tuple
 
-from core.configuration_errors import ConfigurationFileError
-from core.json_documents import read_document, write_documents
+from core.config.configuration_errors import ConfigurationFileError
+from core.config.json_documents import read_document, write_documents
 
-from core.resource_config import load_resource
+from core.config.resource_config import load_resource
 
 CONFIG_VERSION = 3
 
 DEFAULTS: Dict[str, dict] = load_resource("profile_defaults.json")
 if any(config.get("version") != CONFIG_VERSION for config in DEFAULTS.values()):
     raise ConfigurationFileError(
-        Path(__file__).resolve().parent / "resources" / "profile_defaults.json",
+        Path(__file__).resolve().parents[1] / "resources" / "profile_defaults.json",
         "bundled profile defaults do not match the current schema version",
     )
 

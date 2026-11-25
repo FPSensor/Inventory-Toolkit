@@ -17,8 +17,8 @@ import os, sys, time, tkinter as tk
 from pathlib import Path
 if sys.argv[1] == 'ttk':
     sys.modules['customtkinter'] = None
-from core import paths
-from core.profile_creation import create_profile
+from core.runtime import paths
+from core.profiles.profile_creation import create_profile
 paths.PROFILES_ROOT = Path(sys.argv[2])
 profile = create_profile('Desktop Test', '', ['stock_processing'])
 from gui.app import InventoryToolkitGUI
@@ -67,7 +67,7 @@ def settle():
     assert not panel._busy
 settle()
 assert panel._report is not None
-from core.profile_history import create_checkpoint, list_checkpoints, restore_checkpoint
+from core.profiles.profile_history import create_checkpoint, list_checkpoints, restore_checkpoint
 panel._run(lambda: create_checkpoint(profile), panel._created)
 settle()
 identifier = list_checkpoints(profile)[0]

@@ -5,9 +5,9 @@ import pytest
 
 from gui.app import InventoryToolkitGUI
 from gui.setup_wizard import SetupWizard, table_value
-from core import paths
-from core.profile_config import ensure_profile_config
-from core.setup_service import SetupSession, initialize_setup, write_json
+from core.runtime import paths
+from core.config.profile_config import ensure_profile_config
+from core.setup.setup_service import SetupSession, initialize_setup, write_json
 from core.workflow_errors import WorkflowError, ErrorCode
 
 
@@ -60,7 +60,7 @@ def test_new_module_is_routed_to_embedded_setup_before_workflow(session):
 
 
 def test_partial_setup_offers_explicit_continue_and_configuration(session):
-    from core.setup_catalog import get_value
+    from core.setup.setup_catalog import get_value
     step = session.steps[0]
     session.save_step(step.id, {'.'.join(field.path): get_value(session.data(step), field.path) for field in step.fields})
     notifications = []

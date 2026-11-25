@@ -117,12 +117,12 @@ A headless run skips these checks. Linux display tests do not certify native Win
 | --- | --- |
 | `build.prop`, `inventory_toolkit/__main__.py` | Understand startup and interface capabilities. |
 | `core/resources/new_profile_defaults.json`, one profile's `configs/` | See data-owned defaults and actual business choices. |
-| `core/setup_catalog.py` | See friendly fields, help, conditional pages and their stored paths. |
-| `core/setup_service.py` | Follow saving, review state, shared fingerprints and required settings. |
-| `core/config_schemas.py`, `core/workflow_contracts.py` | Understand typed settings and effective input mappings. |
+| `core/setup/setup_catalog.py` | See friendly fields, help, conditional pages and their stored paths. |
+| `core/setup/setup_service.py` | Follow saving, review state, shared fingerprints and required settings. |
+| `core/config/config_schemas.py`, `core/workflow_contracts.py` | Understand typed settings and effective input mappings. |
 | A module's `engine/*/generator.py` | Follow the processing stages and report dispatch. |
 | Its processor, pricing and renderer files | Inspect transformations, calculations and Excel layout separately. |
-| `core/profile_diagnostics.py`, `core/profile_history.py` | Follow checks and configuration recovery. |
+| `core/profiles/profile_diagnostics.py`, `core/profiles/profile_history.py` | Follow checks and configuration recovery. |
 | `gui/app.py`, `cli/*_launcher.py` | See how interfaces gather options and dispatch the shared engine. |
 | `tests/test_business_scenarios.py`, `examples/businesses/` | See complete neutral business examples and independently expected totals. |
 

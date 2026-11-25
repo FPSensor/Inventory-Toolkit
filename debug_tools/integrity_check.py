@@ -8,17 +8,17 @@ import tempfile
 BOOTSTRAP_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(BOOTSTRAP_ROOT))
 
-from core.paths import APPLICATION_ROOT, LOGS_ROOT, profile_configs_root
+from core.runtime.paths import APPLICATION_ROOT, LOGS_ROOT, profile_configs_root
 
 ROOT_DIR = APPLICATION_ROOT
 
 import pandas as pd
 import numpy as np
 
-from core.configuration_manager import ConfigurationManager
-from core.logger import get_session_log_path
-from core.data_sanitizer import clean_sku_series, sanitize_dataframe
-from core.system_utils import InvalidExcelOutputPathError, normalize_xlsx_output_path
+from core.config.configuration_manager import ConfigurationManager
+from core.runtime.logger import get_session_log_path
+from core.files.data_sanitizer import clean_sku_series, sanitize_dataframe
+from core.files.system_utils import InvalidExcelOutputPathError, normalize_xlsx_output_path
 from engine.shared.families import assign_families, build_family_rules, assign_family
 from engine.inventory_cross_check.data_processor import normalize_article, calculate_difference
 from engine.stock_processing.contracts import StockProcessingPlan

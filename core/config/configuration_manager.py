@@ -6,12 +6,12 @@ its own ``settings.json`` without filename collisions.
 """
 
 import json
-from core.json_documents import read_document
+from core.config.json_documents import read_document
 from typing import Any, Dict, Type
 
 from pydantic import BaseModel
 
-from core.config_schemas import (
+from core.config.config_schemas import (
     CatalogConfig,
     CrossCheckConfig,
     FamiliesConfig,
@@ -19,11 +19,11 @@ from core.config_schemas import (
     StockProcessingConfig,
     YoYReportsConfig,
 )
-from core.configuration_errors import ConfigurationError, ConfigurationFileError
-from core.logger import log_debug_event
-from core.paths import profile_configs_root
-from core.profile_config import DEFAULTS, ensure_profile_config, validate_config_header
-from core.module_preferences import enabled_modules, require_enabled
+from core.config.configuration_errors import ConfigurationError, ConfigurationFileError
+from core.runtime.logger import log_debug_event
+from core.runtime.paths import profile_configs_root
+from core.config.profile_config import DEFAULTS, ensure_profile_config, validate_config_header
+from core.profiles.module_preferences import enabled_modules, require_enabled
 
 
 _CONFIG_MODELS: Dict[str, Type[BaseModel]] = {

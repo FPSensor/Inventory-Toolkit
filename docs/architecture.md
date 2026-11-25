@@ -79,7 +79,7 @@ Engines are callable directly from Python and must remain independent from CLI p
 
 ### Configuration — `profiles/`
 
-Profile storage is resolved through the canonical application paths in `core/paths.py`; it does not move with the process current working directory. User-supplied relative workbook paths remain caller-CWD-relative.
+Profile storage is resolved through the canonical application paths in `core/runtime/paths.py`; it does not move with the process current working directory. User-supplied relative workbook paths remain caller-CWD-relative.
 
 Profiles hold environment/business differences that should not require source-code forks. Current schema v3 gives each module clear ownership of its configuration.
 
@@ -141,7 +141,7 @@ Before introducing a new abstraction, ask whether it creates a real boundary. Cr
 
 ### Setup ownership
 
-`core/setup_catalog.py` describes labeled configuration steps. `core/setup_service.py` persists reviewed values and derives per-module readiness; `core/workflow_errors.py` exposes stable recovery targets. CLI and GUI own continuation prompts and assistant navigation. Engines own calculations, file validation and export; they do not import frontend components or open setup screens. GUI code is split into shell, advanced configuration, profile creation, shared widgets and the embedded setup wizard.
+`core/setup/setup_catalog.py` describes labeled configuration steps. `core/setup/setup_service.py` persists reviewed values and derives per-module readiness; `core/workflow_errors.py` exposes stable recovery targets. CLI and GUI own continuation prompts and assistant navigation. Engines own calculations, file validation and export; they do not import frontend components or open setup screens. GUI code is split into shell, advanced configuration, profile creation, shared widgets and the embedded setup wizard.
 
 ## Build capabilities
 
@@ -149,4 +149,4 @@ Before introducing a new abstraction, ask whether it creates a real boundary. Cr
 
 Run `python -m inventory_toolkit --interface gui` (or `cli`). The selected interface loads lazily; core and engines never import a frontend. Direct `python -m cli` and `python -m gui` entry points also respect build capabilities. Changing the manifest does not change an existing profile or report.
 
-Profile JSON and remembered paths are persisted through `core.profile_store`; GUI and CLI are siblings and must not import one another. Setup state and schema validation belong to core. Interface packages own only their rendering and operator interactions.
+Profile JSON and remembered paths are persisted through `core.profiles.profile_store`; GUI and CLI are siblings and must not import one another. Setup state and schema validation belong to core. Interface packages own only their rendering and operator interactions.

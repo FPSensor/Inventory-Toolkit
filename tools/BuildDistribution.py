@@ -9,7 +9,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from core.build import BUILD
+from core.runtime.build import BUILD
 
 SOURCE_DIRS = ("inventory_toolkit", "cli", "core", "engine", "gui", "workflows", "debug_tools", "tools", "tests", "docs")
 ROOT_FILES = (

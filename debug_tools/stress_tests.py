@@ -11,16 +11,16 @@ from pathlib import Path
 BOOTSTRAP_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(BOOTSTRAP_ROOT))
 
-from core.paths import APPLICATION_ROOT, LOGS_ROOT, PROFILES_ROOT
+from core.runtime.paths import APPLICATION_ROOT, LOGS_ROOT, PROFILES_ROOT
 
 ROOT_DIR = APPLICATION_ROOT
 
 try:
     import pandas as pd
     import numpy as np
-    from core.configuration_manager import ConfigurationManager
+    from core.config.configuration_manager import ConfigurationManager
     from engine.shared.families import assign_families, assign_family, build_family_rules
-    from core.data_sanitizer import clean_sku_series
+    from core.files.data_sanitizer import clean_sku_series
 except ImportError as e:
     print(f"❌ Import error: {e}")
     sys.exit(1)

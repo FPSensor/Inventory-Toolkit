@@ -1,9 +1,9 @@
 """Embedded searchable configuration workspace backed by the shared assistant."""
 import tkinter as tk
 
-from core.module_preferences import enabled_modules
-from core.setup_catalog import MODULE_LABELS
-from core.setup_service import SetupSession
+from core.profiles.module_preferences import enabled_modules
+from core.setup.setup_catalog import MODULE_LABELS
+from core.setup.setup_service import SetupSession
 from gui.widgets import BaseFrame, BaseScrollable, USE_CTK, ctk, ttk, _btn, _lbl, _entry
 
 

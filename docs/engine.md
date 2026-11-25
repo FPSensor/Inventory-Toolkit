@@ -117,7 +117,7 @@ With `output.template`, the profile's `.xlsx` owns the design and the engine rep
 
 Supported pivots: one row field, summed values or arithmetic calculated fields (`+ - * /`), hidden items, label sorting, and an optional grand total. One PivotTable per sheet, sourced from a range of the data sheet, saved with its source data. Anything else (report/value filters, column fields, grouping, slicers, macros, external connections, formulas or notes inside generated areas) is rejected: leaving it untouched would deliver the previous report's figures.
 
-`core/workbook_package.py` verifies the finished package (cell placement, styles, strings, relationships, cache records, pivot items and ranges) before anything is written. A rejected report leaves an existing output file untouched. Structural verification does not replace opening a new template's first report in Excel.
+`core/files/workbook_package.py` verifies the finished package (cell placement, styles, strings, relationships, cache records, pivot items and ranges) before anything is written. A rejected report leaves an existing output file untouched. Structural verification does not replace opening a new template's first report in Excel.
 
 The private `__itk_*` keys must never escape into generated workbooks. This boundary lets a profile use names such as `SKU`/`Family` without forcing the core valuation pipeline to carry those external strings through every operation.
 

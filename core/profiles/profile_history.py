@@ -6,12 +6,12 @@ from pathlib import Path
 import re
 from uuid import uuid4
 
-from core.configuration_manager import _CONFIG_MODELS
-from core.json_documents import decode_document, read_document, write_documents, write_payloads
-from core.profile_config import validate_config_header
-from core.profile_diagnostics import profile_directory
-from core.profile_metadata import validate_metadata
-from core.setup_catalog import MODULE_LABELS
+from core.config.configuration_manager import _CONFIG_MODELS
+from core.config.json_documents import decode_document, read_document, write_documents, write_payloads
+from core.config.profile_config import validate_config_header
+from core.profiles.profile_diagnostics import profile_directory
+from core.profiles.profile_metadata import validate_metadata
+from core.setup.setup_catalog import MODULE_LABELS
 
 HISTORY_LIMIT = 10
 _ID = re.compile(r'\d{8}T\d{12}Z-[0-9a-f]{12}')

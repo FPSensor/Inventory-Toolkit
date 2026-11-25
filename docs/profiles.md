@@ -255,7 +255,7 @@ The shared setup catalog defines labels, explanations, typed choices, numeric va
 
 ## Creating a profile
 
-Both interfaces use `core.profile_creation.create_profile`. A display name generates a portable folder ID, workflows are selected before setup, and new profiles load `core/resources/new_profile_defaults.json` with neutral labels and whole-product identifiers instead of clothing/company defaults. Existing profile folders are never overwritten. A failed new-profile initialization removes only the new directory owned by that operation. The older bundled defaults continue to define inherited fields for existing schema-v3 profiles; they are not silently applied over an existing document.
+Both interfaces use `core.profiles.profile_creation.create_profile`. A display name generates a portable folder ID, workflows are selected before setup, and new profiles load `core/resources/new_profile_defaults.json` with neutral labels and whole-product identifiers instead of clothing/company defaults. Existing profile folders are never overwritten. A failed new-profile initialization removes only the new directory owned by that operation. The older bundled defaults continue to define inherited fields for existing schema-v3 profiles; they are not silently applied over an existing document.
 
 ## Categories and safe JSON writes
 

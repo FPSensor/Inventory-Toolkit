@@ -2,10 +2,10 @@
 import pandas as pd
 import pytest
 
-from core import paths
-from core.json_documents import read_document, write_documents
-from core.profile_creation import create_profile
-from core.profile_store import load_last_paths
+from core.runtime import paths
+from core.config.json_documents import read_document, write_documents
+from core.profiles.profile_creation import create_profile
+from core.profiles.profile_store import load_last_paths
 from core.workflow_errors import ErrorCode, WorkflowError
 from workflows import cross, yoy
 

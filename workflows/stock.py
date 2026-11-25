@@ -6,8 +6,8 @@ from argparse import Namespace
 from dataclasses import dataclass
 from functools import partial
 
-from core.configuration_manager import ConfigurationManager
-from core.profile_config import DEFAULTS
+from core.config.configuration_manager import ConfigurationManager
+from core.config.profile_config import DEFAULTS
 from core.workflow_contracts import category_source_columns, stock_input, stock_price_columns
 from workflows.base import Job, choose_columns, remember, require_files, settle_output
 

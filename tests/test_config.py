@@ -4,11 +4,11 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from core.config_schemas import CatalogConfig, YoYOutputConfig
-from core.configuration_errors import ConfigurationError
-from core.configuration_manager import ConfigurationManager
-from core import paths as app_paths
-from core.profile_config import CONFIG_VERSION, ensure_profile_config, profile_readiness
+from core.config.config_schemas import CatalogConfig, YoYOutputConfig
+from core.config.configuration_errors import ConfigurationError
+from core.config.configuration_manager import ConfigurationManager
+from core.runtime import paths as app_paths
+from core.config.profile_config import CONFIG_VERSION, ensure_profile_config, profile_readiness
 
 
 def test_configuration_manager_loading(tmp_path, monkeypatch):
@@ -194,7 +194,7 @@ def test_yoy_default_output_path_rejects_legacy_xls():
 
 def test_yoy_setup_uses_bundled_defaults_and_detection_hints(tmp_path, monkeypatch):
     from cli import wizard
-    from core.profile_config import DEFAULTS
+    from core.config.profile_config import DEFAULTS
 
     configs = _initialize_test_profile(tmp_path, "wizard")
     monkeypatch.setattr(wizard, "clear_screen", lambda: None)
@@ -216,14 +216,14 @@ def test_yoy_setup_uses_bundled_defaults_and_detection_hints(tmp_path, monkeypat
 
 
 def test_cross_check_schema_rejects_empty_quantity_column():
-    from core.config_schemas import CrossCheckConfig
+    from core.config.config_schemas import CrossCheckConfig
 
     with pytest.raises(ValidationError, match="quantity column cannot be empty"):
         CrossCheckConfig.model_validate({"version": CONFIG_VERSION, "input": {"quantity_column": " "}})
 
 
 def test_price_article_tokenization_rejects_unknown_strategy():
-    from core.config_schemas import CrossCheckConfig, StockProcessingConfig
+    from core.config.config_schemas import CrossCheckConfig, StockProcessingConfig
 
     with pytest.raises(ValidationError):
         CrossCheckConfig.model_validate({"version": CONFIG_VERSION, "pricing": {"article_tokenization": "guess"}})
@@ -240,7 +240,7 @@ def test_price_article_tokenization_rejects_unknown_strategy():
     ({"version": CONFIG_VERSION - 1}, "requires migration"),
 ])
 def test_current_schema_header_validation_is_independent_of_migration(tmp_path, payload, message):
-    from core.profile_config import validate_config_header
+    from core.config.profile_config import validate_config_header
 
     path = tmp_path / "settings.json"
     original = json.dumps(payload)

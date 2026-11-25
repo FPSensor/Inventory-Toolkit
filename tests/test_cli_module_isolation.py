@@ -2,9 +2,9 @@
 import pandas as pd
 import pytest
 
-from core import paths
-from core.json_documents import read_document, write_documents
-from core.profile_creation import create_profile
+from core.runtime import paths
+from core.config.json_documents import read_document, write_documents
+from core.profiles.profile_creation import create_profile
 from cli import stock_processing_launcher, cross_check_launcher
 
 

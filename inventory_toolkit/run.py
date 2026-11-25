@@ -5,9 +5,9 @@ import json
 import sys
 from dataclasses import fields
 
-from core.paths import profile_root
-from core.profile_store import load_last_paths
-from core.setup_service import SetupSession
+from core.runtime.paths import profile_root
+from core.profiles.profile_store import load_last_paths
+from core.setup.setup_service import SetupSession
 from workflows import cross, stock, yoy
 
 # Request field -> name under which interfaces remember it.

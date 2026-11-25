@@ -3,10 +3,10 @@
 import json
 from pathlib import Path
 
-from core.configuration_errors import ConfigurationError
-from core.json_documents import read_document
+from core.config.configuration_errors import ConfigurationError
+from core.config.json_documents import read_document
 
-RESOURCE_ROOT = Path(__file__).resolve().parent / "resources"
+RESOURCE_ROOT = Path(__file__).resolve().parents[1] / "resources"
 
 
 def load_resource(name: str) -> dict:

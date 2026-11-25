@@ -2,9 +2,9 @@
 
 from cli.utils import clear_screen, input_default, load_last_paths
 from cli.wizard import run_module_setup
-from core.configuration_manager import ConfigurationManager
-from core.input_doctor import inspect_workflow_inputs
-from core.profile_overview import inspect_profile
+from core.config.configuration_manager import ConfigurationManager
+from core.setup.input_doctor import inspect_workflow_inputs
+from core.profiles.profile_overview import inspect_profile
 
 
 def show_profile_overview(profile):

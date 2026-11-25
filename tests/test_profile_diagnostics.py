@@ -1,10 +1,10 @@
 """Profile inspection must explain contradictions without repairing files."""
 from pathlib import Path
 
-from core import paths
-from core.json_documents import read_document, write_documents
-from core.profile_creation import create_profile
-from core.profile_diagnostics import inspect_configuration
+from core.runtime import paths
+from core.config.json_documents import read_document, write_documents
+from core.profiles.profile_creation import create_profile
+from core.profiles.profile_diagnostics import inspect_configuration
 
 
 def _profile(tmp_path, monkeypatch, modules=('cross_check',)):

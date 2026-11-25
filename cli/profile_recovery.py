@@ -1,7 +1,7 @@
 """Console access to shared read-only checks and local configuration recovery."""
 from cli.utils import clear_screen
-from core.profile_diagnostics import inspect_configuration
-from core.profile_history import checkpoint_info, create_checkpoint, list_checkpoints, restore_checkpoint
+from core.profiles.profile_diagnostics import inspect_configuration
+from core.profiles.profile_history import checkpoint_info, create_checkpoint, list_checkpoints, restore_checkpoint
 
 
 def profile_recovery_menu(profile):

@@ -1,8 +1,8 @@
 """Profile-owned workflow selection, independent of setup completion."""
-from core import paths
-from core.profile_store import save_json
-from core.profile_metadata import read_metadata
-from core.setup_catalog import MODULE_LABELS
+from core.runtime import paths
+from core.profiles.profile_store import save_json
+from core.profiles.profile_metadata import read_metadata
+from core.setup.setup_catalog import MODULE_LABELS
 from core.workflow_errors import ErrorCode, WorkflowError
 
 
@@ -23,7 +23,7 @@ def set_enabled_modules(profile, modules, *, checkpoint=True):
     if metadata.get("enabled_modules") == selected:
         return
     if checkpoint and path.is_file():
-        from core.profile_history import create_checkpoint
+        from core.profiles.profile_history import create_checkpoint
         create_checkpoint(profile, 'Before changing enabled workflows')
     metadata["enabled_modules"] = selected
     save_json(str(path), metadata)

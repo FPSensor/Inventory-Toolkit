@@ -1,7 +1,7 @@
 """Capability-gated discovery without a mandatory debug-package import."""
 from importlib import import_module, util
 
-from core.build import BUILD
+from core.runtime.build import BUILD
 
 
 def debug_available():

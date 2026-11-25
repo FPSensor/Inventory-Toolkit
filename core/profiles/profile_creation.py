@@ -3,13 +3,13 @@ import re
 import shutil
 import unicodedata
 
-from core import paths
-from core.build import BUILD
-from core.json_documents import write_documents
-from core.module_preferences import set_enabled_modules
-from core.resource_config import load_resource
-from core.configuration_manager import _CONFIG_MODELS
-from core.setup_service import initialize_setup
+from core.runtime import paths
+from core.runtime.build import BUILD
+from core.config.json_documents import write_documents
+from core.profiles.module_preferences import set_enabled_modules
+from core.config.resource_config import load_resource
+from core.config.configuration_manager import _CONFIG_MODELS
+from core.setup.setup_service import initialize_setup
 
 
 def profile_slug(name):

@@ -2,8 +2,8 @@
 import queue
 import threading
 
-from core.profile_diagnostics import inspect_configuration
-from core.profile_history import checkpoint_info, create_checkpoint, list_checkpoints, restore_checkpoint
+from core.profiles.profile_diagnostics import inspect_configuration
+from core.profiles.profile_history import checkpoint_info, create_checkpoint, list_checkpoints, restore_checkpoint
 from gui.widgets import BaseFrame, BaseScrollable, _btn, _lbl
 
 

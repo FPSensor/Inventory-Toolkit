@@ -125,7 +125,7 @@ Cross-platform/system helpers and safe workbook saving.
 
 ### Input files
 
-`core/table_reader.py` is the only module that opens input files; a test enforces it. Excel (`.xlsx`, `.xlsm`, `.xls`) and text (`.csv`, `.tsv`, `.txt`) become the same table. Text delimiters and encoding are detected; a semicolon implies a decimal comma. Identity columns keep leading zeroes. Other sheets repeating the first one's headers are reported, or joined when the caller asks. `parse_dates()` decides day/month order from the values and refuses ambiguous dates.
+`core/files/table_reader.py` is the only module that opens input files; a test enforces it. Excel (`.xlsx`, `.xlsm`, `.xls`) and text (`.csv`, `.tsv`, `.txt`) become the same table. Text delimiters and encoding are detected; a semicolon implies a decimal comma. Identity columns keep leading zeroes. Other sheets repeating the first one's headers are reported, or joined when the caller asks. `parse_dates()` decides day/month order from the values and refuses ambiguous dates.
 
 ### Saving
 
@@ -138,4 +138,4 @@ Infrastructure must not assume a terminal exists merely because the CLI was the 
 
 ## Profile persistence guarantees
 
-`core.json_documents` rejects duplicate keys and non-finite values instead of accepting silent data loss. Writes serialize every document first, stage sibling temporary files, flush them and atomically replace targets. If a replacement fails, previous files are restored before the error is reported. Setup configuration and review metadata use the same operation. This protects normal single-process editing; it is not a multi-process database, and two applications must not edit the same profile simultaneously. The modular schema remains version 3 with additive typed fields; readers preserve earlier serialized variant keys until that document is explicitly saved.
+`core.config.json_documents` rejects duplicate keys and non-finite values instead of accepting silent data loss. Writes serialize every document first, stage sibling temporary files, flush them and atomically replace targets. If a replacement fails, previous files are restored before the error is reported. Setup configuration and review metadata use the same operation. This protects normal single-process editing; it is not a multi-process database, and two applications must not edit the same profile simultaneously. The modular schema remains version 3 with additive typed fields; readers preserve earlier serialized variant keys until that document is explicitly saved.

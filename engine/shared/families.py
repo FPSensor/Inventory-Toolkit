@@ -5,7 +5,7 @@ from typing import Dict, List, Tuple
 import pandas as pd
 
 from core.business_schema import UNMATCHED_FAMILY
-from core.data_sanitizer import clean_sku_series
+from core.files.data_sanitizer import clean_sku_series
 
 _TRIE_FAMILY_KEY = "__family__"
 _DEFAULT_UNMATCHED_FAMILY = UNMATCHED_FAMILY

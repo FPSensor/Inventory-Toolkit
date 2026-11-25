@@ -28,11 +28,11 @@ BOOTSTRAP_ROOT = Path(__file__).resolve().parents[1]
 if str(BOOTSTRAP_ROOT) not in sys.path:
     sys.path.insert(0, str(BOOTSTRAP_ROOT))
 
-from core.paths import APPLICATION_ROOT, PROFILES_ROOT, demo_root  # noqa: E402
+from core.runtime.paths import APPLICATION_ROOT, PROFILES_ROOT, demo_root  # noqa: E402
 
 ROOT = APPLICATION_ROOT
 
-from core.logger import (  # noqa: E402
+from core.runtime.logger import (  # noqa: E402
     debug_level_from_environment,
     log_debug_event,
     setup_logger,
@@ -94,7 +94,7 @@ def _quick_gate() -> None:
 
 
 def _validate_profiles() -> None:
-    from core.configuration_manager import ConfigurationManager
+    from core.config.configuration_manager import ConfigurationManager
 
     profiles = sorted(path.name for path in PROFILES_ROOT.iterdir() if path.is_dir())
     if not profiles:
@@ -404,7 +404,7 @@ def _run_cross_demo(cross_system_override: str | None, output: Path) -> None:
 def _run_stock_demo(output: Path) -> None:
     from openpyxl import load_workbook
 
-    from core.configuration_manager import ConfigurationManager
+    from core.config.configuration_manager import ConfigurationManager
     from engine.stock_processing.generator import run_stock_processing
 
     demo = demo_root()
@@ -439,7 +439,7 @@ def _run_yoy_demo(output: Path) -> None:
     import pandas as pd
     from openpyxl import load_workbook
 
-    from core.configuration_manager import ConfigurationManager
+    from core.config.configuration_manager import ConfigurationManager
     from engine.yoy_reports.generator import generate_sales_report
 
     demo = demo_root()

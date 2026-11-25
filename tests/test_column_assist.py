@@ -1,7 +1,7 @@
 """Header advice is conservative and independent of any particular profile."""
 
-from core.column_assist import advise_columns
-from core.setup_catalog import field
+from core.setup.column_assist import advise_columns
+from core.setup.setup_catalog import field
 
 
 def test_exact_and_normalized_headers_are_distinct_from_suggestions():

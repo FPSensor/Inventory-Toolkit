@@ -6,13 +6,13 @@ import json
 import os
 import tempfile
 
-from core import paths
-from core.json_documents import read_document, write_documents
-from core.configuration_manager import ConfigurationManager, _CONFIG_MODELS
-from core.profile_config import ensure_profile_config
-from core.setup_catalog import STEPS, get_value, set_value
+from core.runtime import paths
+from core.config.json_documents import read_document, write_documents
+from core.config.configuration_manager import ConfigurationManager, _CONFIG_MODELS
+from core.config.profile_config import ensure_profile_config
+from core.setup.setup_catalog import STEPS, get_value, set_value
 from core.workflow_errors import ErrorCode, WorkflowError
-from core.module_preferences import require_enabled
+from core.profiles.module_preferences import require_enabled
 
 
 class SetupState(IntEnum):
@@ -216,7 +216,7 @@ class SetupSession:
         metadata_path = paths.profile_root(self.profile) / 'profile.json'
         if _read(target) == raw and self.metadata() == metadata:
             return
-        from core.profile_history import create_checkpoint
+        from core.profiles.profile_history import create_checkpoint
         create_checkpoint(self.profile, f'Before editing {step.title}')
         write_documents({target: raw, metadata_path: metadata})
 

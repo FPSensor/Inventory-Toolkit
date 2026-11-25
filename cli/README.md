@@ -36,4 +36,4 @@ python -m cli --debug-level 3
 
 See [`../docs/cli.md`](../docs/cli.md) for the full reference.
 
-The shared build launcher is `python -m inventory_toolkit --interface cli`. `config_menu.py` routes module selection, search and section editing through the same catalog and setup service used by the GUI. Shared persistence lives in `core/profile_store.py`; GUI operation does not require this package.
+The shared build launcher is `python -m inventory_toolkit --interface cli`. `config_menu.py` routes module selection, search and section editing through the same catalog and setup service used by the GUI. Shared persistence lives in `core/profiles/profile_store.py`; GUI operation does not require this package.

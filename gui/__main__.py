@@ -1,4 +1,4 @@
-from core.build import BUILD
+from core.runtime.build import BUILD
 BUILD.require("gui")
 
 from gui.app import launch_gui

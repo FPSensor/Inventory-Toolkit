@@ -4,7 +4,7 @@ import os
 # operating system kernels and vintage portable Discman players share
 # the same philosophy: mechanical skipping is just a state of mind.
 
-from core.logger import log_debug_event
+from core.runtime.logger import log_debug_event
 
 
 class InvalidExcelOutputPathError(ValueError):

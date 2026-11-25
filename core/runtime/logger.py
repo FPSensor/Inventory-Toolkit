@@ -19,7 +19,7 @@ import threading
 from pathlib import Path
 from typing import Any
 
-from core.paths import APPLICATION_ROOT, LOGS_ROOT
+from core.runtime.paths import APPLICATION_ROOT, LOGS_ROOT
 
 _LOG_NAME = "InventoryToolkit"
 

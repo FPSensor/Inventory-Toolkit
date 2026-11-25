@@ -4,7 +4,7 @@ import posixpath
 
 from openpyxl import Workbook
 
-from core.workbook_package import MAIN, REL, WorkbookPackage
+from core.files.workbook_package import MAIN, REL, WorkbookPackage
 
 HEADERS = ["SKU", "Rubro", "Local", "Local.Costo", "Local.Venta"]
 ROWS = [("A1", "Viejo", 1, 10, 20), ("A2", "Remeras", 2, 20, 50), ("A3", "Oculto", 5, 5, 5)]

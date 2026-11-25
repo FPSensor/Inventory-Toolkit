@@ -17,7 +17,7 @@ import subprocess
 import tempfile
 from pathlib import Path
 
-from core.configuration_errors import ConfigurationFileError
+from core.config.configuration_errors import ConfigurationFileError
 
 try:
     import tkinter as tk
@@ -26,9 +26,9 @@ try:
 except ImportError:
     TKINTER_AVAILABLE = False
 
-from core.logger import log, log_debug_event, log_exception
-from core.table_reader import FILE_PATTERNS
-from core.paths import demo_root, profile_root
+from core.runtime.logger import log, log_debug_event, log_exception
+from core.files.table_reader import FILE_PATTERNS
+from core.runtime.paths import demo_root, profile_root
 _LAST_PATHS_FILE = "last_paths.json"
 
 
@@ -169,4 +169,4 @@ def print_section(title: str, width: int = 50) -> None:
 
 
 # Shared persistence remains importable here for existing CLI callers.
-from core.profile_store import load_json, save_json, load_last_paths, save_last_paths
+from core.profiles.profile_store import load_json, save_json, load_last_paths, save_last_paths

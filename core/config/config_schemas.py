@@ -4,8 +4,8 @@ from typing import Dict, List, Literal
 
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from core.profile_config import CONFIG_VERSION, DEFAULTS
-from core.system_utils import normalize_xlsx_output_path
+from core.config.profile_config import CONFIG_VERSION, DEFAULTS
+from core.files.system_utils import normalize_xlsx_output_path
 
 from core.business_schema import (
     ARTICLE_COLUMN,

@@ -5,7 +5,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from core.progress import ProgressEvent, StatsEvent
+from core.runtime.progress import ProgressEvent, StatsEvent
 from gui import app
 from workflows.base import RunResult
 

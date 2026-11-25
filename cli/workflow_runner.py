@@ -6,9 +6,9 @@ from contextlib import contextmanager
 from cli.progress import show_progress, show_stats
 from cli.utils import confirm_default_column
 from cli.workflow_setup import recover_configuration
-from core.configuration_errors import ConfigurationError
-from core.logger import log_exception
-from core.system_utils import OutputFileLockedError
+from core.config.configuration_errors import ConfigurationError
+from core.runtime.logger import log_exception
+from core.files.system_utils import OutputFileLockedError
 from core.workflow_errors import WorkflowError
 
 

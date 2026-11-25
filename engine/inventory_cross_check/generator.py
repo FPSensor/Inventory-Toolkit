@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 from core.business_schema import DIFFERENCE_COLUMN
-from core.configuration_manager import ConfigurationManager
-from core.logger import log, log_debug_event
-from core.progress import report_progress, report_stats
-from core.system_utils import normalize_xlsx_output_path, require_input_files, safe_pandas_to_excel
-from core.telemetry import execution_timer
+from core.config.configuration_manager import ConfigurationManager
+from core.runtime.logger import log, log_debug_event
+from core.runtime.progress import report_progress, report_stats
+from core.files.system_utils import normalize_xlsx_output_path, require_input_files, safe_pandas_to_excel
+from core.runtime.telemetry import execution_timer
 from engine.inventory_cross_check.contracts import CrossCheckPlan
 from engine.inventory_cross_check.excel_renderer import apply_excel_formatting
 from engine.inventory_cross_check.inputs import read_inputs

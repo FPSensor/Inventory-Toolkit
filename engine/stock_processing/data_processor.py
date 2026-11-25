@@ -13,7 +13,7 @@ from core.business_schema import (
     UNIT_COST_PREFIX,
     UNIT_SALES_PREFIX,
 )
-from core.logger import log_debug_event
+from core.runtime.logger import log_debug_event
 from engine.shared.families import assign_families
 from engine.stock_processing.contracts import (
     INTERNAL_ARTICLE_COLUMN,

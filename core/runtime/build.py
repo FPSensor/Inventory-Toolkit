@@ -2,7 +2,7 @@
 from dataclasses import dataclass
 from pathlib import Path
 
-from core.paths import APPLICATION_ROOT
+from core.runtime.paths import APPLICATION_ROOT
 
 
 @dataclass(frozen=True)

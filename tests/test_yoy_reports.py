@@ -3,7 +3,7 @@ import pytest
 from openpyxl import Workbook
 from pydantic import ValidationError
 
-from core.config_schemas import YoYReportsConfig
+from core.config.config_schemas import YoYReportsConfig
 from engine.yoy_reports.generator import generate_sales_report
 from engine.yoy_reports.metrics import configured_branches, resolve_metric_specs
 from engine.yoy_reports.sheet_renderer import render_report_sheet
@@ -199,7 +199,7 @@ def test_yoy_stats_use_unique_branches_and_label_single_branch_groups():
 
 def test_cli_full_report_comparison_is_opt_in_and_reuses_last_paths(tmp_path, monkeypatch):
     from cli.yoy_reports_launcher import launch_yoy_reports
-    from core import paths as app_paths
+    from core.runtime import paths as app_paths
 
     monkeypatch.setattr(app_paths, "PROFILES_ROOT", tmp_path / "profiles")
     config = _config(metrics=["units"], annual_comparison=True)
@@ -308,7 +308,7 @@ def test_interactive_metrics_are_opt_in_without_mutating_profile(configured, inc
 def test_cli_selects_only_requested_metric_columns(tmp_path, monkeypatch, answer, expected):
     from copy import deepcopy
     from cli.yoy_reports_launcher import launch_yoy_reports
-    from core import paths as app_paths
+    from core.runtime import paths as app_paths
 
     monkeypatch.setattr(app_paths, 'PROFILES_ROOT', tmp_path / 'profiles')
     config = _config()

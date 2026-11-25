@@ -1,8 +1,8 @@
 """Profile metadata validation independent of configuration initialization."""
-from core import paths
-from core.configuration_errors import ConfigurationFileError
-from core.json_documents import read_document
-from core.setup_catalog import MODULE_LABELS
+from core.runtime import paths
+from core.config.configuration_errors import ConfigurationFileError
+from core.config.json_documents import read_document
+from core.setup.setup_catalog import MODULE_LABELS
 
 
 def validate_metadata(payload):

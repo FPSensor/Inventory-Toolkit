@@ -4,7 +4,7 @@ from dataclasses import dataclass
 import re
 import unicodedata
 
-from core.resource_config import load_resource
+from core.config.resource_config import load_resource
 
 
 @dataclass(frozen=True)

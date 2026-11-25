@@ -1,6 +1,6 @@
 import time
 from contextlib import contextmanager
-from core.logger import log, log_debug_event
+from core.runtime.logger import log, log_debug_event
 
 @contextmanager
 def execution_timer(stage_name: str):

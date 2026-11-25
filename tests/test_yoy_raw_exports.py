@@ -2,8 +2,8 @@
 import pandas as pd
 import pytest
 
-from core import paths as app_paths
-from core.profile_config import ensure_profile_config
+from core.runtime import paths as app_paths
+from core.config.profile_config import ensure_profile_config
 from engine.yoy_reports.data_processor import process_sales_data
 
 START, END = pd.Timestamp("2026-01-01"), pd.Timestamp("2026-01-31")
@@ -88,7 +88,7 @@ def test_files_without_a_recognizable_total_are_accepted(tmp_path, total):
 
 
 def test_aliases_are_editable_from_guided_setup(tmp_path, monkeypatch):
-    from core.setup_service import SetupSession
+    from core.setup.setup_service import SetupSession
 
     monkeypatch.setattr(app_paths, "PROFILES_ROOT", tmp_path)
     ensure_profile_config(tmp_path / "shop" / "configs")

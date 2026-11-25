@@ -4,10 +4,10 @@ import json
 
 import pytest
 
-from core import paths
-from core.profile_config import ensure_profile_config
-from core.setup_catalog import STEPS, get_value
-from core.setup_service import SetupSession, SetupState, initialize_setup, write_json
+from core.runtime import paths
+from core.config.profile_config import ensure_profile_config
+from core.setup.setup_catalog import STEPS, get_value
+from core.setup.setup_service import SetupSession, SetupState, initialize_setup, write_json
 from core.workflow_errors import WorkflowError, ErrorCode
 
 

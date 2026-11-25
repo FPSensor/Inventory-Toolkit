@@ -1,7 +1,7 @@
 import pytest
 
-from core import json_documents
-from core.configuration_errors import ConfigurationFileError
+from core.config import json_documents
+from core.config.configuration_errors import ConfigurationFileError
 
 
 def test_duplicate_keys_and_nonfinite_values_are_not_silently_accepted(tmp_path):

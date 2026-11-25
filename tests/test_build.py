@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from core.build import load_build
+from core.runtime.build import load_build
 
 
 def test_manifest_capabilities_and_validation(tmp_path):
@@ -26,9 +26,9 @@ def test_manifest_rejects_duplicate_properties(tmp_path):
 
 def test_debug_is_optional_and_release_archives_exclude_development(monkeypatch):
     from dataclasses import replace
-    from core import optional_debug
+    from core.runtime import optional_debug
     from tools.BuildDistribution import distribution_files, ROOT
-    from core.build import BUILD
+    from core.runtime.build import BUILD
 
     release = replace(BUILD, type="release", control_type="cli", default_control="cli")
     monkeypatch.setattr(optional_debug, "BUILD", release)
@@ -50,7 +50,7 @@ def test_release_source_tree_imports_without_excluded_packages(tmp_path, interfa
     import subprocess
     import sys
     from tools.BuildDistribution import distribution_files, ROOT
-    from core.build import BUILD
+    from core.runtime.build import BUILD
     default = 'gui' if interface == 'gui' else 'cli'
     release = replace(BUILD, type='release', control_type=interface, default_control=default)
     for source in distribution_files(release):
@@ -65,7 +65,7 @@ def test_release_source_tree_imports_without_excluded_packages(tmp_path, interfa
     if interface != 'both':
         assert not (tmp_path / ('gui' if interface == 'cli' else 'cli')).exists()
     imports = 'import cli.menu' if interface == 'cli' else 'import gui.app'
-    code = imports + '; from core.optional_debug import debug_available; assert not debug_available()'
+    code = imports + '; from core.runtime.optional_debug import debug_available; assert not debug_available()'
     result = subprocess.run([sys.executable, '-c', code], cwd=tmp_path, capture_output=True, text=True, timeout=30)
     assert result.returncode == 0, result.stderr
     result = subprocess.run([sys.executable, '-m', 'inventory_toolkit', '--version'], cwd=tmp_path, capture_output=True, text=True, timeout=30)
@@ -79,7 +79,7 @@ def test_release_source_tree_imports_without_excluded_packages(tmp_path, interfa
 
 def test_source_distribution_never_collects_local_profile_history(tmp_path, monkeypatch):
     from tools import BuildDistribution as builder
-    from core.build import BUILD
+    from core.runtime.build import BUILD
     config = tmp_path / 'profiles/demo/configs/general/catalog.json'
     history = tmp_path / 'profiles/demo/.history/local.json'
     for path in (config, history):

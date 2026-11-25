@@ -2,7 +2,7 @@
 import pandas as pd
 import pytest
 
-from core.table_reader import parse_dates, read_headers, read_table
+from core.files.table_reader import parse_dates, read_headers, read_table
 
 ROWS = {"Code": ["00012", "A-1"], "Qty": [1.5, 1000.0], "Name": ["Café", "Té"]}
 

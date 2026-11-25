@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 from typing import Callable, Optional
 
-from core.logger import log
+from core.runtime.logger import log
 
 
 @dataclass(frozen=True)

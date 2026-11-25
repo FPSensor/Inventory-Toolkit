@@ -2,7 +2,7 @@
 
 from collections.abc import Callable, Mapping
 
-from core.table_reader import read_headers
+from core.files.table_reader import read_headers
 from core.workflow_errors import ErrorCode, WorkflowError
 
 

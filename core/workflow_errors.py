@@ -1,6 +1,6 @@
 """Stable recovery contracts; presentation never parses exception messages."""
 from enum import Enum
-from core.configuration_errors import ConfigurationError
+from core.config.configuration_errors import ConfigurationError
 
 
 class ErrorCode(str, Enum):

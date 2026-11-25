@@ -2,9 +2,9 @@
 
 from dataclasses import dataclass
 
-from core.setup_catalog import MODULE_LABELS
-from core.setup_service import SetupSession, SetupState
-from core.module_preferences import enabled_modules
+from core.setup.setup_catalog import MODULE_LABELS
+from core.setup.setup_service import SetupSession, SetupState
+from core.profiles.module_preferences import enabled_modules
 from core.workflow_errors import WorkflowError
 
 

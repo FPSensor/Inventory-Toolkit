@@ -1,11 +1,11 @@
 """Shared, validated profile persistence; independent of either interface."""
 import json
-from core.json_documents import read_document, write_documents
+from core.config.json_documents import read_document, write_documents
 from pathlib import Path
 
-from core.configuration_errors import ConfigurationFileError
-from core.logger import log_debug_event
-from core.paths import profile_root
+from core.config.configuration_errors import ConfigurationFileError
+from core.runtime.logger import log_debug_event
+from core.runtime.paths import profile_root
 
 _LAST_PATHS_FILE = "last_paths.json"
 
@@ -14,7 +14,7 @@ def _validate_profile_document(path: Path, payload) -> None:
     if "configs" not in path.parts:
         return
     logical = Path(*path.parts[path.parts.index("configs") + 1:]).with_suffix("").as_posix()
-    from core.configuration_manager import _CONFIG_MODELS
+    from core.config.configuration_manager import _CONFIG_MODELS
 
     model = _CONFIG_MODELS.get(logical)
     if model is None:

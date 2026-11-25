@@ -1,6 +1,6 @@
 # Profile diagnostics
 
-`core.profile_diagnostics.inspect_configuration(profile)` checks current configuration without initializing missing documents, reading workbooks or reviewing setup pages. It validates shared documents and enabled workflows; malformed disabled workflow files do not block another module.
+`core.profiles.profile_diagnostics.inspect_configuration(profile)` checks current configuration without initializing missing documents, reading workbooks or reviewing setup pages. It validates shared documents and enabled workflows; malformed disabled workflow files do not block another module.
 
 The report contains stable issue codes, severity, source document and, when available, a module/setup-page destination. `healthy` means there are no errors. Competing identical category prefixes are warnings; different-length overlapping prefixes remain valid longest-prefix rules.
 

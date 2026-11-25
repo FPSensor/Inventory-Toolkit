@@ -1,6 +1,6 @@
 # Optional developer tools
 
-This package is included in debug source builds and omitted from release source builds. The application can start without it. `core.optional_debug` gates discovery using `build.prop`; the CLI imports the developer console only when requested.
+This package is included in debug source builds and omitted from release source builds. The application can start without it. `core.runtime.optional_debug` gates discovery using `build.prop`; the CLI imports the developer console only when requested.
 
 ```bash
 python -m debug_tools release --release

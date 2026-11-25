@@ -1,6 +1,6 @@
 """Workbook vocabulary loaded from data, never used as catalog classification rules."""
 
-from core.resource_config import load_resource
+from core.config.resource_config import load_resource
 
 _LABELS = load_resource("workbook_labels.json")
 

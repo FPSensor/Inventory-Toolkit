@@ -17,7 +17,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable
 
-from core.paths import APPLICATION_ROOT, RELEASE_REFERENCE_ROOT, demo_root, profile_root
+from core.runtime.paths import APPLICATION_ROOT, RELEASE_REFERENCE_ROOT, demo_root, profile_root
 
 ROOT = APPLICATION_ROOT
 DEMO_ROOT = demo_root()

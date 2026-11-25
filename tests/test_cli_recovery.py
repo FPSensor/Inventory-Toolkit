@@ -1,6 +1,6 @@
-from core import paths
-from core.profile_creation import create_profile
-from core.profile_history import list_checkpoints
+from core.runtime import paths
+from core.profiles.profile_creation import create_profile
+from core.profiles.profile_history import list_checkpoints
 from cli.profile_recovery import profile_recovery_menu
 
 

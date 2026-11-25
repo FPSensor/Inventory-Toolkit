@@ -42,4 +42,4 @@ def test_only_the_table_reader_opens_input_files():
         for path in (ROOT / package).rglob("*.py")
         if any(name in path.read_text(encoding="utf-8") for name in ("read_excel(", "read_csv(", "ExcelFile("))
     }
-    assert readers == {"core/table_reader.py"}
+    assert readers == {"core/files/table_reader.py"}

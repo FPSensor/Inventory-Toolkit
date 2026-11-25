@@ -1,11 +1,11 @@
 """The shared overview reports review progress without changing the profile."""
 
-from core import paths
-from core.profile_config import ensure_profile_config
-from core.profile_overview import inspect_profile
-from core.setup_catalog import get_value
-from core.setup_service import SetupSession, initialize_setup, write_json
-from core.setup_service import SetupState
+from core.runtime import paths
+from core.config.profile_config import ensure_profile_config
+from core.profiles.profile_overview import inspect_profile
+from core.setup.setup_catalog import get_value
+from core.setup.setup_service import SetupSession, initialize_setup, write_json
+from core.setup.setup_service import SetupState
 
 
 def test_new_profile_reports_independent_module_progress(tmp_path, monkeypatch):
@@ -40,7 +40,7 @@ def test_existing_profile_reports_ready_without_enrolling_setup(tmp_path, monkey
 def test_console_inspection_uses_selected_yoy_options(monkeypatch):
     from types import SimpleNamespace
     from cli import profile_overview as cli
-    from core.profile_overview import ModuleOverview
+    from core.profiles.profile_overview import ModuleOverview
 
     entry = ModuleOverview('yoy_reports', 'YoY Reports', SetupState.COMPLETE, None, 8, None, ())
     monkeypatch.setattr(cli, 'inspect_profile', lambda _profile: (entry, entry, entry))
