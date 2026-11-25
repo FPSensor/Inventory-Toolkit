@@ -65,6 +65,24 @@ def test_aliases_are_editable_from_guided_setup(tmp_path, monkeypatch):
     monkeypatch.setattr(app_paths, "PROFILES_ROOT", tmp_path)
     ensure_profile_config(tmp_path / "shop" / "configs")
     session = SetupSession("shop", "yoy_reports", include_advanced=True)
-    session.save_step("yoy_branch_aliases", {"input.branch_aliases": {"DSLOCAL": "LOCAL"}})
-    step = next(step for step in session.all_steps if step.id == "yoy_branch_aliases")
-    assert session.data(step)["input"]["branch_aliases"] == {"DSLOCAL": "LOCAL"}
+    session.save_step("yoy_source_values", {
+        "input.branch_aliases": {"DSLOCAL": "LOCAL"}, "input.code_tokenization": "first_token",
+    })
+    step = next(step for step in session.all_steps if step.id == "yoy_source_values")
+    saved = session.data(step)["input"]
+    assert (saved["branch_aliases"], saved["code_tokenization"]) == ({"DSLOCAL": "LOCAL"}, "first_token")
+
+
+@pytest.mark.parametrize("mode, items, variants", [
+    ("first_token", ["01008-ORG", "01008-ORG"], ["S", "XXL"]),
+    ("whole", ["01008-ORG TABLAS", "01008-ORG"], ["S S", "XXL  XXL"]),
+])
+def test_codes_can_be_separated_from_their_description(tmp_path, mode, items, variants):
+    path = tmp_path / "sales.xlsx"
+    pd.DataFrame({"Origen": ["LOCAL"] * 3, "Codigo": ["01008-ORG TABLAS", "01008-ORG", None],
+                  "Talle": ["S S", "XXL  XXL", None], "Dia": [pd.Timestamp("2026-01-02")] * 3,
+                  "Unidades": [1, 2, 0], "Importe": [1, 2, 0]}).to_excel(path, index=False)
+    current, _, _ = process_sales_data(path, START, END, config(variant_column="Talle", code_tokenization=mode))
+    assert current["Codigo"].tolist()[:2] == items
+    assert current["Talle"].tolist()[:2] == variants
+    assert current[["Codigo", "Talle"]].iloc[2].isna().all()

@@ -117,7 +117,8 @@
             "item_column": "Articulo",
             "branch_column": "Base",
             "variant_column": "Talle",
-            "branch_aliases": {}
+            "branch_aliases": {},
+            "code_tokenization": "whole"
         },
         "output": {
             "quantity_label": "Units Sold",

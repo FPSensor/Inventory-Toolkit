@@ -199,6 +199,7 @@ class YoYInputConfig(_StrictConfigModel):
     branch_column: str = DEFAULTS["yoy_reports/settings"]["input"]["branch_column"]
     variant_column: str = Field(default=VARIANT_COLUMN, validation_alias=AliasChoices("variant_column", "size_column"))
     branch_aliases: Dict[str, str] = Field(default_factory=dict)
+    code_tokenization: Literal["first_token", "whole"] = "whole"
 
 
 class YoYOutputConfig(_StrictConfigModel):

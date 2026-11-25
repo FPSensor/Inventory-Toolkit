@@ -77,6 +77,10 @@ def process_sales_data(
     if date_column in dataframe.columns:
         dataframe = dataframe[dataframe[date_column] != date_column]
     dataframe = check_exported_totals(dataframe, input_config)
+    if input_config.get("code_tokenization", "whole") == "first_token":
+        for column in (input_config["item_column"], input_config.get("variant_column")):
+            if column in dataframe.columns:
+                dataframe = dataframe.assign(**{column: dataframe[column].str.split().str[0]})
     aliases = input_config.get("branch_aliases") or {}
     branch_column = input_config["branch_column"]
     if aliases and branch_column in dataframe.columns:

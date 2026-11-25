@@ -9,7 +9,8 @@
             "item_column": "SKU",
             "branch_column": "Location",
             "variant_column": "Variant",
-            "branch_aliases": {}
+            "branch_aliases": {},
+            "code_tokenization": "whole"
         },
         "output": {
             "quantity_label": "Quantity",

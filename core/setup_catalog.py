@@ -137,8 +137,9 @@ STEPS = {
             field('input.branch_column', 'Sales location column', 'Values must match the members of your comparison groups.', hint_key='branch_hints')), sample='file'),
         SetupStep('yoy_groups', 'Which locations should be compared?', 'yoy_reports/settings', (
             field('groups', 'Comparison groups and their locations', 'One group can contain one or more locations. A multi-location group gets a Global block; one-location groups do not duplicate totals.', 'groups'),)),
-        SetupStep('yoy_branch_aliases', 'Locations that sell for another one', 'yoy_reports/settings', (
-            field('input.branch_aliases', 'Source location and the location it counts for', 'Left: the name in the sales file, such as a deposit. Right: the location used by your comparison groups. Leave empty if not used.', 'mapping'),), advanced=True),
+        SetupStep('yoy_source_values', 'Values in the sales file', 'yoy_reports/settings', (
+            field('input.code_tokenization', 'Product and variant codes', 'Keep the full value unless the file adds a description after the code.', 'choice', choices=MATCHING),
+            field('input.branch_aliases', 'Source location and the location it counts for', 'Left: the name in the sales file, such as a deposit. Right: the location used by your comparison groups. Leave empty if not used.', 'mapping')), advanced=True),
         SetupStep('yoy_variants', 'Optional product variants', 'yoy_reports/settings', (
             field('output.include_variants', 'Include variants by default', 'Leave off when products do not use variants.', 'bool'),
             field('input.variant_column', 'Variant column (optional)', 'For example package weight, flavor or size. This identifies a product dimension; it is separate from quantity sold.', hint_key='variant_hints', sample_required=False, optional=True)), sample='file'),
