@@ -78,10 +78,6 @@ def get_session_log_path() -> Path:
     return _SESSION_LOG
 
 
-def is_forensic_debug() -> bool:
-    """Return ``True`` when debug level 3 diagnostics are active."""
-    return _DEBUG_LEVEL == 3
-
 
 def _handler(role: str) -> logging.Handler | None:
     logger = logging.getLogger(_LOG_NAME)

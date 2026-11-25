@@ -189,12 +189,6 @@ class ConfigurationManager:
     def get_active_stores(self) -> list[str]:
         return self.get_network_config()["active"]
 
-    def get_regional_groups(self) -> Dict[str, list]:
-        return self.get_network_config()["regional_groups"]
-
-    def get_stock_database_columns(self) -> Dict[str, str]:
-        return self.get_network_config()["stock_database_columns"]
-
     def get_stock_cleaning(self) -> dict:
         return self.get_stock_processing_config()["cleaning"]
 

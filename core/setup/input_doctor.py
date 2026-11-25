@@ -60,8 +60,6 @@ class InputInspection:
 
 def _requirements(config, module, *, include_sales, include_variants, grouping, has_families):
     """Capture only columns actually consumed by the selected workflow options."""
-    catalog = config.get_catalog_columns()
-    article = ("Article / SKU", catalog["article"], "article_hints")
     if module == "cross_check":
         settings = config.get_cross_check_config()
         source_category = (("Category", settings["input"]["family_column"], "family_hints"),) if settings["input"].get("family_mode") == "column" else ()
@@ -75,7 +73,6 @@ def _requirements(config, module, *, include_sales, include_variants, grouping, 
                 ("Sales price", settings["price_lists"]["sales"]["price_column"], "price_hints"))),
         }
     if module == "stock_processing":
-        network = config.get_network_config()
         source = stock_input(config)
         stock_columns = [("Article / SKU", source["article_column"], "article_hints")]
         if source.get("family_mode") == "column":

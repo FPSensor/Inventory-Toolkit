@@ -1,6 +1,5 @@
 """Load bundled data resources independently of the caller's working directory."""
 
-import json
 from pathlib import Path
 
 from core.config.configuration_errors import ConfigurationError

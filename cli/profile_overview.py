@@ -1,6 +1,7 @@
 """Console profile overview and direct module setup access."""
 
-from cli.utils import clear_screen, input_default, load_last_paths
+from cli.utils import clear_screen, input_default
+from core.profiles.profile_store import load_last_paths
 from cli.wizard import run_module_setup
 from core.config.configuration_manager import ConfigurationManager
 from core.setup.input_doctor import inspect_workflow_inputs

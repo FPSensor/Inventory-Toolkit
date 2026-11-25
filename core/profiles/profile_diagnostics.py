@@ -1,7 +1,6 @@
 """Read-only profile diagnostics with stable codes and configuration destinations."""
 from collections import defaultdict
 from dataclasses import asdict, dataclass
-from pathlib import Path
 import re
 
 from core.runtime import paths

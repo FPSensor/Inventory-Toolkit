@@ -9,14 +9,11 @@ Linear new-profile flow:
 """
 
 import os
-from core.runtime.build import BUILD
-from core.profiles.module_preferences import set_enabled_modules
 from core.setup.setup_catalog import MODULE_LABELS
 import sys
-from cli.utils import clear_screen, load_json, save_json, ask_yes_no
-from cli.wizard import initialize_profile_files, run_setup_wizard
+from cli.utils import clear_screen
+from core.profiles.profile_store import load_json
 from core.runtime import paths as app_paths
-from core.setup.setup_service import initialize_setup
 
 
 # ── Internal helpers ──────────────────────────────────────────────────────────

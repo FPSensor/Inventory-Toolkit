@@ -2,7 +2,8 @@
 
 from dataclasses import replace
 
-from cli.utils import ask_file, input_default, load_last_paths
+from cli.utils import ask_file, input_default
+from core.profiles.profile_store import load_last_paths
 from cli.workflow_runner import ask_option, confirm_column, run_job, show_notice, workflow_screen
 from core.workflow_errors import WorkflowError
 from workflows import yoy

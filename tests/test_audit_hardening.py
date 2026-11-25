@@ -3,7 +3,7 @@ import json
 import pandas as pd
 import pytest
 
-from cli.utils import load_json, save_json
+from core.profiles.profile_store import load_json, save_json
 from core.config.configuration_errors import ConfigurationFileError
 from core.files.input_columns import choose_input_columns
 from core.config.profile_config import DEFAULTS

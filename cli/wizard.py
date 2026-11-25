@@ -1,14 +1,8 @@
 """Console rendering for the shared, module-specific setup catalog."""
-from pathlib import Path
 from cli.utils import ask_file, clear_screen
 from core.files.table_reader import read_table
-from core.config.profile_config import ensure_profile_config
 from core.config.configuration_errors import ConfigurationError
 
-
-def initialize_profile_files(configs_path: str) -> None:
-    """Compatibility entry point used by profile creation."""
-    ensure_profile_config(Path(configs_path))
 
 
 def _load_columns(path: str) -> tuple[list[str], object | None]:
@@ -51,10 +45,6 @@ def _sample_file(label: str) -> tuple[str, list[str], object | None]:
         print(f"  ✅ {len(columns)} columns detected.")
     return path, columns, df
 
-
-def run_setup_wizard(profile_dir: str, profile_name: str = "") -> None:
-    from cli.config_menu import configuration_menu
-    configuration_menu(profile_name or Path(profile_dir).name)
 
 
 def run_module_setup(profile: str, module: str, step_id: str | None = None, *, include_advanced=False, single_page=False) -> None:

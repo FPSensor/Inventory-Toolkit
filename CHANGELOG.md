@@ -78,6 +78,8 @@ Development changes after `v1.4.1`. The released application version remains `1.
 
 ### Changed
 
+- **cleanup:** Remove functions, re-exports and imports that nothing used.
+
 - **core:** Group modules into `config`, `profiles`, `setup`, `files` and `runtime` packages. Only import paths change.
 
 - **engines:** Split Cross Check into plan, inputs, reconciliation and orchestration. Engines raise for unusable files instead of printing and returning nothing, and never read a terminal: interfaces answer whether to retry or copy a locked report. Reports are unchanged.

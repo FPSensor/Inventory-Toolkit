@@ -115,10 +115,6 @@ def _entry(parent, textvariable=None, **kwargs):
     return ttk.Entry(parent, textvariable=textvariable, **allowed)
 
 
-def _pack_btn(button, **kwargs):
-    button.pack(**kwargs)
-    return button
-
 
 def _register_scroll(canvas):
     root = canvas.winfo_toplevel()

@@ -9,7 +9,7 @@ from core.files.table_reader import FILE_PATTERNS, read_table
 from core.setup.setup_catalog import MODULE_LABELS, STEPS, get_value
 from core.setup.column_assist import advise_columns
 from core.profiles.profile_store import save_last_paths
-from core.setup.setup_service import SetupSession, SetupState
+from core.setup.setup_service import SetupSession
 from core.workflow_errors import WorkflowError
 from gui.widgets import BaseFrame, BaseScrollable, BaseTextbox, USE_CTK, ctk, ttk, _btn, _lbl, _entry
 

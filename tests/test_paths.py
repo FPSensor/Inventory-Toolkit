@@ -9,7 +9,8 @@ from cli import profiles as cli_profiles
 from cli import cross_check_launcher, stock_processing_launcher, yoy_reports_launcher
 from core.workflow_errors import ErrorCode, WorkflowError
 from workflows.base import require_files
-from cli.utils import input_default, load_last_paths, save_last_paths
+from cli.utils import input_default
+from core.profiles.profile_store import load_last_paths, save_last_paths
 from core.runtime import paths as app_paths
 from core.config.configuration_manager import ConfigurationManager
 from gui.app import InventoryToolkitGUI

@@ -5,19 +5,10 @@ Provides:
   • clear_screen()
   • ask_yes_no(message)            → bool
   • ask_file(message, default, is_output) → str
-  • load_last_paths / save_last_paths   — per-profile path persistence
-  • open_in_editor(path)           — cross-platform (Linux / macOS / Windows)
-  • load_json / save_json
 """
 
 import os
-import sys
-import json
-import subprocess
-import tempfile
-from pathlib import Path
 
-from core.config.configuration_errors import ConfigurationFileError
 
 try:
     import tkinter as tk
@@ -26,10 +17,9 @@ try:
 except ImportError:
     TKINTER_AVAILABLE = False
 
-from core.runtime.logger import log, log_debug_event, log_exception
+from core.runtime.logger import log_debug_event
 from core.files.table_reader import FILE_PATTERNS
-from core.runtime.paths import demo_root, profile_root
-_LAST_PATHS_FILE = "last_paths.json"
+from core.runtime.paths import demo_root
 
 
 # ── Screen ────────────────────────────────────────────────────────────────────
@@ -118,55 +108,3 @@ def ask_file(message: str, default_val: str, is_output: bool = False) -> str:
 
 
 # ── Path persistence ──────────────────────────────────────────────────────────
-
-# ── Editor — cross-platform ───────────────────────────────────────────────────
-
-def open_in_editor(path: str) -> None:
-    """Open *path* in the system's default text editor (Linux / macOS / Windows)."""
-    print(f"  Opening {os.path.basename(path)} in the default editor...")
-    try:
-        if sys.platform.startswith("darwin"):
-            subprocess.call(("open", path))
-        elif sys.platform.startswith("linux"):
-            subprocess.call(("xdg-open", path))
-        elif os.name == "nt":
-            # os.startfile is Windows-only; subprocess keeps cross-platform parity
-            subprocess.call(("cmd", "/c", "start", "", path))
-        else:
-            subprocess.call(("xdg-open", path))
-    except Exception as e:
-        log_exception("Could not open file automatically: %s", e)
-    input("\n  Press Enter when you have saved the file...")
-
-
-# ── JSON I/O ──────────────────────────────────────────────────────────────────
-
-# ── Output helpers ────────────────────────────────────────────────────────────
-
-def print_success(msg: str) -> None:
-    """Print a success message with a checkmark prefix."""
-    print(f"  ✓  {msg}")
-
-
-def print_error(msg: str) -> None:
-    """Print an error message with a cross prefix."""
-    print(f"  ✗  {msg}")
-
-
-def print_warning(msg: str) -> None:
-    """Print a warning message with a warning-sign prefix."""
-    print(f"  ⚠  {msg}")
-
-
-def print_info(msg: str) -> None:
-    """Print an informational message with an info prefix."""
-    print(f"  ℹ  {msg}")
-
-
-def print_section(title: str, width: int = 50) -> None:
-    """Print a section header padded with a horizontal rule."""
-    print(f"\n  ── {title} {'─' * max(0, width - len(title) - 5)}")
-
-
-# Shared persistence remains importable here for existing CLI callers.
-from core.profiles.profile_store import load_json, save_json, load_last_paths, save_last_paths
