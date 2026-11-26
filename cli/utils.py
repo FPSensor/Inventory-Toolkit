@@ -18,6 +18,7 @@ except ImportError:
     TKINTER_AVAILABLE = False
 
 from core.runtime.logger import log_debug_event
+from core.files.system_utils import unquote_path
 from core.files.table_reader import FILE_PATTERNS
 from core.runtime.paths import demo_root
 
@@ -67,7 +68,7 @@ def ask_file(message: str, default_val: str, is_output: bool = False) -> str:
     if TKINTER_AVAILABLE:
         hint += ", 'B' to browse"
 
-    resp = input(f"  {message} ({hint}): ").strip()
+    resp = unquote_path(input(f"  {message} ({hint}): "))
     log_debug_event(
         "file_prompt_response",
         prompt=message,

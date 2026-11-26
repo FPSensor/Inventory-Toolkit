@@ -18,6 +18,7 @@ from gui.widgets import (ctk, ttk, USE_CTK, BaseWindow, BaseFrame,
     _btn, _lbl, _entry, apply_dark_theme, set_text_scale, COLORS)
 
 from core.config.configuration_manager import ConfigurationManager
+from core.files.system_utils import unquote_path
 from core.runtime.logger import log
 from core.runtime import paths as app_paths
 from core.profiles.profile_store import load_last_paths
@@ -471,6 +472,14 @@ class InventoryToolkitGUI(BaseWindow):
         _lbl(frame, text=label_text, width=230 if USE_CTK else None, anchor="w"
              ).pack(side="left", padx=5)
         _entry(frame, textvariable=var).pack(side="left", fill="x", expand=True, padx=5)
+
+        def unquote(*_):
+            # Windows "Copy as path" pastes the path between quotes.
+            text = var.get()
+            if unquote_path(text) != text.strip():
+                var.set(unquote_path(text))
+
+        var.trace_add("write", unquote)
 
         def browse():
             if is_output:

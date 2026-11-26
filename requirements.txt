@@ -4,3 +4,4 @@ xlrd
 numpy
 pydantic>=2,<3
 lxml
+customtkinter>=5.2

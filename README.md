@@ -64,6 +64,8 @@ Implementation identifiers are English. External workbook labels such as `Artíc
 
 The strict pre-release gate executes all three demo workflows and compares their generated workbooks against committed golden masters in `tests/release_reference/`. Comparison is semantic, not a raw `.xlsx` ZIP hash.
 
+GitHub Actions runs this gate on every push to any branch and on every pull request, on Linux with Python 3.10 and 3.12 and on Windows with Python 3.12 (`.github/workflows/tests.yml`). On Linux the desktop tests run under a virtual display.
+
 ---
 
 # Features
@@ -120,7 +122,7 @@ Linux/macOS users can also run:
 ./Inventory\ Toolkit.sh
 ```
 
-The CLI targets Python 3.10+. The current Windows bootstrap installs Python 3.11.9.
+The CLI targets Python 3.10+; continuous integration certifies 3.10 and 3.12. The current Windows bootstrap installs Python 3.11.9. File prompts accept paths pasted between quotes, as Windows "Copy as path" produces them.
 
 For platform-specific notes, GUI requirements, and troubleshooting, see [docs/installation.md](docs/installation.md).
 

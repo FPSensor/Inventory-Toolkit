@@ -72,7 +72,7 @@ From the repository root:
 python -m inventory_toolkit --interface gui
 ```
 
-CustomTkinter is optional. If it is unavailable, the GUI falls back to standard Tkinter/ttk.
+CustomTkinter is installed by `requirements.txt`. If it is unavailable, the GUI falls back to standard Tkinter/ttk.
 
 ## Developer commands
 

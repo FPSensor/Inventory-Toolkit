@@ -8,6 +8,8 @@ Development changes after `v1.4.1`. The released application version remains `1.
 
 ### Added
 
+- **ci:** Run the full release certification on every push to any branch and on every pull request: Linux with Python 3.10 and 3.12, with a virtual display for desktop tests, and Windows with Python 3.12.
+
 - **inputs:** Read Excel, CSV, TSV and text files through one table reader in every workflow. YoY can join sheets with the same columns and multiply unit prices by quantity.
 
 - **yoy: safeguards:** Stop when the file has no sales for the requested period and locations, and warn about an empty previous year, unreadable dates or unread sheets, instead of reporting a false fall. Ambiguous day/month dates are refused.
@@ -144,6 +146,10 @@ Development changes after `v1.4.1`. The released application version remains `1.
 - Made compatibility retirement preserve existing LF/CRLF/mixed line endings, remove obsolete documentation and its regression tests, and generate an attributed `core: compatibility:` commit with a descriptive body.
 
 ### Fixed
+
+- **cli, gui: paths:** Accept file paths pasted between quotes, as Windows "Copy as path" and dragged files produce them, instead of reporting a missing file.
+
+- **requirements:** Install CustomTkinter, so a new installation opens the intended desktop interface instead of the plain fallback.
 
 - **cross: double count:** Always add system stock up to one row per product. Without consolidation, the former default, each repeated row received the whole physical count: the demo reported 2,119 counted units instead of 797 and a cost surplus of 1,010,648 instead of a shortage of 166,176. The consolidation question and checkbox are removed.
 

@@ -21,6 +21,14 @@ class InvalidExcelOutputPathError(ValueError):
         )
 
 
+def unquote_path(text: str) -> str:
+    """Remove the quotes that "Copy as path" or a dragged file add around a path."""
+    text = text.strip()
+    if len(text) >= 2 and text[0] == text[-1] and text[0] in "\"'":
+        return text[1:-1].strip()
+    return text
+
+
 def normalize_xlsx_output_path(filepath, *, notify=None):
     """Return a validated .xlsx output path, appending the suffix when omitted.
 
