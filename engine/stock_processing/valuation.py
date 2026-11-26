@@ -95,7 +95,8 @@ def missing_price_warnings(stock_frame: pd.DataFrame, plan: StockProcessingPlan)
             price_column = f"{prefix}{store}"
             prices = stock_frame[price_column] if price_column in stock_frame.columns else -1
             missing = reported & stock_frame[store].ne(0) & (prices <= 0)
-            units += float(stock_frame.loc[missing, store].sum())
+            # Negative stock is still stock to value: -1 here and +1 there are 2 units.
+            units += float(stock_frame.loc[missing, store].abs().sum())
             unpriced |= missing
         products = stock_frame.loc[unpriced, INTERNAL_ARTICLE_COLUMN].drop_duplicates()
         if len(products):

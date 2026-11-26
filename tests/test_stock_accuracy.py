@@ -52,6 +52,12 @@ def test_stock_reports_missing_prices_and_unclear_quantities(tmp_path, monkeypat
     assert "1 products with stock have no cost price" in text
 
 
+def test_negative_stock_without_price_counts_its_units(tmp_path, monkeypatch):
+    warnings = []
+    _run_stock(tmp_path, monkeypatch, [(12345, 1), (99998, -1), (99999, 1)], warnings)
+    assert "so 2 units are valued at 0" in "\n".join(warnings)
+
+
 def test_each_variant_takes_its_own_price(tmp_path, monkeypatch):
     monkeypatch.setattr(app_paths, "PROFILES_ROOT", tmp_path / "profiles")
     configs = tmp_path / "profiles" / "variants" / "configs"
