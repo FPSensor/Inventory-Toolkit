@@ -6,6 +6,7 @@ import pandas as pd
 
 from core.runtime.logger import log_debug_event
 from core.business_schema import UNMATCHED_FAMILY
+from core.files.data_sanitizer import describe_unclear_numbers, read_quantities
 from core.files.table_reader import parse_dates, read_table
 from engine.shared.families import assign_families
 from engine.yoy_reports.metrics import resolve_metric_specs
@@ -132,15 +133,19 @@ def process_sales_data(
     undated = int(dataframe[date_column].isna().sum())
     if undated and on_notice:
         on_notice(f"{undated:,} sales rows have no readable date and were not counted.")
-    for metric in metric_specs:
-        dataframe[metric.column] = pd.to_numeric(
-            dataframe[metric.column], errors="coerce"
-        ).fillna(0)
+    # Figures exported as local text, such as "1.234,50", are read instead of
+    # silently counting as 0; anything still unreadable or doubtful is named.
+    figure_columns = dict.fromkeys(
+        [metric.column for metric in metric_specs]
+        + [column for column in (quantity_column, input_config.get("sales_column")) if column in dataframe.columns])
+    for column in figure_columns:
+        dataframe[column], needs_review = read_quantities(dataframe[column])
+        message = describe_unclear_numbers(column, needs_review, "figures")
+        if message and on_notice:
+            on_notice(message)
     sales_column = input_config.get("sales_column")
     if input_config.get("sales_values") == "unit_price" and sales_column in dataframe.columns:
-        quantities = pd.to_numeric(dataframe[quantity_column], errors="coerce").fillna(0)
-        prices = pd.to_numeric(dataframe[sales_column], errors="coerce").fillna(0)
-        dataframe[sales_column] = quantities * prices
+        dataframe[sales_column] = dataframe[quantity_column] * dataframe[sales_column]
 
     if family_rules is not None:
         item_column = input_config["item_column"]

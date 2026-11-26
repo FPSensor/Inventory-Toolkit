@@ -440,3 +440,28 @@ def test_variant_column_is_optional_until_breakdown_is_selected(tmp_path):
     config["output"]["include_variants"] = True
     with pytest.raises(ValueError, match="missing required columns"):
         process_sales_data(path, pd.Timestamp("2026-01-01"), pd.Timestamp("2026-01-31"), config)
+
+
+def test_sales_figures_written_as_local_text_are_read_not_zeroed(tmp_path):
+    from engine.yoy_reports.data_processor import process_sales_data
+
+    config = _config(metrics=["units", "sales"])
+    names = {key: config["input"][key] for key in ("date_column", "branch_column", "grouping_column",
+                                                   "quantity_column", "sales_column")}
+    frame = pd.DataFrame({
+        names["date_column"]: [pd.Timestamp("2026-01-02")] * 3,
+        names["branch_column"]: ["A"] * 3,
+        names["grouping_column"]: ["Goods"] * 3,
+        names["quantity_column"]: ["1,5", 2, "dos"],
+        names["sales_column"]: ["1.234,50", 100, "10"],
+    })
+    path = tmp_path / "sales.xlsx"
+    frame.to_excel(path, index=False)
+    notices = []
+    current, _, _ = process_sales_data(
+        path, pd.Timestamp("2026-01-01"), pd.Timestamp("2026-01-31"), config, on_notice=notices.append)
+    assert current[names["quantity_column"]].tolist() == [1.5, 2, 0]
+    assert current[names["sales_column"]].sum() == 1344.5
+    assert [n for n in notices if n and "unreadable" in n] == [
+        f"1 figures in column '{names['quantity_column']}' are unreadable or ambiguous (rows 4); "
+        "unreadable ones count as 0. Review the original file."]
