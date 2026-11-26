@@ -1,5 +1,5 @@
 # Runtime/distribution capabilities. This is data, never executable code.
-ver = 1.4.1
+ver = 2.0.0
 type = debug
 control-type = both
 default-control = cli

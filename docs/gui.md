@@ -6,7 +6,7 @@ The desktop uses the same setup, validation and report engines as the CLI. Start
 python -m inventory_toolkit --interface gui
 ```
 
-`build.prop` must include `gui` in `control-type`. Its `gui-stage` supplies the visible milestone label. The application release version remains 1.4.1; RC preview does not publish a new toolkit release.
+`build.prop` must include `gui` in `control-type`. Its `gui-stage` supplies the visible milestone label. The desktop ships with application release 2.0.0 as an RC preview: it has been reviewed on Windows, while native macOS review is pending.
 
 ## Workspace
 

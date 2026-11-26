@@ -3,7 +3,7 @@
 ![Python](https://img.shields.io/badge/Python-3.10%2B-blue)
 ![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux%20%7C%20macOS-blue)
 ![License](https://img.shields.io/badge/License-MIT-green)
-![Version](https://img.shields.io/badge/Version-1.4.1-orange)
+![Version](https://img.shields.io/badge/Version-2.0.0-orange)
 
 Inventory Toolkit is a profile-driven Python application for retail inventory reconciliation, stock valuation, and Year-over-Year sales reporting from Excel workbooks.
 
@@ -11,11 +11,11 @@ It was built around real operational constraints: legacy `.xls` exports, inconsi
 
 The project exposes independent CLI and dark desktop interfaces, guided setup per workflow, typed JSON configuration, optional developer tools and a release gate backed by golden-master workbooks. The desktop is an RC preview under active testing; native Windows/macOS review remains pending.
 
-> **Current release line:** `1.4.x`
+> **Current release line:** `2.0.x`
 > **Primary interface:** CLI
-> **GUI status:** RC preview / native platform review pending
+> **GUI status:** RC preview / reviewed on Windows, macOS review pending
 > **Configuration schema:** v3
-> **Development state:** post-1.4.1 changes are recorded under `Unreleased` in [CHANGELOG.md](CHANGELOG.md); the release badge identifies the published version.
+> **Development state:** post-2.0.0 changes are recorded under `Unreleased` in [CHANGELOG.md](CHANGELOG.md); the release badge identifies the published version.
 
 ---
 
@@ -415,9 +415,7 @@ The roadmap is directional rather than a release-date promise. Business correctn
 
 ## Released baseline and current development
 
-`v1.4.1` is the released stabilization baseline. Subsequent changes are listed under `Unreleased` in [CHANGELOG.md](CHANGELOG.md), including progress/statistics, demo-path suggestions, external JSON resources and retirement-tool improvements.
-
-The current testing branch adds a dark RC-preview desktop, embedded setup/configuration, neutral module-selected profiles, independent mappings, variants, measured quantities and optional developer packages. The pre-v3 compatibility layer has been retired after validation; current schema-v3 validation remains strict.
+`v2.0.0` is the current release. Over `v1.4.1` it adds shared workflows for CLI, GUI and unattended `run`, a dark RC-preview desktop, embedded setup/configuration, neutral module-selected profiles, independent mappings, variants, measured quantities, optional developer packages, continuous integration, and accuracy fixes that change report numbers (see [CHANGELOG.md](CHANGELOG.md)). The pre-v3 compatibility layer has been retired; schema-v3 validation remains strict. Later changes are listed under `Unreleased`.
 
 `build.prop` is the runtime source for version and capabilities. For a source archive, use the existing `python tools/BuildDistribution.py dist/Inventory-Toolkit.zip`. It excludes local workbooks, logs, caches, Git internals and non-demo profiles; release builds also omit developer tooling and tests. This is preparation for future bundles, not a new binary packaging system.
 
