@@ -151,6 +151,10 @@ Development changes after `v1.4.1`. The released application version remains `1.
 
 - **windows: output:** Print UTF-8 when output is redirected to a file or another program, as a scheduled `run` or continuous integration does, instead of stopping on symbols the legacy code page cannot encode.
 
+- **windows: console:** Write status symbols as plain text (`[OK]`, `[X]`, `[!]`) and drop decorative emoji in the classic console that a double-clicked `.bat` opens, which draws them as empty boxes. Windows Terminal, VS Code and redirected output keep the emoji; `ITK_SYMBOLS=emoji` or `ITK_SYMBOLS=plain` overrides the detection. Batch files are checked out with Windows line endings.
+
+- **workflows: output:** Add `.xlsx` to output names whose last dot is not a file extension, such as `Stock 26.11.2026`, instead of rejecting `.2026` as an unsupported format. Names ending in another file format such as `.xls` or `.csv` are still rejected.
+
 - **requirements:** Install CustomTkinter, so a new installation opens the intended desktop interface instead of the plain fallback.
 
 - **cross: double count:** Always add system stock up to one row per product. Without consolidation, the former default, each repeated row received the whole physical count: the demo reported 2,119 counted units instead of 797 and a cost surplus of 1,010,648 instead of a shortage of 166,176. The consolidation question and checkbox are removed.

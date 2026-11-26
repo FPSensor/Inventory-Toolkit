@@ -85,7 +85,7 @@ Final results appear in a separate `Stats:` block after completion and before re
 
 Remembered inputs take priority. For the `demo` profile without a remembered input, each launcher suggests the matching workbook under the application-owned `examples/demo/` directory. Press Enter to accept the suggestion. A stale remembered path is not silently replaced; select a new file if it no longer exists.
 
-YoY remembers its input and output alongside Stock and Cross Check. Accepting a demo/default path can also save it as the last-used path: this state records the selected file, not whether the operator typed it. User-supplied relative paths remain relative to the caller's working directory. Extensionless output names are normalized to `.xlsx`; legacy `.xls` remains input-only.
+YoY remembers its input and output alongside Stock and Cross Check. Accepting a demo/default path can also save it as the last-used path: this state records the selected file, not whether the operator typed it. User-supplied relative paths remain relative to the caller's working directory. Output names without `.xlsx` get it added, so `Stock 26.11.2026` saves as `Stock 26.11.2026.xlsx`; names ending in another format such as `.xls` or `.csv` are rejected, and legacy `.xls` remains input-only. In the classic Windows console, status emoji print as `[OK]`, `[X]` and `[!]`; set `ITK_SYMBOLS=emoji` or `ITK_SYMBOLS=plain` to choose.
 
 ## Configuration Hub
 

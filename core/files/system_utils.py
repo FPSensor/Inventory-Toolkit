@@ -7,6 +7,14 @@ import os
 from core.runtime.logger import log_debug_event
 
 
+# Extensions of other file formats: a name ending in one of these was meant to
+# be that format, so it is rejected instead of becoming "name.csv.xlsx".
+OTHER_FILE_FORMATS = frozenset({
+    ".xls", ".xlsm", ".xlsb", ".xltx", ".xltm", ".xlt", ".ods", ".csv", ".tsv",
+    ".txt", ".json", ".xml", ".pdf", ".doc", ".docx", ".zip",
+})
+
+
 class InvalidExcelOutputPathError(ValueError):
     """Raised when an Excel output path is not a supported .xlsx target."""
 
@@ -50,10 +58,11 @@ def normalize_xlsx_output_path(filepath, *, notify=None):
         raise InvalidExcelOutputPathError(filepath)
 
     _base, ext = os.path.splitext(path)
-    if not ext:
+    # "Stock 26.11.2026" has no extension: ".2026" is part of the date.
+    if ext.lower() != ".xlsx" and ext.lower() not in OTHER_FILE_FORMATS:
         resolved = f"{path}.xlsx"
         if notify is not None:
-            notify(f"No output extension detected; using {resolved}")
+            notify(f"No .xlsx extension detected; using {resolved}")
         log_debug_event(
             "xlsx_output_path_normalized",
             requested_path=path,
