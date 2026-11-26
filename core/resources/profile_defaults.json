@@ -69,7 +69,8 @@
             "template": "",
             "cost_factor": 1.0,
             "hidden_families": [],
-            "totals_label": ""
+            "totals_label": "",
+            "missing_cost_file": ""
         }
     },
     "cross_check/settings": {

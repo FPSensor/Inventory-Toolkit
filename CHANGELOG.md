@@ -149,6 +149,8 @@ Development changes after `v1.4.1`. The released application version remains `1.
 
 - **cross: matching:** Recognize scanner readings of products that have no system stock row but appear in a price list, instead of sending them to review with no value, and ignore case in product codes, price lists and ignored articles. In the demo, 9 readings are now valued surpluses. Refuse scanner files with several filled columns or none.
 
+- **stock: list of stock without cost:** Save the products with stock and no cost price, per location and with their sales value, in a separate workbook beside the report when `output.missing_cost_file` names it. Those units count as cost 0 and raise the margin; the list lets the people who load prices see them. Report values are unchanged.
+
 - **stock: variant prices:** Value each color and size with its own price through the optional `pricing.variant_columns`, editable in guided setup, instead of averaging every variant of a product. The demo profile uses it: in Plaza Oeste a size 40 of `12309-222` was valued at 26,361 per unit, the average of its sizes, instead of its price of 19,900.
 
 - **cross: store prices:** Value differences with the prices of the counted store when the price lists and system stock name it, through the optional `store_column` settings in guided setup, instead of averaging every store. The demo profile uses them: its cost total moves from −166,175 with averaged prices to −289,758 with Plaza Oeste prices.

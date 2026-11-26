@@ -78,9 +78,13 @@ def attach_unit_prices(
 
 
 def missing_price_warnings(stock_frame: pd.DataFrame, plan: StockProcessingPlan) -> list[str]:
-    """Name the stocked products that a store values at 0 for lack of a price."""
+    """Name the stocked products that a store values at 0 for lack of a price.
+
+    Missing costs are left out when the profile saves them in their own list.
+    """
     messages = []
-    for prefix, label in ((UNIT_COST_PREFIX, "cost"), (UNIT_SALES_PREFIX, "sales")):
+    sides = ((UNIT_COST_PREFIX, "cost"), (UNIT_SALES_PREFIX, "sales"))
+    for prefix, label in sides[bool(plan.missing_cost_file):]:
         # Hidden families stay out of the report, so their prices do not matter.
         reported = ~stock_frame[INTERNAL_FAMILY_COLUMN].isin(plan.hidden_families)
         unpriced = pd.Series(False, index=stock_frame.index)
@@ -100,6 +104,30 @@ def missing_price_warnings(stock_frame: pd.DataFrame, plan: StockProcessingPlan)
                 f"{len(products)} products with stock have no {label} price in at least one store, "
                 f"so {units:,.6g} units are valued at 0: {preview}.")
     return messages
+
+
+def stock_without_cost(valued: pd.DataFrame, plan: StockProcessingPlan) -> pd.DataFrame:
+    """Rows with stock in a location that has no cost for them, for the people who load prices.
+
+    Each location shows its units and their sales value only where its cost is
+    missing; those units count as cost 0 and raise the margin.
+    """
+    stores = [store for store in plan.active_stores if store not in plan.regional_groups and store in valued.columns]
+    reported = ~valued[INTERNAL_FAMILY_COLUMN].isin(plan.hidden_families)
+    missing = {
+        store: reported & valued[store].ne(0) & (valued.get(f"{UNIT_COST_PREFIX}{store}", -1) <= 0)
+        for store in stores
+    }
+    rows = pd.concat(missing, axis=1).any(axis=1) if missing else pd.Series(False, index=valued.index)
+    base = [plan.internal_base_column(column) for column in plan.base_columns]
+    columns = [column for column in dict.fromkeys(base) if column in valued.columns]
+    result = valued.loc[rows, columns].copy()
+    for store, flagged in missing.items():
+        if flagged[rows].any():
+            result[store] = valued.loc[rows, store].where(flagged[rows])
+            result[f"{store}.{SALES_VALUE_LABEL}"] = valued.loc[rows, f"{store}.{SALES_VALUE_LABEL}"].where(flagged[rows])
+    order = [column for column in (INTERNAL_FAMILY_COLUMN, INTERNAL_ARTICLE_COLUMN) if column in result.columns]
+    return plan.expose_catalog_columns(result.sort_values(order) if order else result)
 
 
 def calculate_inventory_values(

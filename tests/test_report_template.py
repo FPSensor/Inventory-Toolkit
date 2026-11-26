@@ -249,10 +249,11 @@ def test_template_settings_are_editable_from_guided_setup(tmp_path, monkeypatch)
     session = SetupSession("report", "stock_processing", include_advanced=True)
     session.save_step("stock_template", {
         "output.template": "templates/r.xlsx", "output.cost_factor": 1.245,
-        "output.hidden_families": ["Bolsas"], "output.totals_label": "",
+        "output.hidden_families": ["Bolsas"], "output.totals_label": "", "output.missing_cost_file": "Sin costo",
     })
     saved = json.loads((root / "configs" / "stock_processing" / "settings.json").read_text(encoding="utf-8"))["output"]
     assert (saved["template"], saved["cost_factor"], saved["hidden_families"]) == ("templates/r.xlsx", 1.245, ["Bolsas"])
+    assert saved["missing_cost_file"] == "Sin costo"
     assert saved["summaries"][0]["sheet_name"] == "Fijo"
 
 

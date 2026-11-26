@@ -58,6 +58,7 @@ class StockProcessingPlan:
     cost_factor: float = 1.0
     hidden_families: tuple[str, ...] = ()
     totals_label: str = ""
+    missing_cost_file: str = ""
 
     @classmethod
     def from_manager(cls, config: ConfigurationManager) -> "StockProcessingPlan":
@@ -108,6 +109,7 @@ class StockProcessingPlan:
             cost_factor=output.get("cost_factor", 1.0),
             hidden_families=tuple(output.get("hidden_families", [])),
             totals_label=output.get("totals_label", ""),
+            missing_cost_file=output.get("missing_cost_file", ""),
         )
 
     @property

@@ -121,6 +121,15 @@ class StockOutputConfig(_StrictConfigModel):
     cost_factor: float = Field(default=1.0, gt=0, allow_inf_nan=False)
     hidden_families: List[str] = Field(default_factory=list)
     totals_label: str = ""
+    missing_cost_file: str = ""
+
+    @field_validator("missing_cost_file")
+    @classmethod
+    def validate_missing_cost_file(cls, value: str) -> str:
+        value = value.strip()
+        if any(character in value for character in '\\/:*?"<>|'):
+            raise ValueError("the missing-cost file suffix cannot contain path characters")
+        return value
 
     @field_validator("template")
     @classmethod

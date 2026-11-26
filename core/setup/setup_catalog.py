@@ -129,7 +129,8 @@ STEPS = {
             field('output.template', 'Excel template (optional)', 'A .xlsx file inside the profile folder, for example templates/stock.xlsx. Leave empty for the standard report.', 'text', optional=True),
             field('output.cost_factor', 'Cost multiplier for summary margins', 'Margin is 1 - cost x multiplier / sales. Use 1 for cost as listed. PivotTable formulas in a template keep their own multiplier.', 'number'),
             field('output.hidden_families', 'Families left out of totals', 'One family per line. Their rows stay in the detail sheet and a warning appears when they have stock.', 'list'),
-            field('output.totals_label', 'Summary total row (optional)', 'For example Totals. Leave empty to omit the total row.', 'text', optional=True)), advanced=True), NETWORK_GROUPS),
+            field('output.totals_label', 'Summary total row (optional)', 'For example Totals. Leave empty to omit the total row.', 'text', optional=True),
+            field('output.missing_cost_file', 'Separate list of stock without cost (optional)', 'Name added to the report name, for example Without cost. Each run then saves the products with stock and no cost price, per location, beside the report. Leave empty for no list.', 'text', optional=True)), advanced=True), NETWORK_GROUPS),
     'yoy_reports': (CATALOG, FAMILIES,
         SetupStep('yoy_period', 'Sales dates and amounts', 'yoy_reports/settings', (
             field('input.date_column', 'Transaction date', 'Dates used to select current and previous-year periods.', hint_key='date_hints'),

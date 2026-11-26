@@ -88,3 +88,40 @@ def test_each_variant_takes_its_own_price(tmp_path, monkeypatch):
     # the average of its variants.
     assert frame["STORE.Costo"].tolist() == [100, 250, 100]
     assert any("1 stock rows have no cost price for their variant" in message for message in warnings)
+
+
+def test_stock_without_cost_is_listed_in_its_own_workbook(tmp_path, monkeypatch):
+    monkeypatch.setattr(app_paths, "PROFILES_ROOT", tmp_path / "profiles")
+    configs = tmp_path / "profiles" / "listing" / "configs"
+    (configs / "general").mkdir(parents=True)
+    (configs / "general" / "network.json").write_text(json.dumps({
+        "version": 3, "active": ["NORTH", "SOUTH"], "regional_groups": {}, "stock_database_columns": {},
+    }), encoding="utf-8")
+    (configs / "stock_processing").mkdir()
+    settings = {
+        "version": 3,
+        "cleaning": {"text_columns": [], "drop_columns": [], "numeric_columns": []},
+        "pricing": {"columns": {"article": "Artículo", "database": "Base", "price": "Precio"}},
+        "output": {"raw_data_sheet": "Datos", "base_columns": ["Artículo", "Familias"], "summaries": [],
+                   "missing_cost_file": "Sin costo"},
+    }
+    (configs / "stock_processing" / "settings.json").write_text(json.dumps(settings), encoding="utf-8")
+    raw, cost, sales = (tmp_path / name for name in ("raw.xlsx", "cost.xlsx", "sales.xlsx"))
+    pd.DataFrame({"Artículo": ["AA-1", "BB-2", "CC-3"], "NORTH": [3, 0, 1], "SOUTH": [2, 4, 0]}).to_excel(raw, index=False)
+    # AA-1 lacks cost in NORTH only; BB-2 lacks it everywhere but has stock only in SOUTH; CC-3 has cost.
+    pd.DataFrame({"Artículo": ["AA-1", "CC-3"], "Base": ["SOUTH", "NORTH"], "Precio": [10.0, 10.0]}).to_excel(cost, index=False)
+    pd.DataFrame({"Artículo": ["AA-1", "AA-1", "BB-2", "CC-3"], "Base": ["NORTH", "SOUTH", "SOUTH", "NORTH"],
+                  "Precio": [50.0, 50.0, 20.0, 30.0]}).to_excel(sales, index=False)
+    warnings = []
+    report = run_stock_processing(Namespace(
+        stock_processing_raw=str(raw), shared_cost=str(cost), shared_sales=str(sales),
+        stock_processing_out=str(tmp_path / "Stock.xlsx"), stock_processing_profile="listing", warnings=warnings,
+    ))
+    listing = pd.read_excel(tmp_path / "Stock - Sin costo.xlsx")
+    assert listing["Artículo"].tolist() == ["AA-1", "BB-2"]
+    assert listing["NORTH"].fillna(0).tolist() == [3, 0]
+    assert listing["SOUTH"].fillna(0).tolist() == [0, 4]
+    assert listing["NORTH.Venta"].fillna(0).tolist() == [150, 0]
+    assert any("2 products with stock have no cost" in message for message in warnings)
+    assert not any("no cost price in at least one store" in message for message in warnings)
+    assert pd.read_excel(report, sheet_name="Datos")["NORTH.Costo"].tolist() == [0, 0, 10]

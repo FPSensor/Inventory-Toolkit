@@ -121,6 +121,22 @@ def build_summary(
     return frame, column_formats
 
 
+def render_stock_without_cost(output_file, frame, sheet_name, stores, quantity_format="#,##0", on_locked=None):
+    """Save the list of stock without cost as its own workbook."""
+    workbook = Workbook()
+    worksheet = workbook.active
+    worksheet.title = sheet_name[:31]
+    for row in dataframe_to_rows(frame, index=False, header=True):
+        worksheet.append(row)
+    formats = {
+        index: "#,##0.00" if str(column).endswith(f".{SALES_VALUE_LABEL}") else quantity_format
+        for index, column in enumerate(frame.columns, 1)
+        if column in stores or str(column).endswith(f".{SALES_VALUE_LABEL}")
+    }
+    apply_excel_formatting(worksheet, is_summary=True, column_formats=formats)
+    return safe_openpyxl_save(workbook, output_file, on_locked=on_locked)
+
+
 def render_stock_excel(
     output_file,
     stock_frame,

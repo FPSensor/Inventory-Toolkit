@@ -28,12 +28,13 @@ from engine.stock_processing.data_processor import (
     remove_unidentified_stock,
     validate_stock_network,
 )
-from engine.stock_processing.excel_renderer import build_summary, render_stock_excel
+from engine.stock_processing.excel_renderer import build_summary, render_stock_excel, render_stock_without_cost
 from engine.stock_processing.pricing import price_key, process_pricing, variant_keys
 from engine.stock_processing.valuation import (
     attach_unit_prices,
     calculate_inventory_values,
     missing_price_warnings,
+    stock_without_cost,
 )
 
 
@@ -214,6 +215,7 @@ def run_stock_processing(args):
         for message in missing_price_warnings(stock_frame, plan):
             report_warning(args, message)
         stock_frame = calculate_inventory_values(stock_frame, plan)
+        without_cost = stock_without_cost(stock_frame, plan) if plan.missing_cost_file else None
         result_frame = project_stock_output(
             stock_frame, plan, include_unit_prices=getattr(args, "include_unit_prices", False)
         )
@@ -268,6 +270,16 @@ def run_stock_processing(args):
                 on_locked=on_locked,
                 **presentation,
             )
+
+        if without_cost is not None and not without_cost.empty:
+            list_path = render_stock_without_cost(
+                f"{os.path.splitext(final_path)[0]} - {plan.missing_cost_file}.xlsx",
+                without_cost, plan.missing_cost_file, plan.active_stores,
+                quantity_format=plan.quantity_format, on_locked=on_locked,
+            )
+            report_warning(args, (
+                f"{without_cost[plan.article_column].nunique()} products with stock have no cost in some location "
+                f"and count as cost 0 in the margin. List saved in {list_path}."))
 
     log.info("Process completed. File saved at: %s", final_path)
     report_progress(progress, 4, 4, "Stock report saved.")
