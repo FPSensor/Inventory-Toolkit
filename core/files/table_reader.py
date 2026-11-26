@@ -45,10 +45,21 @@ def read_headers(path) -> list[str]:
 
 
 # Excel ------------------------------------------------------------------
+def _excel_engine():
+    """Calamine reads workbooks about five times faster than openpyxl, with the same values."""
+    try:
+        import python_calamine  # noqa: F401
+    except ImportError:
+        return None
+    # pandas reads with calamine since 2.2.
+    major, minor = (int(part) for part in pd.__version__.split(".")[:2])
+    return "calamine" if (major, minor) >= (2, 2) else None
+
+
 def _read_excel(path, text, as_stored, header, rows, all_sheets, on_notice):
     types = {**{column: object for column in as_stored}, **{column: str for column in text}}
     options = {"dtype": types or None, "nrows": rows} if header else {"dtype": str, "header": None, "nrows": rows}
-    with pd.ExcelFile(path) as book:
+    with pd.ExcelFile(path, engine=_excel_engine()) as book:
         table = pd.read_excel(book, sheet_name=0, **options)
         if not header or rows is not None:
             return table

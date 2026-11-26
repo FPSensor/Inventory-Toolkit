@@ -80,6 +80,8 @@ Development changes after `v1.4.1`. The released application version remains `1.
 
 ### Changed
 
+- **core: files: speed:** Read Excel inputs with calamine when `python-calamine` is installed (now in `requirements.txt`): about five times faster than openpyxl with identical values. The demo Stock run drops from 33 to 15 seconds. Without it, openpyxl is used as before.
+
 - **cleanup:** Remove functions, re-exports and imports that nothing used.
 
 - **core:** Group modules into `config`, `profiles`, `setup`, `files` and `runtime` packages. Only import paths change.

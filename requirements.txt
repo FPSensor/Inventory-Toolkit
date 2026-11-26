@@ -1,6 +1,7 @@
 pandas
 openpyxl
 xlrd
+python-calamine
 numpy
 pydantic>=2,<3
 lxml
