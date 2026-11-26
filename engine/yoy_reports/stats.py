@@ -28,7 +28,7 @@ def build_yoy_stats(current_frame, previous_frame, start_date, end_date, yoy_con
         return f"{amount(current_value)} vs {amount(previous_value)} ({change})"
 
     lines = [
-        f"Period rows: {len(current_frame):,} current, {len(previous_frame):,} prior year",
+        f"Period rows (configured branches): {len(current):,} current, {len(previous):,} prior year",
         f"Monthly {metric.label.lower()} (current vs prior year, configured branches):",
     ]
     periods = pd.period_range(start_date, end_date, freq="M")

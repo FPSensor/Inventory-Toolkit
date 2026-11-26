@@ -197,6 +197,21 @@ def test_yoy_stats_use_unique_branches_and_label_single_branch_groups():
     )[-1]
 
 
+def test_yoy_stats_count_only_rows_of_configured_branches():
+    current, previous = _frames()
+    config = _config(groups={"north": ["A"]})
+    closed = previous.iloc[[0]].copy()
+    closed[config["input"]["branch_column"]] = "CLOSED"
+    lines = build_yoy_stats(
+        current, pd.concat([previous, closed], ignore_index=True),
+        pd.Timestamp("2026-01-01"), pd.Timestamp("2026-01-31"), config,
+    )
+    branch = config["input"]["branch_column"]
+    expected = (f"Period rows (configured branches): {current[branch].eq('A').sum():,} current, "
+                f"{previous[branch].eq('A').sum():,} prior year")
+    assert lines[0] == expected
+
+
 def test_cli_full_report_comparison_is_opt_in_and_reuses_last_paths(tmp_path, monkeypatch):
     from cli.yoy_reports_launcher import launch_yoy_reports
     from core.runtime import paths as app_paths
