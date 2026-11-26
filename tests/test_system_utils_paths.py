@@ -22,3 +22,17 @@ def test_cli_accepts_a_quoted_path(monkeypatch):
 
     monkeypatch.setattr("builtins.input", lambda prompt: '"C:\\Descargas\\stock.xlsx"')
     assert utils.ask_file("Stock", "default.xlsx") == "C:\\Descargas\\stock.xlsx"
+
+
+def test_redirected_windows_output_can_print_symbols(monkeypatch):
+    import io
+    import sys
+
+    from core.runtime.console import utf8_output
+
+    redirected = io.TextIOWrapper(io.BytesIO(), encoding="cp1252")
+    monkeypatch.setattr(sys, "stdout", redirected)
+    utf8_output()
+    print("⚠️ 3 products ✅")
+    redirected.flush()
+    assert redirected.buffer.getvalue().decode("utf-8").strip() == "⚠️ 3 products ✅"

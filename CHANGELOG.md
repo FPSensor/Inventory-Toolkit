@@ -149,6 +149,8 @@ Development changes after `v1.4.1`. The released application version remains `1.
 
 - **cli, gui: paths:** Accept file paths pasted between quotes, as Windows "Copy as path" and dragged files produce them, instead of reporting a missing file.
 
+- **windows: output:** Print UTF-8 when output is redirected to a file or another program, as a scheduled `run` or continuous integration does, instead of stopping on symbols the legacy code page cannot encode.
+
 - **requirements:** Install CustomTkinter, so a new installation opens the intended desktop interface instead of the plain fallback.
 
 - **cross: double count:** Always add system stock up to one row per product. Without consolidation, the former default, each repeated row received the whole physical count: the demo reported 2,119 counted units instead of 797 and a cost surplus of 1,010,648 instead of a shortage of 166,176. The consolidation question and checkbox are removed.

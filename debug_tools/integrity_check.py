@@ -345,6 +345,9 @@ class IntegrityAuditor:
         )
 
 def main():
+    from core.runtime.console import utf8_output
+
+    utf8_output()
     auditor = IntegrityAuditor()
     auditor.run_all()
     return 1 if auditor.failed else 0

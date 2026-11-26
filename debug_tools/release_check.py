@@ -530,6 +530,9 @@ def parse_args() -> argparse.Namespace:
 
 
 def main() -> int:
+    from core.runtime.console import utf8_output
+
+    utf8_output()
     args = parse_args()
     inherited_debug_level = debug_level_from_environment()
     setup_logger(inherited_debug_level, reset_session_log=False)

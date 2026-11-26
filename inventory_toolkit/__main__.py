@@ -4,9 +4,11 @@ import importlib
 import sys
 
 from core.runtime.build import BUILD
+from core.runtime.console import utf8_output
 
 
 def main(argv=None):
+    utf8_output()
     argv = list(sys.argv[1:] if argv is None else argv)
     if argv and argv[0] in {'doctor', 'history'}:
         from inventory_toolkit.maintenance import main as maintenance
