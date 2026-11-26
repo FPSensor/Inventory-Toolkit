@@ -157,6 +157,8 @@ Development changes after `v1.4.1`. The released application version remains `1.
 
 - **engine: stock: prices:** Read only the price-list rows of active stores. Databases outside the network, such as a closed store, no longer raise conflicting-price warnings or stop a run with an unreadable price. Conflicting prices are reported only for products with stock in an active store outside the hidden families, the only ones they value. Report values are unchanged.
 
+- **engine: stock: stats:** Leave hidden families out of the console totals by store, as the report totals do, instead of showing units and values the workbook does not include.
+
 - **engine: stock: warnings:** Count negative stock in the units a missing price leaves at 0, instead of letting -1 and +1 cancel into "0 units".
 
 - **workflows: output:** Add `.xlsx` to output names whose last dot is not a file extension, such as `Stock 26.11.2026`, instead of rejecting `.2026` as an unsupported format. Names ending in another file format such as `.xls` or `.csv` are still rejected.

@@ -88,6 +88,8 @@ def _stock_stats(result_frame, stock_frame, plan, input_rows, input_columns, exc
         f"Articles in default family ({plan.default_family}): {default_articles:,}",
         "Stock by active store (valuations):",
     ]
+    # The same rows as the report totals: hidden families are left out.
+    result_frame = result_frame[~result_frame[plan.family_column].isin(plan.hidden_families)]
     total_units = total_cost = total_sales = 0
     for store in plan.active_stores:
         units = result_frame[store].sum()

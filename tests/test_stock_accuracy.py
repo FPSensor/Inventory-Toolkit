@@ -173,10 +173,13 @@ def test_conflicting_prices_are_reported_only_for_reported_stock(tmp_path, monke
     pd.DataFrame({"Artículo": ["AA-1", "BB-2", "D1"], "NORTH": [3, 0, 2]}).to_excel(raw, index=False)
     pd.DataFrame({"Artículo": ["AA-1", "AA-1", "BB-2", "BB-2", "D1", "D1"], "Base": ["NORTH"] * 6,
                   "Precio": [10.0, 20.0, 10.0, 20.0, 10.0, 20.0]}).to_excel(price, index=False)
-    warnings = []
+    warnings, stats = [], []
     run_stock_processing(Namespace(
         stock_processing_raw=str(raw), shared_cost=str(price), shared_sales=str(price),
         stock_processing_out=str(tmp_path / "out.xlsx"), stock_processing_profile="conflicts", warnings=warnings,
+        stats=stats.append,
     ))
+    # The console totals match the report: the hidden D1 units are left out.
+    assert "Total active stores: 3 units" in stats[0].render()
     conflicts = [message for message in warnings if "more than one price" in message]
     assert len(conflicts) == 2 and all("1 products" in message and "(AA-1)" in message for message in conflicts)
