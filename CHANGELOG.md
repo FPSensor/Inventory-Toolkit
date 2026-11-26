@@ -153,7 +153,7 @@ Development changes after `v1.4.1`. The released application version remains `1.
 
 - **windows: console:** Write status symbols as plain text (`[OK]`, `[X]`, `[!]`) and drop decorative emoji in the classic console that a double-clicked `.bat` opens, which draws them as empty boxes. Windows Terminal, VS Code and redirected output keep the emoji; `ITK_SYMBOLS=emoji` or `ITK_SYMBOLS=plain` overrides the detection. Batch files are checked out with Windows line endings.
 
-- **engine: stock: prices:** Read only the price-list rows of active stores. Databases outside the network, such as a closed store, no longer raise conflicting-price warnings or stop a run with an unreadable price. Report values are unchanged.
+- **engine: stock: prices:** Read only the price-list rows of active stores. Databases outside the network, such as a closed store, no longer raise conflicting-price warnings or stop a run with an unreadable price. Conflicting prices are reported only for products with stock in an active store outside the hidden families, the only ones they value. Report values are unchanged.
 
 - **engine: stock: warnings:** Count negative stock in the units a missing price leaves at 0, instead of letting -1 and +1 cancel into "0 units".
 

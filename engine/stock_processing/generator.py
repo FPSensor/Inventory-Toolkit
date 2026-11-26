@@ -173,8 +173,14 @@ def run_stock_processing(args):
 
     with execution_timer("Stock Pricing & Valuation"):
         log.info("Processing pricing files...")
-        cost_frame = process_pricing(args.shared_cost, {**plan.pricing, "columns": overrides.get("cost", plan.pricing.get("cost_columns") or plan.pricing["columns"])}, partial(report_warning, args), stores=plan.active_stores)
-        sales_frame = process_pricing(args.shared_sales, {**plan.pricing, "columns": overrides.get("sales", plan.pricing.get("sales_columns") or plan.pricing["columns"])}, partial(report_warning, args), stores=plan.active_stores)
+        # Conflicting prices matter only where they value the report: products
+        # with stock in an active store and outside the hidden families.
+        priced_stores = [store for store in plan.active_stores if store in stock_frame.columns]
+        reported = (stock_frame[priced_stores].ne(0).any(axis=1)
+                    & ~stock_frame[INTERNAL_FAMILY_COLUMN].isin(plan.hidden_families))
+        reported_articles = stock_frame.loc[reported, INTERNAL_ARTICLE_COLUMN]
+        cost_frame = process_pricing(args.shared_cost, {**plan.pricing, "columns": overrides.get("cost", plan.pricing.get("cost_columns") or plan.pricing["columns"])}, partial(report_warning, args), stores=plan.active_stores, warn_for=reported_articles)
+        sales_frame = process_pricing(args.shared_sales, {**plan.pricing, "columns": overrides.get("sales", plan.pricing.get("sales_columns") or plan.pricing["columns"])}, partial(report_warning, args), stores=plan.active_stores, warn_for=reported_articles)
         log_debug_event(
             "stock_processing_pricing_ready",
             cost_shape=getattr(cost_frame, "shape", None),

@@ -148,3 +148,35 @@ def test_price_lists_only_read_active_stores(tmp_path):
     assert prices.set_index("__itk_article")["STORE"].to_dict() == {"A1": 100}
     assert "CLOSED" not in prices.columns
     assert not [notice for notice in notices if notice and "more than one price" in notice]
+
+
+def test_conflicting_prices_are_reported_only_for_reported_stock(tmp_path, monkeypatch):
+    monkeypatch.setattr(app_paths, "PROFILES_ROOT", tmp_path / "profiles")
+    configs = tmp_path / "profiles" / "conflicts" / "configs"
+    (configs / "general").mkdir(parents=True)
+    (configs / "general" / "network.json").write_text(json.dumps({
+        "version": 3, "active": ["NORTH"], "regional_groups": {}, "stock_database_columns": {},
+    }), encoding="utf-8")
+    (configs / "general" / "families.json").write_text(json.dumps({
+        "version": 3, "rules": {"Old": ["D"]},
+    }), encoding="utf-8")
+    (configs / "stock_processing").mkdir()
+    (configs / "stock_processing" / "settings.json").write_text(json.dumps({
+        "version": 3,
+        "cleaning": {"text_columns": [], "drop_columns": [], "numeric_columns": []},
+        "pricing": {"columns": {"article": "Artículo", "database": "Base", "price": "Precio"}},
+        "output": {"raw_data_sheet": "Datos", "base_columns": ["Artículo", "Familias"], "summaries": [],
+                   "hidden_families": ["Old"]},
+    }), encoding="utf-8")
+    raw, price = tmp_path / "raw.xlsx", tmp_path / "price.xlsx"
+    # AA-1 has stock; BB-2 has none; D1 belongs to a hidden family.
+    pd.DataFrame({"Artículo": ["AA-1", "BB-2", "D1"], "NORTH": [3, 0, 2]}).to_excel(raw, index=False)
+    pd.DataFrame({"Artículo": ["AA-1", "AA-1", "BB-2", "BB-2", "D1", "D1"], "Base": ["NORTH"] * 6,
+                  "Precio": [10.0, 20.0, 10.0, 20.0, 10.0, 20.0]}).to_excel(price, index=False)
+    warnings = []
+    run_stock_processing(Namespace(
+        stock_processing_raw=str(raw), shared_cost=str(price), shared_sales=str(price),
+        stock_processing_out=str(tmp_path / "out.xlsx"), stock_processing_profile="conflicts", warnings=warnings,
+    ))
+    conflicts = [message for message in warnings if "more than one price" in message]
+    assert len(conflicts) == 2 and all("1 products" in message and "(AA-1)" in message for message in conflicts)

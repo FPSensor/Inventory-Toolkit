@@ -35,11 +35,13 @@ def variant_keys(variant_columns) -> list[str]:
     return [f"{VARIANT_KEY_PREFIX}{index}" for index, _ in enumerate(variant_columns)]
 
 
-def process_pricing(file_path, pricing_config=None, on_notice=None, stores=None):
+def process_pricing(file_path, pricing_config=None, on_notice=None, stores=None, warn_for=None):
     """Load and pivot one price list into the Stock pipeline's private article key.
 
     With ``stores`` only the rows of those stores are read: other databases,
     such as a closed store, never value the report and their prices are ignored.
+    With ``warn_for`` conflicting prices are reported only for those articles,
+    the ones whose value reaches the report.
 
     With ``variant_columns`` the pivot also carries one key per variant column,
     blank on rows that price the whole product.
@@ -102,6 +104,8 @@ def process_pricing(file_path, pricing_config=None, on_notice=None, stores=None)
         if on_notice:
             distinct = dataframe.groupby([INTERNAL_ARTICLE_COLUMN, *keys, database_column])[value_column].nunique()
             conflicting = distinct[distinct.gt(1)].index.get_level_values(0).unique()
+            if warn_for is not None:
+                conflicting = conflicting[conflicting.isin(set(warn_for))]
             if len(conflicting):
                 preview = ", ".join(map(str, conflicting[:10])) + ("..." if len(conflicting) > 10 else "")
                 on_notice(
