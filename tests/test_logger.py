@@ -1,7 +1,7 @@
 import logging
 import os
 
-from core.logger import (
+from core.runtime.logger import (
     DEBUG_LEVEL_ENV,
     debug_level_from_environment,
     get_debug_level,

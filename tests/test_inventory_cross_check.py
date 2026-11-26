@@ -1,6 +1,10 @@
 import pytest
 from engine.shared.families import build_family_rules, assign_family
-from engine.inventory_cross_check.data_processor import calculate_difference, normalize_article
+from engine.inventory_cross_check.data_processor import (
+    build_article_index,
+    calculate_difference,
+    normalize_article,
+)
 
 def test_build_family_rules():
     families = {
@@ -39,36 +43,36 @@ def test_normalize_article_variable_length_longest_prefix():
         "11111-261",
         "LONG-ARTICLE-12345",
     ]
-    master_set = {article.upper() for article in master_base}
+    index = build_article_index(master_base)
 
-    assert normalize_article("11111-261XXLH1", master_base, master_set) == "11111-261"
-    assert normalize_article("LONG-ARTICLE-12345XLRED", master_base, master_set) == "LONG-ARTICLE-12345"
+    assert normalize_article("11111-261XXLH1", index) == "11111-261"
+    assert normalize_article("LONG-ARTICLE-12345XLRED", index) == "LONG-ARTICLE-12345"
 
 
 def test_normalize_article_exact_match_and_review_fallback():
     master_base = ["11111-261", "ABC-123"]
-    master_set = {article.upper() for article in master_base}
+    index = build_article_index(master_base)
 
     # Exact matches are normalized to uppercase, matching system-stock normalization.
-    assert normalize_article("abc-123", master_base, master_set) == "ABC-123"
+    assert normalize_article("abc-123", index) == "ABC-123"
 
     # Unknown readings must never be guessed, truncated, or discarded.
     raw_unknown = "UNKNOWN-XXLH1"
-    assert normalize_article(raw_unknown, master_base, master_set) == f"REVISAR | {raw_unknown}"
+    assert normalize_article(raw_unknown, index) == f"REVISAR | {raw_unknown}"
 
 
 def test_normalize_article_ignores_empty_master_entries():
     master_base = ["", "   ", "ABC", "ABC-123"]
-    master_set = {str(article).upper().strip() for article in master_base}
+    index = build_article_index(master_base)
 
     # A zero-length master article must never win prefix matching. Unknown
     # scanner readings must remain visible for manual review.
     raw_unknown = "UNKNOWN-XXLH1"
-    assert normalize_article(raw_unknown, master_base, master_set) == f"REVISAR | {raw_unknown}"
+    assert normalize_article(raw_unknown, index) == f"REVISAR | {raw_unknown}"
 
     # Existing invariants still hold in the presence of invalid blank masters.
-    assert normalize_article("abc", master_base, master_set) == "ABC"
-    assert normalize_article("ABC-123XLRED", master_base, master_set) == "ABC-123"
+    assert normalize_article("abc", index) == "ABC"
+    assert normalize_article("ABC-123XLRED", index) == "ABC-123"
 
 
 def test_cross_check_renderer_owns_header_style(tmp_path):
@@ -101,7 +105,7 @@ def test_cross_check_renderer_owns_header_style(tmp_path):
     workbook.save(output)
     workbook.close()
 
-    apply_excel_formatting(output, interactive=False)
+    apply_excel_formatting(output)
 
     workbook = load_workbook(output)
     try:

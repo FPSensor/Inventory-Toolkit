@@ -1,6 +1,6 @@
 # Installation and Launchers
 
-Inventory Toolkit is a Python application. The CLI is the primary supported interface; the GUI is Alpha Pre-Beta.
+Inventory Toolkit is a Python application. The CLI is the primary supported interface; the GUI is RC preview.
 
 ## Requirements
 
@@ -11,7 +11,7 @@ Inventory Toolkit is a Python application. The CLI is the primary supported inte
   - `xlrd`
   - `numpy`
   - `pydantic>=2,<3`
-- Tkinter for native file dialogs and the Alpha Pre-Beta GUI
+- Tkinter for native file dialogs and the RC preview GUI
 
 `xlrd` is required for the legacy `.xls` Cross Check demo fixture.
 
@@ -59,20 +59,20 @@ Launch with:
 or:
 
 ```bash
-python cli.py
+python -m cli
 ```
 
 Some Linux distributions package Tkinter separately (for example `python3-tk`). Install the platform package if file dialogs or the GUI cannot start.
 
-## Alpha Pre-Beta GUI
+## RC preview GUI
 
 From the repository root:
 
 ```bash
-python -m gui.app
+python -m inventory_toolkit --interface gui
 ```
 
-CustomTkinter is optional. If it is unavailable, the GUI falls back to standard Tkinter/ttk.
+CustomTkinter is installed by `requirements.txt`. If it is unavailable, the GUI falls back to standard Tkinter/ttk.
 
 ## Developer commands
 
@@ -88,9 +88,9 @@ For interactive developer tooling, launch the normal CLI, type the hidden comman
 
 The Windows and shell launchers still change to the repository root for convenience, but Inventory Toolkit no longer relies on the process CWD to locate its own resources. Profiles, built-in examples, logs, tools, and release references are anchored to the application root.
 
-User-supplied relative workbook paths keep normal shell semantics and resolve from the directory where the command was invoked. For example, invoking `python C:/path/to/Inventory-Toolkit/cli.py` while standing in `C:/Work/Today` will still interpret `stock.xlsx` as `C:/Work/Today/stock.xlsx`, while the active profile continues to come from `C:/path/to/Inventory-Toolkit/profiles/`.
+User-supplied relative workbook paths keep normal shell semantics and resolve from the directory where the command was invoked. For example, with the application root available on `PYTHONPATH`, invoking `python -m cli` from `C:/Work/Today` interprets `stock.xlsx` as `C:/Work/Today/stock.xlsx`, while the active profile comes from the application-owned `profiles/` directory. Without an installation or `PYTHONPATH`, launch Python modules from the repository root.
 
-The Alpha Pre-Beta GUI is still normally launched as a module from the repository root (`python -m gui.app`) because Python module discovery is separate from Inventory Toolkit resource-path resolution.
+The RC preview GUI is still normally launched as a module from the repository root (`python -m inventory_toolkit --interface gui`) because Python module discovery is separate from Inventory Toolkit resource-path resolution.
 
 ## Upgrading dependencies
 
@@ -99,6 +99,8 @@ The project intentionally keeps `requirements.txt` small. Before changing packag
 1. install the candidate environment cleanly;
 2. run `pytest -q`;
 3. run `python tools/ReleaseCheck.py --release`;
-4. verify the Alpha Pre-Beta GUI can at least launch if the change affects Tk/Python packaging.
+4. verify the RC preview GUI can at least launch if the change affects Tk/Python packaging.
 
 Do not infer dependency compatibility only from a successful import.
+
+The shell and Windows launchers now call `python -m inventory_toolkit`. `build.prop` selects the default interface, allowed interfaces and development capabilities. CLI-only and GUI-only source trees import without the excluded frontend or developer package. This prepares source packaging boundaries; it is not a frozen binary installer.

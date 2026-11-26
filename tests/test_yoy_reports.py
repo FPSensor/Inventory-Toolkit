@@ -3,7 +3,7 @@ import pytest
 from openpyxl import Workbook
 from pydantic import ValidationError
 
-from core.config_schemas import YoYReportsConfig
+from core.config.config_schemas import YoYReportsConfig
 from engine.yoy_reports.generator import generate_sales_report
 from engine.yoy_reports.metrics import configured_branches, resolve_metric_specs
 from engine.yoy_reports.sheet_renderer import render_report_sheet
@@ -11,7 +11,7 @@ from engine.yoy_reports.excel_renderer import render_yoy_sales_excel
 from engine.yoy_reports.stats import build_yoy_stats
 
 
-def _config(*, metrics=None, annual_comparison=True, include_sizes=False, groups=None):
+def _config(*, metrics=None, annual_comparison=True, include_variants=False, groups=None):
     return {
         "version": 3,
         "input": {
@@ -21,13 +21,13 @@ def _config(*, metrics=None, annual_comparison=True, include_sizes=False, groups
             "grouping_column": "Category",
             "item_column": "SKU",
             "branch_column": "Branch",
-            "size_column": "Size",
+            "variant_column": "Size",
         },
         "output": {
             "default_path": "report.xlsx",
             "metrics": ["units", "sales"] if metrics is None else metrics,
             "annual_comparison": annual_comparison,
-            "include_sizes": include_sizes,
+            "include_variants": include_variants,
         },
         "groups": groups if groups is not None else {"north": ["A", "B"]},
     }
@@ -97,7 +97,7 @@ def test_yoy_renders_configured_units_and_sales_metrics():
         pd.Timestamp("2025-01-01"),
         config,
         "Category",
-        include_sizes=False,
+        include_variants=False,
     )
 
     values = _sheet_values(worksheet)
@@ -147,7 +147,6 @@ def test_full_report_can_omit_extra_annual_comparison_without_losing_metrics(tmp
         str(path), current, previous,
         pd.Timestamp("2026-01-01"), pd.Timestamp("2026-01-31"),
         pd.Timestamp("2025-01-01"), config, "Category", False,
-        interactive=False,
     )
 
     workbook = load_workbook(path, read_only=True)
@@ -171,8 +170,7 @@ def test_segmented_progress_advances_after_each_rendered_sheet(tmp_path):
     render_yoy_sales_excel(
         str(tmp_path / "segmented.xlsx"), current, previous,
         pd.Timestamp("2026-01-01"), pd.Timestamp("2026-02-28"),
-        pd.Timestamp("2025-01-01"), _config(), "Category", True,
-        interactive=False, progress=events.append,
+        pd.Timestamp("2025-01-01"), _config(), "Category", True, progress=events.append,
     )
 
     assert len(events) == 4  # Two months, the consolidated sheet, then saving.
@@ -199,24 +197,34 @@ def test_yoy_stats_use_unique_branches_and_label_single_branch_groups():
     )[-1]
 
 
+def test_yoy_stats_count_only_rows_of_configured_branches():
+    current, previous = _frames()
+    config = _config(groups={"north": ["A"]})
+    closed = previous.iloc[[0]].copy()
+    closed[config["input"]["branch_column"]] = "CLOSED"
+    lines = build_yoy_stats(
+        current, pd.concat([previous, closed], ignore_index=True),
+        pd.Timestamp("2026-01-01"), pd.Timestamp("2026-01-31"), config,
+    )
+    branch = config["input"]["branch_column"]
+    expected = (f"Period rows (configured branches): {current[branch].eq('A').sum():,} current, "
+                f"{previous[branch].eq('A').sum():,} prior year")
+    assert lines[0] == expected
+
+
 def test_cli_full_report_comparison_is_opt_in_and_reuses_last_paths(tmp_path, monkeypatch):
     from cli.yoy_reports_launcher import launch_yoy_reports
-    from core import paths as app_paths
+    from core.runtime import paths as app_paths
 
     monkeypatch.setattr(app_paths, "PROFILES_ROOT", tmp_path / "profiles")
     config = _config(metrics=["units"], annual_comparison=True)
     monkeypatch.setattr(
-        "cli.yoy_reports_launcher.ConfigurationManager",
-        lambda profile: type("Manager", (), {"get_yoy_reports_config": lambda self: config})(),
+        "workflows.yoy.ConfigurationManager",
+        lambda profile, **_kwargs: type("Manager", (), {"get_yoy_reports_config": lambda self: config})(),
     )
-    monkeypatch.setattr(
-        "cli.yoy_reports_launcher.pd.read_excel",
-        lambda *_args, **_kwargs: pd.DataFrame(columns=config["input"].values()),
-    )
-    monkeypatch.setattr(
-        "cli.yoy_reports_launcher.choose_input_columns",
-        lambda _file, configured, _defaults, _confirm: configured,
-    )
+    sales = tmp_path / "sales.xlsx"
+    pd.DataFrame(columns=config["input"].values()).to_excel(sales, index=False)
+    monkeypatch.chdir(tmp_path)
     requested_defaults = []
 
     def choose_file(message, default, is_output=False):
@@ -241,9 +249,9 @@ def test_cli_full_report_comparison_is_opt_in_and_reuses_last_paths(tmp_path, mo
     assert requested_defaults[3] == ("Output file", "report.xlsx")
 
 
-def test_generate_sales_report_uses_profile_include_sizes_default(monkeypatch, tmp_path):
+def test_generate_sales_report_uses_profile_include_variants_default(monkeypatch, tmp_path):
     current, previous = _frames()
-    config = _config(metrics=["units"], include_sizes=True)
+    config = _config(metrics=["units"], include_variants=True)
     captured = {}
     events = []
     stats = []
@@ -252,7 +260,7 @@ def test_generate_sales_report_uses_profile_include_sizes_default(monkeypatch, t
         return current, previous, pd.Timestamp("2025-01-01")
 
     def fake_render(*args, **kwargs):
-        captured["include_sizes"] = args[9]
+        captured["include_variants"] = args[9]
         return str(tmp_path / "report.xlsx")
 
     monkeypatch.setattr("engine.yoy_reports.generator.process_sales_data", fake_process)
@@ -272,7 +280,7 @@ def test_generate_sales_report_uses_profile_include_sizes_default(monkeypatch, t
         stats=stats.append,
     )
 
-    assert captured["include_sizes"] is True
+    assert captured["include_variants"] is True
     assert [event.completed for event in events] == [0, 1, 2, 3]
     assert "comparison periods selected" in events[1].message
     assert "Overall (2 unique branches): 6 vs 5 (+20.0%)" in stats[0].render()
@@ -280,19 +288,19 @@ def test_generate_sales_report_uses_profile_include_sizes_default(monkeypatch, t
 
 def test_size_labels_and_total_formula_use_configured_column():
     current, previous = _frames()
-    config = _config(include_sizes=True)
-    size_column = 'Dimension*?"'
-    current = current.rename(columns={"Size": size_column})
-    previous = previous.rename(columns={"Size": size_column})
-    config["input"]["size_column"] = size_column
+    config = _config(include_variants=True)
+    variant_column = 'Dimension*?"'
+    current = current.rename(columns={"Size": variant_column})
+    previous = previous.rename(columns={"Size": variant_column})
+    config["input"]["variant_column"] = variant_column
     workbook = Workbook()
     render_report_sheet(
         workbook.active, current, previous,
         pd.Timestamp("2026-01-01"), pd.Timestamp("2026-01-31"),
-        pd.Timestamp("2025-01-01"), config, "Category", include_sizes=True,
+        pd.Timestamp("2025-01-01"), config, "Category", include_variants=True,
     )
     values = _sheet_values(workbook.active)
-    assert any(str(value).startswith(f"  {size_column}: ") for value in values)
+    assert any(str(value).startswith(f"  {variant_column}: ") for value in values)
     assert any('Dimension~*~?""*' in str(value) for value in values if str(value).startswith('=SUMIF'))
 
 
@@ -315,21 +323,21 @@ def test_interactive_metrics_are_opt_in_without_mutating_profile(configured, inc
 def test_cli_selects_only_requested_metric_columns(tmp_path, monkeypatch, answer, expected):
     from copy import deepcopy
     from cli.yoy_reports_launcher import launch_yoy_reports
-    from core import paths as app_paths
+    from core.runtime import paths as app_paths
 
     monkeypatch.setattr(app_paths, 'PROFILES_ROOT', tmp_path / 'profiles')
     config = _config()
     original = deepcopy(config)
-    monkeypatch.setattr('cli.yoy_reports_launcher.ConfigurationManager',
-        lambda **_kwargs: type('Manager', (), {'get_yoy_reports_config': lambda self: config})())
+    monkeypatch.setattr('workflows.yoy.ConfigurationManager',
+        lambda _profile, **_kwargs: type('Manager', (), {'get_yoy_reports_config': lambda self: config})())
     monkeypatch.setattr('cli.yoy_reports_launcher.ask_file',
         lambda _message, _default, is_output=False: str(tmp_path / ('output.xlsx' if is_output else 'input.xlsx')))
-    monkeypatch.setattr('cli.yoy_reports_launcher.pd.read_excel', lambda *_args, **_kwargs: pd.DataFrame())
+    (tmp_path / 'input.xlsx').touch()
     fields = []
     def choose(_file, configured, _defaults, _confirm):
         fields.extend(configured)
         return configured
-    monkeypatch.setattr('cli.yoy_reports_launcher.choose_input_columns', choose)
+    monkeypatch.setattr('workflows.base.choose_input_columns', choose)
     captured = []
     monkeypatch.setattr('engine.yoy_reports.generator.generate_sales_report',
         lambda _file, out, _start, _end, selected, *_args, **_kwargs: captured.append(selected) or out)
@@ -356,7 +364,7 @@ def test_selected_metrics_keep_units_and_line_revenue_separate_on_every_sheet(tm
     path = tmp_path / 'selected.xlsx'
     render_yoy_sales_excel(str(path), current, previous,
         pd.Timestamp('2026-09-01'), pd.Timestamp('2026-10-04'),
-        pd.Timestamp('2025-09-01'), config, 'Category', segmented, interactive=False)
+        pd.Timestamp('2025-09-01'), config, 'Category', segmented)
     workbook = load_workbook(path)
     assert workbook.sheetnames == (['09-26', '10-26', 'Full Report'] if segmented else ['Sales'])
     for sheet in workbook:
@@ -416,3 +424,44 @@ def test_unset_revenue_column_has_a_stable_configuration_destination():
     assert error.value.code == ErrorCode.CONFIG_REQUIRED_FIELD
     assert error.value.step == 'yoy_period'
     assert error.value.field == 'input.sales_column'
+
+
+def test_variant_column_is_optional_until_breakdown_is_selected(tmp_path):
+    from engine.yoy_reports.data_processor import process_sales_data
+    import pytest
+    config = _config(metrics=["units"], include_variants=False)
+    frame = pd.DataFrame({"Date": [pd.Timestamp("2026-01-01")], "Store": ["A"], "Category": ["Goods"], "Units": [1.25]})
+    # Use the configured names to keep this independent of a retail profile.
+    frame.columns = [config["input"][key] for key in ("date_column", "branch_column", "grouping_column", "quantity_column")]
+    path = tmp_path / "sales.xlsx"
+    frame.to_excel(path, index=False)
+    current, _, _ = process_sales_data(path, pd.Timestamp("2026-01-01"), pd.Timestamp("2026-01-31"), config)
+    assert current[config["input"]["quantity_column"]].sum() == 1.25
+    config["output"]["include_variants"] = True
+    with pytest.raises(ValueError, match="missing required columns"):
+        process_sales_data(path, pd.Timestamp("2026-01-01"), pd.Timestamp("2026-01-31"), config)
+
+
+def test_sales_figures_written_as_local_text_are_read_not_zeroed(tmp_path):
+    from engine.yoy_reports.data_processor import process_sales_data
+
+    config = _config(metrics=["units", "sales"])
+    names = {key: config["input"][key] for key in ("date_column", "branch_column", "grouping_column",
+                                                   "quantity_column", "sales_column")}
+    frame = pd.DataFrame({
+        names["date_column"]: [pd.Timestamp("2026-01-02")] * 3,
+        names["branch_column"]: ["A"] * 3,
+        names["grouping_column"]: ["Goods"] * 3,
+        names["quantity_column"]: ["1,5", 2, "dos"],
+        names["sales_column"]: ["1.234,50", 100, "10"],
+    })
+    path = tmp_path / "sales.xlsx"
+    frame.to_excel(path, index=False)
+    notices = []
+    current, _, _ = process_sales_data(
+        path, pd.Timestamp("2026-01-01"), pd.Timestamp("2026-01-31"), config, on_notice=notices.append)
+    assert current[names["quantity_column"]].tolist() == [1.5, 2, 0]
+    assert current[names["sales_column"]].sum() == 1344.5
+    assert [n for n in notices if n and "unreadable" in n] == [
+        f"1 figures in column '{names['quantity_column']}' are unreadable or ambiguous (rows 4); "
+        "unreadable ones count as 0. Review the original file."]

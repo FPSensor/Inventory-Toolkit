@@ -1,12 +1,16 @@
 """Stable recovery contracts; presentation never parses exception messages."""
 from enum import Enum
-from core.configuration_errors import ConfigurationError
+from core.config.configuration_errors import ConfigurationError
 
 
 class ErrorCode(str, Enum):
+    MODULE_DISABLED = 'MODULE_DISABLED'
     CONFIG_REQUIRED_FIELD = 'CONFIG_REQUIRED_FIELD'
     CONFIG_INVALID = 'CONFIG_INVALID'
     INPUT_COLUMN_MISSING = 'INPUT_COLUMN_MISSING'
+    INPUT_FILE_MISSING = 'INPUT_FILE_MISSING'
+    PERIOD_INVALID = 'PERIOD_INVALID'
+    PERIOD_WITHOUT_SALES = 'PERIOD_WITHOUT_SALES'
     SETUP_STATE_INVALID = 'SETUP_STATE_INVALID'
 
 

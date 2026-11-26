@@ -18,7 +18,7 @@ def build_yoy_stats(current_frame, previous_frame, start_date, end_date, yoy_con
     previous_months = previous.groupby(previous[date_column].dt.to_period("M"))[metric.column].sum()
 
     def amount(value):
-        return f"{value:,.0f}" if metric.key == "units" else f"{value:,.2f}"
+        return f"{value:,.6f}".rstrip('0').rstrip('.') if metric.key == "units" else f"{value:,.2f}"
 
     def comparison(current_value, previous_value):
         if previous_value == 0:
@@ -28,7 +28,7 @@ def build_yoy_stats(current_frame, previous_frame, start_date, end_date, yoy_con
         return f"{amount(current_value)} vs {amount(previous_value)} ({change})"
 
     lines = [
-        f"Period rows: {len(current_frame):,} current, {len(previous_frame):,} prior year",
+        f"Period rows (configured branches): {len(current):,} current, {len(previous):,} prior year",
         f"Monthly {metric.label.lower()} (current vs prior year, configured branches):",
     ]
     periods = pd.period_range(start_date, end_date, freq="M")

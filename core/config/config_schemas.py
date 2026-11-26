@@ -1,0 +1,239 @@
+"""Pydantic schemas for Inventory Toolkit profile configuration."""
+
+from typing import Dict, List, Literal
+
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator, model_validator
+
+from core.config.profile_config import CONFIG_VERSION, DEFAULTS
+from core.files.system_utils import normalize_xlsx_output_path
+
+from core.business_schema import (
+    ARTICLE_COLUMN,
+    DATABASE_ORIGIN_COLUMN,
+    DEFAULT_FAMILY,
+    FAMILY_COLUMN,
+    PRICE_COLUMN,
+    QUANTITY_COLUMN,
+    RAW_DATA_SHEET,
+    VARIANT_COLUMN,
+)
+
+
+class _StrictConfigModel(BaseModel):
+    """Reject unknown configuration keys instead of silently ignoring typos."""
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class _Config(_StrictConfigModel):
+    version: Literal[CONFIG_VERSION]
+
+
+class CatalogColumns(_StrictConfigModel):
+    article: str = ARTICLE_COLUMN
+    family: str = FAMILY_COLUMN
+
+    @field_validator("article", "family")
+    @classmethod
+    def validate_catalog_column_name(cls, value: str) -> str:
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError("catalog column names cannot be empty")
+        return normalized
+
+    @model_validator(mode="after")
+    def validate_distinct_catalog_columns(self):
+        if self.article == self.family:
+            raise ValueError("catalog article and family columns must use different names")
+        return self
+
+
+class CatalogConfig(_Config):
+    columns: CatalogColumns = Field(default_factory=CatalogColumns)
+    default_family: str = DEFAULT_FAMILY
+
+    @field_validator("default_family")
+    @classmethod
+    def validate_default_family(cls, value: str) -> str:
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError("default_family cannot be empty")
+        return normalized
+
+
+class FamiliesConfig(_Config):
+    rules: Dict[str, List[str]] = Field(default_factory=dict)
+
+
+class NetworkConfig(_Config):
+    active: List[str] = Field(default_factory=list)
+    regional_groups: Dict[str, List[str]] = Field(default_factory=dict)
+    stock_database_columns: Dict[str, str] = Field(default_factory=dict)
+
+
+class CleaningConfig(_StrictConfigModel):
+    text_columns: List[str] = Field(default_factory=list)
+    drop_columns: List[str] = Field(default_factory=list)
+    numeric_columns: List[str] = Field(default_factory=list)
+
+
+class PricingColumns(_StrictConfigModel):
+    article: str = ARTICLE_COLUMN
+    database: str = DATABASE_ORIGIN_COLUMN
+    price: str = PRICE_COLUMN
+
+
+class PricingConfig(_StrictConfigModel):
+    article_tokenization: Literal["first_token", "whole"] = "first_token"
+    columns: PricingColumns = Field(default_factory=PricingColumns)
+    aliases: Dict[str, str] = Field(default_factory=dict)
+    cost_columns: PricingColumns | None = None
+    sales_columns: PricingColumns | None = None
+    default_store: str = ""
+    variant_columns: Dict[str, str] = Field(default_factory=dict)
+
+
+class StockInputConfig(_StrictConfigModel):
+    family_mode: Literal["rules", "column", "none"] = "rules"
+    family_column: str = ""
+    article_column: str = ""
+    format: Literal["wide", "long"] = "wide"
+    quantity_columns: Dict[str, str] = Field(default_factory=dict)
+    deposit_columns: Dict[str, str] | None = None
+    quantity_column: str = ""
+    branch_column: str = ""
+    default_store: str = ""
+
+
+class StockSummaryConfig(_StrictConfigModel):
+    sheet_name: str = "Summary"
+    entities: List[str] = Field(default_factory=list)
+    titles: List[str] = Field(default_factory=list)
+
+
+class StockOutputConfig(_StrictConfigModel):
+    quantity_label: str = "units"
+    quantity_format: str = "#,##0"
+    raw_data_sheet: str = RAW_DATA_SHEET
+    base_columns: List[str] = Field(default_factory=lambda: [ARTICLE_COLUMN, FAMILY_COLUMN])
+    summaries: List[StockSummaryConfig] = Field(default_factory=list)
+    template: str = ""
+    cost_factor: float = Field(default=1.0, gt=0, allow_inf_nan=False)
+    hidden_families: List[str] = Field(default_factory=list)
+    totals_label: str = ""
+    missing_cost_file: str = ""
+
+    @field_validator("missing_cost_file")
+    @classmethod
+    def validate_missing_cost_file(cls, value: str) -> str:
+        value = value.strip()
+        if any(character in value for character in '\\/:*?"<>|'):
+            raise ValueError("the missing-cost file suffix cannot contain path characters")
+        return value
+
+    @field_validator("template")
+    @classmethod
+    def validate_template(cls, value: str) -> str:
+        value = value.strip()
+        if value and not value.lower().endswith(".xlsx"):
+            raise ValueError("report template must be an .xlsx workbook")
+        return value
+
+
+class StockProcessingConfig(_Config):
+    input: StockInputConfig = Field(default_factory=StockInputConfig)
+    cleaning: CleaningConfig = Field(default_factory=CleaningConfig)
+    pricing: PricingConfig = Field(default_factory=PricingConfig)
+    output: StockOutputConfig = Field(default_factory=StockOutputConfig)
+
+
+class CrossCheckFilters(_StrictConfigModel):
+    ignored_articles: List[str] = Field(default_factory=list)
+    ignored_terms: List[str] = Field(default_factory=list)
+
+
+class PriceListColumns(_StrictConfigModel):
+    article_column: str = ARTICLE_COLUMN
+    price_column: str = PRICE_COLUMN
+    store_column: str = ""
+
+
+class CrossCheckPriceLists(_StrictConfigModel):
+    cost: PriceListColumns = Field(default_factory=PriceListColumns)
+    sales: PriceListColumns = Field(default_factory=PriceListColumns)
+
+
+class CrossCheckInput(_StrictConfigModel):
+    family_mode: Literal["rules", "column", "none"] = "rules"
+    family_column: str = ""
+    article_column: str = ""
+    count_mode: Literal["scans", "quantities"] = "scans"
+    count_article_column: str = ""
+    count_quantity_column: str = ""
+    matching: Literal["longest_prefix", "exact"] = "longest_prefix"
+    store_column: str = ""
+    quantity_column: str = DEFAULTS["cross_check/settings"]["input"]["quantity_column"]
+
+    @field_validator("quantity_column")
+    @classmethod
+    def validate_quantity_column(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("cross-check quantity column cannot be empty")
+        return value
+
+
+class CrossCheckReconciliation(_StrictConfigModel):
+    quantity_tolerance: float = Field(default=0, ge=0, allow_inf_nan=False)
+    ignore_negative_system_stock_when_counted: bool = DEFAULTS[
+        "cross_check/settings"
+    ]["reconciliation"]["ignore_negative_system_stock_when_counted"]
+
+
+class PriceArticleRules(_StrictConfigModel):
+    article_tokenization: Literal["first_token", "whole"] = "first_token"
+
+
+class CrossCheckConfig(_Config):
+    pricing: PriceArticleRules = Field(default_factory=PriceArticleRules)
+    input: CrossCheckInput = Field(default_factory=CrossCheckInput)
+    reconciliation: CrossCheckReconciliation = Field(default_factory=CrossCheckReconciliation)
+    filters: CrossCheckFilters = Field(default_factory=CrossCheckFilters)
+    price_lists: CrossCheckPriceLists = Field(default_factory=CrossCheckPriceLists)
+
+
+class YoYInputConfig(_StrictConfigModel):
+    date_column: str = DEFAULTS["yoy_reports/settings"]["input"]["date_column"]
+    quantity_column: str = QUANTITY_COLUMN
+    sales_column: str = DEFAULTS["yoy_reports/settings"]["input"]["sales_column"]
+    grouping_column: str = FAMILY_COLUMN
+    item_column: str = DEFAULTS["yoy_reports/settings"]["input"]["item_column"]
+    branch_column: str = DEFAULTS["yoy_reports/settings"]["input"]["branch_column"]
+    variant_column: str = Field(default=VARIANT_COLUMN, validation_alias=AliasChoices("variant_column", "size_column"))
+    branch_aliases: Dict[str, str] = Field(default_factory=dict)
+    code_tokenization: Literal["first_token", "whole"] = "whole"
+    sales_values: Literal["line_total", "unit_price"] = "line_total"
+    all_sheets: bool = False
+
+
+class YoYOutputConfig(_StrictConfigModel):
+    quantity_label: str = "Units Sold"
+    quantity_format: str = "#,##0"
+    default_path: str = "analysis_report.xlsx"
+
+    @field_validator("default_path")
+    @classmethod
+    def validate_default_output_path(cls, value: str) -> str:
+        return normalize_xlsx_output_path(value)
+    metrics: List[Literal["units", "sales"]] = Field(
+        default_factory=lambda: ["units", "sales"],
+        min_length=1,
+    )
+    annual_comparison: bool = True
+    include_variants: bool = Field(default=False, validation_alias=AliasChoices("include_variants", "include_sizes"))
+
+
+class YoYReportsConfig(_Config):
+    input: YoYInputConfig = Field(default_factory=YoYInputConfig)
+    output: YoYOutputConfig = Field(default_factory=YoYOutputConfig)
+    groups: Dict[str, List[str]] = Field(default_factory=dict)

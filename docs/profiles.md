@@ -106,6 +106,17 @@ Owns:
 
 This configuration belongs to Stock Processing; it must not be hidden in YoY configuration.
 
+Optional report settings under `output`:
+
+| Key | Default | Meaning |
+| --- | --- | --- |
+| `template` | `""` | `.xlsx` inside the profile folder, for example `templates/stock.xlsx`; see [engine.md](engine.md) |
+| `cost_factor` | `1.0` | multiplies cost in summary margins: `1 - cost * factor / sales` |
+| `hidden_families` | `[]` | families omitted from summaries and family PivotTables, replacing the visibility saved in a template; their rows stay in the data sheet and a warning reports any stock left out |
+| `totals_label` | `""` | label of the summary total row; empty omits it |
+
+Templates can contain real business data. Workbooks are ignored by Git outside the demo fixtures; do not force-add them. In template summaries a margin is blank only when sales are zero, matching PivotTable arithmetic; standard summaries keep a zero margin for non-positive sales.
+
 ### `cross_check/settings.json`
 
 Owns:
@@ -119,10 +130,10 @@ Owns:
 
 Owns:
 
-- input date/quantity/sales-amount/family/article/branch/size mapping;
+- input date/quantity/sales-amount/family/article/branch/variant mapping;
 - default output path;
 - enabled metrics (`units` and/or `sales`) for direct engine calls; interactive CLI/GUI runs select units and explicitly opt into sales amounts for that run;
-- annual-comparison/size options;
+- annual-comparison/variant options;
 - report groups that define the branches rendered by the workbook.
 
 ## `profile.json`
@@ -161,23 +172,6 @@ A new profile's missing current-schema files are initialized from defaults witho
 
 `last_paths.json` remembers previously selected files for convenience. It is local runtime state, not business configuration, and should not be treated as part of the schema-v3 contract.
 
-<!-- BEGIN LEGACY_COMPATIBILITY -->
-## Legacy profile migration
-
-Supported pre-v3 storage is converted by the compatibility layer before strict current-schema validation.
-
-Inventory Toolkit temporarily recognizes pre-v3 storage and old serialized Spanish keys.
-
-Configuration Hub exposes a migration/archive path. Legacy JSON is converted to the current modular schema and archived under:
-
-```text
-configs/_legacy_v1_backup/
-```
-
-Current built-in engines use native schema-v3 accessors after migration.
-
-Debug level 2/3 reports compatibility usage so maintainers can identify remaining callers/profiles. See [legacy_compatibility.md](legacy_compatibility.md).
-<!-- END LEGACY_COMPATIBILITY -->
 
 ## Versioning rule
 
@@ -234,3 +228,39 @@ input columns continue to offer the existing per-run default fallback; they are
 not interpreted as an unset configuration field.
 
 When an existing profile enrolls one module, untouched modules carry a legacy marker and remain available under their previous lifecycle. Invalid setup metadata is rejected before configuration files are changed. Review states are derived from fingerprints rather than trusting a manually edited completion flag.
+
+# Header advice in guided setup
+
+The assistant can inspect a small Excel sample on each column-mapping page. It reports which configured headers exist and suggests a unique normalized or vocabulary match when possible. Ambiguous matches require a manual choice. Suggestions are never saved until the operator explicitly adopts them and saves the page. Matching vocabulary is stored in `core/resources/column_hints.json`, not in the matching algorithm.
+
+## Optional variants
+
+YoY `input.variant_column` identifies an optional product dimension, such as flavor, package weight or size. `output.include_variants` controls its default breakdown. The actual header is also used in report detail labels. A business with no variants leaves the breakdown off and does not need a variant column. Quantity remains a separate numeric measure: a presentation named "500 g" is a variant, while a sale of 1.25 kg is a quantity. Earlier `size_column` / `include_sizes` keys are accepted on read and become the generic names when saved.
+
+## Enabled workflows
+
+`profile.json` may contain `enabled_modules`, a nonempty list drawn from `cross_check`, `stock_processing` and `yoy_reports`. Missing selection means all workflows for existing profiles. Disabled workflows retain their configuration and setup progress; they do not need review before another workflow runs. Frontends and direct engine entry points reject disabled workflows. Configuration loading can target one module, so a malformed disabled module file does not block an enabled workflow. Shared catalog/family/network documents still belong to the profile.
+
+## Module-owned input mappings
+
+Catalog column names describe shared output vocabulary. Stock `input.article_column` and Cross Check `input.article_column` select independent input headers. Empty values inherit the earlier catalog mapping until setup is reviewed. Stock `input.quantity_columns` maps stable store identifiers to stock-file headers; `input.deposit_columns` maps optional additional quantities. An absent deposit map inherits the previous network mapping, while an explicit empty object disables deposits. Stock `pricing.cost_columns` and `sales_columns` independently override the earlier shared `columns` contract. Setup displays effective inherited values and saves explicit mappings on review. YoY retains its independent input mapping and report groups.
+
+## Fractional quantities
+
+Stock numeric cleaning preserves decimal quantities, including store/deposit columns. For weighted or volume-based goods, set Stock `output.quantity_label` (for example `kg`) and `output.quantity_format` (`#,##0.###`). YoY has the same format option and a report-block `quantity_label` such as `Quantity (kg)`. This is display configuration; quantity arithmetic uses the supplied values and never converts units. Do not combine incompatible units in a single quantity total.
+
+## Conditional setup and shared reviews
+
+The shared setup catalog defines labels, explanations, typed choices, numeric values, optional fields, sample-file roles and conditional pages. Normal setup reviews essential pages; additional configuration includes cleanup, filters, matching preferences, output layout and summaries. Scanner counts do not show quantity-table mappings; wide stock does not show row-based mappings. Unchanged shared settings reviewed in another module can be reused by a module that has not reviewed them yet. A module that already accepted older shared values must review a later change. Setup completion is review metadata, not proof that every row in a selected workbook is valid.
+
+## Creating a profile
+
+Both interfaces use `core.profiles.profile_creation.create_profile`. A display name generates a portable folder ID, workflows are selected before setup, and new profiles load `core/resources/new_profile_defaults.json` with neutral labels and whole-product identifiers instead of clothing/company defaults. Existing profile folders are never overwritten. A failed new-profile initialization removes only the new directory owned by that operation. The older bundled defaults continue to define inherited fields for existing schema-v3 profiles; they are not silently applied over an existing document.
+
+## Categories and safe JSON writes
+
+See [Category sources](CATEGORY_SOURCES.md) for source-column, prefix-rule and unclassified modes in Stock and Cross Check. Sales mappings remain independent.
+
+JSON documents reject duplicate keys and non-finite numbers. Setup stages the configuration and review metadata together, replaces files atomically and restores the prior bytes if a later replacement fails. This prevents a failed save from keeping only one half of an edit; it is not a multi-process transaction or a guarantee against machine power loss between files. Keep one writer per profile.
+
+Profile metadata must be a JSON object. Enabled workflows are a nonempty list of known names; remembered paths contain workflow objects with string paths. Invalid documents raise a configuration error and are not overwritten or treated as empty defaults.

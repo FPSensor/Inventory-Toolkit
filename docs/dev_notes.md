@@ -54,12 +54,6 @@ Forensic mode should log counts, shapes, columns, decisions, timings, paths, and
 
 `--update-reference` is not a test-fix command. It changes the definition of correct expected output. Review candidates before committing.
 
-<!-- BEGIN LEGACY_COMPATIBILITY -->
-## Compatibility is temporary
-
-Do not add new calls to legacy projections. The compatibility layer includes its own readiness/retirement tooling so the project can eventually delete it cleanly.
-
-<!-- END LEGACY_COMPATIBILITY -->
 
 ## Documentation is part of the codebase contract
 
@@ -80,3 +74,9 @@ Patch commits use `sector: component: change`, the author `FPSensor <gkartyt@gma
 ## About the easter eggs
 
 Small harmless easter eggs exist in the CLI/source. They must never alter business output, configuration, release references, or engine behavior.
+
+## Optional developer package
+
+`debug_tools` owns release certification, semantic reference comparison, integrity checks, stress diagnostics and the developer console. Run `python -m debug_tools release --release`, `python -m debug_tools integrity`, or `python -m debug_tools stress`. Source wrappers under `tools/` preserve established commands. The runtime discovers the package only for `type=debug`; a missing package hides developer actions instead of breaking application startup. `type=release` disables developer loading even if someone copies the package back.
+
+The source archive allowlist respects build capabilities: release archives omit developer tools and tests, and interface-specific archives omit the unselected interface. This prepares the boundary for future binary packaging; it does not introduce a new binary bundler.

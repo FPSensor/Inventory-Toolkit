@@ -1,4 +1,6 @@
 import sys
+from core.runtime.build import BUILD
+from core.profiles.module_preferences import enabled_modules
 import argparse
 from cli.utils import clear_screen
 from cli.profiles import select_profile
@@ -6,20 +8,12 @@ from cli.config_menu import configuration_menu
 from cli.cross_check_launcher import launch_cross_check
 from cli.stock_processing_launcher import launch_stock_processing
 from cli.yoy_reports_launcher import launch_yoy_reports
-from cli.wizard import PANDAS_AVAILABLE
 from cli.workflow_setup import launch_configured
-from cli.debug_menu import developer_tools_menu
-from core.logger import log, log_debug_event, set_debug_level
+from cli.profile_overview import show_profile_overview
+from core.runtime.optional_debug import debug_available, open_debug_console
+from core.runtime.logger import log, log_debug_event, set_debug_level
 
-try:
-    from engine import stock_processing
-    from engine import inventory_cross_check
-    MODULES_LOADED = True
-except ImportError as e:
-    MODULES_LOADED = False
-    _import_error = e
-
-_VERSION = "1.4.1"
+_VERSION = BUILD.version
 
 _LOGO = r"""
   ██╗███╗   ██╗██╗   ██╗███████╗███╗   ██╗████████╗ ██████╗ ██████╗ ██╗   ██╗
@@ -65,14 +59,16 @@ def _draw_menu(current_profile: str, debug_level: int = 1) -> None:
         print(_row(f"   Debug diagnostics: [LEVEL {debug_level}]"))
     print(_rule())
     print(_row())
-    print(_row("    C  ›  Inventory Cross Check"))
-    print(_row("    S  ›  Stock Processing"))
-    print(_row("    R  ›  YoY Sales Report"))
+    enabled = enabled_modules(current_profile)
+    for module, key, label in [("cross_check", "C", "Inventory Cross Check"), ("stock_processing", "S", "Stock Processing"), ("yoy_reports", "R", "YoY Sales Report")]:
+        if module in enabled:
+            print(_row(f"    {key}  ›  {label}"))
     print(_row())
     print(_rule())
     print(_row("    K  ›  Configuration"))
+    print(_row("    H  ›  Profile Overview"))
     print(_row("    P  ›  Change Profile"))
-    if debug_level == 3:
+    if debug_level == 3 and debug_available():
         print(_row("    D  ›  Developer / Release Tools"))
     print(_row("    E  ›  Exit"))
     print(_rule("╚", "╝"))
@@ -104,11 +100,6 @@ def _select_debug_level(current_level: int) -> int:
 def _apply_debug_level(level: int, *, reset_session_log: bool = False) -> int:
     """Apply the runtime debug level without restarting."""
     active_level = set_debug_level(level, reset_session_log=reset_session_log)
-    # BEGIN LEGACY_COMPATIBILITY
-    from core.compatibility import configure_compatibility_diagnostics
-
-    configure_compatibility_diagnostics(active_level > 1)
-    # END LEGACY_COMPATIBILITY
     return active_level
 
 def _show_easter_egg() -> None:
@@ -121,25 +112,17 @@ def _show_easter_egg() -> None:
     input("  Press Enter to return...")
 
 def main():
+    BUILD.require("cli")
     parser = argparse.ArgumentParser(description="Inventory Toolkit CLI")
     parser.add_argument('-debug_level', '--debug-level', dest='debug_level', type=int, choices=[1, 2, 3], default=1,
                         help=argparse.SUPPRESS)
     args, _ = parser.parse_known_args()
 
-    if not PANDAS_AVAILABLE:
-        print("  ⚠️  Warning: Pandas is not installed.")
-
-    if not MODULES_LOADED:
-        print(f"  ⚠️  Warning: Could not load engine modules ({_import_error}).")
-        input("  Press Enter to continue in degraded mode...")
-
-    debug_level = _apply_debug_level(args.debug_level, reset_session_log=True)
+    debug_level = _apply_debug_level(args.debug_level if BUILD.type == "debug" else 1, reset_session_log=True)
     log_debug_event(
         "cli_start",
         version=_VERSION,
         debug_level=debug_level,
-        modules_loaded=MODULES_LOADED,
-        pandas_available=PANDAS_AVAILABLE,
     )
     if debug_level > 1:
         log.info("Inventory Toolkit %s starting (debug level %s)...", _VERSION, debug_level)
@@ -161,16 +144,18 @@ def main():
                 launch_configured(current_profile, "yoy_reports", launch_yoy_reports)
             elif option == "K":
                 configuration_menu(current_profile)
+            elif option == "H":
+                show_profile_overview(current_profile)
             elif option == "P":
                 current_profile = select_profile(current_profile)
                 log_debug_event("profile_selected", profile=current_profile, startup=False)
-            elif option == "DEBUG":
+            elif option == "DEBUG" and debug_available():
                 requested_level = _select_debug_level(debug_level)
                 if requested_level != debug_level:
                     debug_level = _apply_debug_level(requested_level)
                     log.info("Runtime debug level is now %s.", debug_level)
-            elif option == "D" and debug_level == 3:
-                developer_tools_menu()
+            elif option == "D" and debug_level == 3 and debug_available():
+                open_debug_console()
             elif option == "42":
                 _show_easter_egg()
             elif option == "E":

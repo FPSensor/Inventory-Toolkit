@@ -2,7 +2,7 @@
     "ARTICLE_COLUMN": "Artículo",
     "FAMILY_COLUMN": "Familias",
     "QUANTITY_COLUMN": "Cantidad",
-    "SIZE_COLUMN": "Talle",
+    "VARIANT_COLUMN": "Talle",
     "PRICE_COLUMN": "Precio",
     "COST_COLUMN": "Costo",
     "SALES_VALUE_LABEL": "Venta",

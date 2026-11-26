@@ -4,13 +4,69 @@ All notable changes to Inventory Toolkit are documented in this file.
 
 ## [Unreleased]
 
-Development changes after `v1.4.1`. The released application version remains `1.4.1`; legacy configuration compatibility remains enabled until deliberately retired.
+## [2.0.0] - 2026-11-26
+
+Changes since `v1.4.1`. Accuracy fixes change report numbers on purpose; each entry under **Fixed** says what and why.
 
 ### Added
 
+- **ci:** Run the full release certification on every push to any branch and on every pull request: Linux with Python 3.10 and 3.12, with a virtual display for desktop tests, and Windows with Python 3.12.
+
+- **inputs:** Read Excel, CSV, TSV and text files through one table reader in every workflow. YoY can join sheets with the same columns and multiply unit prices by quantity.
+
+- **yoy: safeguards:** Stop when the file has no sales for the requested period and locations, and warn about an empty previous year, unreadable dates or unread sheets, instead of reporting a false fall. Ambiguous day/month dates are refused.
+
+- **run:** Create any report without questions from `python -m inventory_toolkit run`, with explicit or remembered files, exit statuses and JSON results for schedulers. It uses the same workflows as CLI and GUI.
+
+- **yoy: raw exports:** Add `input.branch_aliases` so deposits count for their store, and `input.code_tokenization` to separate codes from descriptions, without editing the workbook. Both are editable from guided setup. Verify quantity and sales against the total row that some systems append to their exports and stop when they differ.
+
+- **stock: templates:** Let a profile own an Excel report template. Native PivotTables, calculated fields, styles and summaries are rebuilt from each run's data; layouts that cannot be rebuilt faithfully are rejected and every generated package is structurally verified before saving. Adds the `lxml` dependency.
+
+- **stock: unit prices:** Ask on each run whether to include unit cost and sales prices beside every active store, for audits. The default keeps totals only; totals, summaries and PivotTables do not change.
+
+- **stock: summaries:** Add optional `cost_factor`, `hidden_families` and `totals_label` settings, editable from guided setup. The profile decides family visibility on every sheet, and a warning reports hidden families that have stock. Defaults preserve existing reports.
+
+- **tests: maintenance:** Verify headless diagnostics in isolated CLI-only/GUI-only release trees, exclude local checkpoint data from distributions and reject unsupported checkpoint schemas even when their checksums are valid.
+
+- **gui: recovery:** Embed profile diagnostics and checkpoint management in Overview. Run file operations in workers, show actionable configuration destinations, require inline restore confirmation, retain a pre-restore point and lock profile/navigation until maintenance finishes. Exercise real Tk/CustomTkinter save/restore flows.
+
+- **cli: recovery:** Add profile checks and configuration history to Configuration → H. Show checkpoint labels/times, create manual points and restore by list number with explicit confirmation, using the same services as headless maintenance.
+
+- **core: maintenance:** Expose headless `doctor` and configuration-history commands through the application launcher in every build. Support machine-readable diagnostics, meaningful exit statuses and explicit confirmation for non-interactive restores without loading CLI or GUI packages.
+
+- **setup: recovery:** Create a local configuration checkpoint before saving a changed setup page or workflow selection. Identical saves avoid redundant writes/checkpoints, and new-profile initialization does not create a misleading pre-creation restore point.
+
+- **core: history:** Add bounded local configuration checkpoints with checksums, exact-byte restoration and a pre-restore safety copy. Validate enabled settings before restoring, preserve disabled settings verbatim, recover missing live documents and exclude history from Git/source distributions. UTF-8 BOM JSON is accepted consistently.
+
+- **core: diagnostics:** Add read-only profile checks with stable issue codes and setup destinations. Detect missing/invalid enabled documents, colliding source columns, required cleanup removals, invalid or repeated Excel sheet names, unavailable summary/group locations and ambiguous category prefixes. Inspection never initializes missing profiles or reviews setup pages.
+
+- **tests: desktop:** Exercise real Tk and CustomTkinter widgets in isolated subprocesses: small-window navigation, 130% scaling, configuration/setup/profile panels, disabled workflows and results-pane focus. The checks require a desktop display and skip explicitly in headless runs.
+
+- **tests: businesses:** Add data-owned kiosk, greengrocer and grocery scenarios. Configure all three workflows through shared assistant pages and verify quantities, categories, valuations, four Cross Check option combinations and 64 YoY combinations per business. Include the synthetic scenario resource in source distributions.
+
+- **core: categories:** Choose categories independently in Stock and Cross Check: use a source column, longest-prefix rules, or one default category. New neutral profiles begin without prefix assumptions. Setup skips irrelevant prefix pages; source columns participate in input inspection and explicit fallback selection. Conflicting Cross Check categories for one SKU are rejected.
+
+- **core: profiles:** Create new profiles through a shared service with neutral SKU/category/location vocabulary, exact product matching and independent input defaults. Generate portable profile IDs from display names, select workflows before setup, and remove an incomplete new profile if creation fails. Existing profiles are unchanged.
+
+- **stock: inputs:** Accept row-based stock with an explicit location column or one configured location, preserving source rows and fractional values. Single-location price lists no longer need an invented origin column; price-origin aliases now resolve configured location names. Product identifiers are read as text to preserve leading zeroes.
+
+- **cross: counts:** Support headered physical-count tables with configured product/quantity columns, including fractional counts, alongside the existing headerless scanner mode. Add explicit exact/prefix matching and a configurable quantity tolerance; reject missing products and invalid physical quantities with original Excel row numbers.
+
+- **core: mappings:** Separate Stock and Cross Check article headers from catalog output labels. Stock owns store-to-quantity/deposit mappings and independent cost/sales price columns; existing profiles inherit their previous mappings until explicitly reviewed. CLI/GUI preflight and input inspection use the same resolved contracts.
+
+- **core: modules:** Add profile-owned workflow selection during CLI/GUI profile creation and in the desktop overview. Disabled workflows retain settings but cannot run or force configuration/validation of their files. Existing profiles continue with all workflows enabled.
+
+- **core: build:** Centralize runtime version, debug/release capabilities and permitted interfaces in `build.prop`. CLI, GUI and new profile metadata now read the same manifest; a lazy application launcher supports CLI-only, GUI-only or both interfaces.
+
+- Added optional pre-run workbook inspection in the GUI and CLI profile overview. It samples only five rows per selected file, checks the headers actually required by each module and the chosen YoY options, handles headerless scanner readings correctly, and reports missing/ambiguous columns without generating a report or changing profile settings.
+
+- Added a shared profile overview in the CLI and GUI with module readiness, reviewed-page counts, the next pending page and direct access to targeted setup. Existing profiles remain ready without forced enrollment, and damaged configuration is shown as an actionable status instead of hiding all modules.
+
+- Added conservative sample-header advice for guided setup: exact and normalized matches are distinguished from unique vocabulary suggestions, ambiguous headers are left for operator selection, and matching vocabulary stays in JSON resources. Advice never rewrites a profile by itself.
+
 - Connected CLI module launch to shared setup states and guided recovery, with per-page saving and explicit continuation for partial profiles. New CLI profiles return to the module menu; existing workflows remain available when only one legacy module enrolls in setup.
 
-- Promoted the desktop surface to Alpha Pre-Beta (toolkit remains 1.4.1): dark sidebar workspace, scrolling module pages, resizable activity/results area, session text scaling and inline progress/completion/errors.
+- Promoted the desktop surface to Alpha Pre-Beta: dark sidebar workspace, scrolling module pages, resizable activity/results area, session text scaling and inline progress/completion/errors.
 - Added graphical module setup with contextual help, sample-header/value previews, typed row editors, per-page saving/resume and actionable configuration recovery while retaining workflow inputs.
 
 - Added shared per-module setup states (not configured, partial, complete), reviewed-field fingerprints and stable workflow error codes. Existing profiles without setup metadata retain their current lifecycle.
@@ -25,6 +81,60 @@ Development changes after `v1.4.1`. The released application version remains `1.
 - Added independent Stock and Cross Check price-list article tokenization settings: `first_token` preserves historical behavior, while `whole` preserves cleaned identifiers containing spaces.
 
 ### Changed
+
+- **dependencies:** Require pandas 2.2 or later and below 4, and openpyxl 3.1 or later, the versions the certification runs on.
+
+- **core: files: speed:** Read Excel inputs with calamine when `python-calamine` is installed (now in `requirements.txt`): about five times faster than openpyxl with identical values. The demo Stock run drops from 33 to 15 seconds. Without it, openpyxl is used as before.
+
+- **cleanup:** Remove functions, re-exports and imports that nothing used.
+
+- **core:** Group modules into `config`, `profiles`, `setup`, `files` and `runtime` packages. Only import paths change.
+
+- **engines:** Split Cross Check into plan, inputs, reconciliation and orchestration. Engines raise for unusable files instead of printing and returning nothing, and never read a terminal: interfaces answer whether to retry or copy a locked report. Reports are unchanged.
+
+- **workflows:** Prepare and run Stock Processing, Cross Check and YoY once for every interface. CLI and GUI request a shared workflow and show its result instead of each validating columns, resolving paths and building engine arguments. Missing files are reported together, selected inputs are remembered even when a run stops, yes/no questions reject other answers, warnings appear after completion in the console, and a run without a report is an explicit error. Reports are unchanged.
+
+- **debug: sources:** Remove trailing whitespace inherited by the relocated integrity/stress tools so the complete development diff passes Git whitespace verification. Runtime behavior is unchanged.
+
+- **docs: configuration:** Align installation, module READMEs and CLI/engine references with shared guided settings, generic variants and optional developer packages. Remove remaining outdated GUI milestone labels and duplicate-menu instructions.
+
+- **tests: gui:** Keep saved-path regression fixtures compatible with module-scoped configuration loading, so the test continues exercising path restoration instead of intercepting an unsupported mock signature.
+
+- **tests: references:** Refresh only configuration fingerprints after renaming variant keys and adding optional profile fields. All three regenerated demo reports match the approved semantic references; no golden workbook is replaced.
+
+- **debug: comparison:** Stream hashes of semantic XLSX parts before allocating canonical XML trees. Identical report parts compare with bounded memory; serializer differences still use canonical/model checks. Cache styles in mismatch diagnostics as well.
+
+- **docs: workspace:** Consolidate the current setup, module ownership, variants, build capabilities and developer-package documentation. Mark the desktop as RC preview after Linux real-widget checks, with native Windows/macOS review explicitly pending.
+
+- **core: launchers:** Route Linux/macOS and Windows launchers through the build-selected interface and reject disabled direct module entry points. Verify isolated CLI-only, GUI-only and combined release source trees without debug packages.
+
+- **debug: certification:** Bound the fallback workbook comparison signature by hashing cells incrementally and reusing effective style signatures. Large stock reports no longer retain a separate copy of every cell style while preserving value, formula and applied-style checks.
+
+- **gui: layout:** Correct CustomTkinter empty-container sizing found during real widget rendering, keep the sidebar scrollable at smaller sizes, set an initial workspace/results split, and explicitly style native notebook/readonly controls dark.
+
+- **gui: profiles:** Replace the modal new-profile dialog with embedded onboarding: a display name, generated portable folder ID, optional description and workflow choices. Validate inline, create through the shared neutral-profile service, and guard an uncreated draft before leaving.
+
+- **gui: setup:** Remodel the assistant into a step navigator with visible progress, optional additional settings and a final review. Reuse samples by input role, remember explicitly selected files, and provide inline save/discard/stay actions for an unsaved page instead of losing edits on exit.
+
+- **gui: appearance:** Introduce a consistent dark navy palette, clearer typography and controls, selected/disabled navigation states, keyboard shortcuts and native mouse-wheel scrolling. Keep final statistics in a dedicated results tab instead of mixing them with stage events, and preserve the native ttk fallback.
+
+- **gui: configuration:** Replace the separate configuration window and duplicated editors with an embedded, searchable settings workspace. Search friendly field names, filter by workflow, edit one section through the same assistant, and return to the settings workspace without losing run inputs.
+
+- **cli: configuration:** Replace duplicate JSON-oriented editors with searchable module settings backed by the same typed assistant. Add single-section editing, back/pause navigation, reusable input samples, and workflow activation without configuring unused modules.
+
+- **core: json:** Reject duplicate keys and non-finite JSON values, centralize profile persistence, and save setup documents plus review metadata as one staged operation with rollback on replacement failure. Validation still precedes writes; concurrent profile editing is not supported.
+
+- **setup: flow:** Replace storage-oriented pages with conditional, module-specific questions and human-readable choices. Separate essential review from additional configuration, cover independent price lists and new stock/count layouts, reuse unchanged shared reviews for untouched modules, and print a final setup summary.
+
+- **stock: quantities:** Preserve fractional stock quantities instead of truncating them to integers, including mapped store/deposit columns. Stock and YoY quantity labels and Excel formats are configurable, and final statistics retain fractional values. Existing report formats remain the default.
+
+- **yoy: variants:** Generalize the optional size breakdown into a profile-mapped variant dimension (for example package weight, flavor or size). Reports use the chosen header; products without variants require no variant column. Existing size keys are accepted when reading and saved under variant names when reviewed.
+
+- **core: profiles:** Move validated profile persistence into core and remove GUI imports of CLI helpers and its wizard. GUI-only distributions can now create/edit profiles without shipping the CLI package.
+
+- **debug: tools:** Package diagnostics behind `python -m debug_tools` and load the developer console only when a debug build includes the optional package. Source command wrappers remain available; release source archives exclude diagnostics/tests and interfaces excluded by the build manifest.
+
+- **core: compatibility:** Retired pre-v3 migrations and deprecated configuration projections using the audited retirement tool. Current-schema validation and archived backups are preserved; older active profiles must be migrated before upgrading.
 
 - Split the GUI shell, advanced Configuration Hub, profile dialog and shared widgets into separate modules; replace raw general-setting keys with readable labels and provide an explicit dark ttk theme.
 
@@ -43,12 +153,72 @@ Development changes after `v1.4.1`. The released application version remains `1.
 
 ### Fixed
 
+- **engine: yoy: figures:** Read quantities and amounts exported as local text, such as `1.234,50`, instead of counting them as 0, and name the cells that stay unreadable or ambiguous. Reports from files with numeric cells do not change.
+
+- **launchers:** Explain which packages are missing and how to install them instead of stopping with a traceback, and keep the Windows window open after an error so the message can be read. `Setup Environment.bat` now uses the Python it has just installed instead of failing to find it, and stops with a message when the download or the package installation fails.
+
+- **cli, gui: paths:** Accept file paths pasted between quotes, as Windows "Copy as path" and dragged files produce them, instead of reporting a missing file.
+
+- **windows: output:** Print UTF-8 when output is redirected to a file or another program, as a scheduled `run` or continuous integration does, instead of stopping on symbols the legacy code page cannot encode.
+
+- **windows: console:** Write status symbols as plain text (`[OK]`, `[X]`, `[!]`) and drop decorative emoji in the classic console that a double-clicked `.bat` opens, which draws them as empty boxes. Windows Terminal, VS Code and redirected output keep the emoji; `ITK_SYMBOLS=emoji` or `ITK_SYMBOLS=plain` overrides the detection. Batch files are checked out with Windows line endings.
+
+- **engine: stock: prices:** Read only the price-list rows of active stores. Databases outside the network, such as a closed store, no longer raise conflicting-price warnings or stop a run with an unreadable price. Conflicting prices are reported only for products with stock in an active store outside the hidden families, the only ones they value. Report values are unchanged.
+
+- **engine: yoy: stats:** Count only the rows of configured branches in "Period rows", as the totals beside it do, instead of including stores outside the report such as closed ones.
+
+- **engine: stock: stats:** Leave hidden families out of the console totals by store, as the report totals do, instead of showing units and values the workbook does not include.
+
+- **engine: stock: warnings:** Count negative stock in the units a missing price leaves at 0, instead of letting -1 and +1 cancel into "0 units".
+
+- **workflows: output:** Add `.xlsx` to output names whose last dot is not a file extension, such as `Stock 26.11.2026`, instead of rejecting `.2026` as an unsupported format. Names ending in another file format such as `.xls` or `.csv` are still rejected.
+
+- **requirements:** Install CustomTkinter, so a new installation opens the intended desktop interface instead of the plain fallback.
+
+- **cross: double count:** Always add system stock up to one row per product. Without consolidation, the former default, each repeated row received the whole physical count: the demo reported 2,119 counted units instead of 797 and a cost surplus of 1,010,648 instead of a shortage of 166,176. The consolidation question and checkbox are removed.
+
+- **cross: matching:** Recognize scanner readings of products that have no system stock row but appear in a price list, instead of sending them to review with no value, and ignore case in product codes, price lists and ignored articles. In the demo, 9 readings are now valued surpluses. Refuse scanner files with several filled columns or none.
+
+- **stock: list of stock without cost:** Save the products with stock and no cost price, per location and with their sales value, in a separate workbook beside the report when `output.missing_cost_file` names it. Those units count as cost 0 and raise the margin; the list lets the people who load prices see them. Report values are unchanged.
+
+- **stock: variant prices:** Value each color and size with its own price through the optional `pricing.variant_columns`, editable in guided setup, instead of averaging every variant of a product. The demo profile uses it: in Plaza Oeste a size 40 of `12309-222` was valued at 26,361 per unit, the average of its sizes, instead of its price of 19,900.
+
+- **cross: store prices:** Value differences with the prices of the counted store when the price lists and system stock name it, through the optional `store_column` settings in guided setup, instead of averaging every store. The demo profile uses them: its cost total moves from −166,175 with averaged prices to −289,758 with Plaza Oeste prices.
+
+- **cross, stock: numbers:** Read quantities and prices in local formats such as `1.234,5`, and warn with row numbers about ambiguous values such as `1.234`, quantities without a product, products with conflicting prices and stock or differences without a price, which are valued at 0. A blank price is a missing price, not zero.
+
+- **core: checkpoints:** Reject incomplete checkpoint document entries instead of interpreting missing content/checksum fields as an intentionally absent file. Damaged snapshot metadata cannot silently remove live profile metadata.
+
+- **core: isolation:** Scope CLI preflight and workbook inspection to the selected workflow, so another enabled module with damaged settings does not block it. Keep profile diagnostics aligned with enabled metrics, including revenue-only YoY configurations that do not consume quantity.
+
+- **setup: checkpoints:** Preserve the supported lifecycle of existing profiles without metadata. Their first reviewed edit can be checkpointed, and restoring the earlier point removes metadata that did not originally exist. Explicit document deletions share the rollback contract.
+
+- **core: profiles:** Validate profile metadata and remembered-path shapes before using them. Damaged objects or non-string workflow selections now produce actionable configuration errors instead of attribute/hash failures, without rewriting user documents.
+
+- **debug: integrity:** Supply the resolved input contract in the synthetic Stock integrity fixture after introducing module-owned mappings. Keep the diagnostic executable under the full release gate.
+
+- **stock: quantities:** Keep entirely whole-number input columns integral while preserving fractional measurements. This retains existing integer-report column widths without rounding measured stock.
+
+- **gui: profiles:** Restore Stock and Cross Check workbook selections per profile, persist their selected paths before dispatch, and refresh disabled workflow navigation after switching profiles. YoY configuration failures now stay in the interface and validate only YoY settings.
+
+- **setup: review:** Fingerprint the validated values actually saved by the assistant. Numeric normalization, such as tolerance `0` becoming `0.0`, no longer makes a completed page appear stale immediately after saving.
+
+- **yoy: identifiers:** Import product, location and variant identifiers as text so numeric-looking codes retain their leading zeroes. Quantity and revenue columns keep numeric processing.
+
 - Resolved demo input suggestions from the application-owned `examples/demo/` directory for Cross Check, Stock and YoY while giving remembered paths priority.
 - Advanced YoY rendering percentage across individual sheets instead of keeping it fixed for the entire rendering stage; completion is reported after saving.
 - Removed the special family-label shortcut so every article follows profile rules and longest-prefix priority, including articles whose text resembles a review marker.
 - Kept explicit current-schema object/version validation outside removable compatibility code, preserving clear errors and rejected file contents after retirement.
 
+### Removed
+
+- **cli: entrypoint:** Remove the redundant root `cli.py` wrapper. Platform launchers keep using the build-selected `python -m inventory_toolkit`; explicit console startup is `python -m cli`. Update source distributions, documentation and foreign-working-directory coverage.
+
 ### Documentation
+
+- **readme: roadmap:** Replace the finished 1.6, 1.7 and 2.0 goals with what comes after 2.0.0.
+
+- **docs: maintenance:** Add an offline operation/recovery handbook, diagnostic-code lookup and a practical source-reading route. Link it from the README and documentation index so configuration and development workflows remain usable without an online assistant.
 
 - Updated README, module guides, configuration ownership, progress/statistics semantics, profile copying, release certification and retirement documentation to match the cumulative development state.
 - Required changelog and affected-document updates alongside future behavior changes rather than deferring them until release preparation.

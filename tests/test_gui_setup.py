@@ -5,9 +5,9 @@ import pytest
 
 from gui.app import InventoryToolkitGUI
 from gui.setup_wizard import SetupWizard, table_value
-from core import paths
-from core.profile_config import ensure_profile_config
-from core.setup_service import SetupSession, initialize_setup, write_json
+from core.runtime import paths
+from core.config.profile_config import ensure_profile_config
+from core.setup.setup_service import SetupSession, initialize_setup, write_json
 from core.workflow_errors import WorkflowError, ErrorCode
 
 
@@ -60,7 +60,7 @@ def test_new_module_is_routed_to_embedded_setup_before_workflow(session):
 
 
 def test_partial_setup_offers_explicit_continue_and_configuration(session):
-    from core.setup_catalog import get_value
+    from core.setup.setup_catalog import get_value
     step = session.steps[0]
     session.save_step(step.id, {'.'.join(field.path): get_value(session.data(step), field.path) for field in step.fields})
     notifications = []
@@ -88,7 +88,7 @@ def test_recovery_uses_codes_and_keeps_unrelated_failures_out_of_setup():
 def test_inline_notice_retains_message_without_a_dialog():
     stored = []
     view = SimpleNamespace(_feedback_text=SimpleNamespace(configure=lambda **kw: stored.append(kw['text'])),
-        _feedback_actions=SimpleNamespace(winfo_children=lambda: []))
+        _feedback_actions=SimpleNamespace(winfo_children=lambda: [], pack_forget=lambda: None))
     InventoryToolkitGUI._notify(view, 'error', 'Example', 'Readable explanation')
     assert stored == ['Example: Readable explanation']
 

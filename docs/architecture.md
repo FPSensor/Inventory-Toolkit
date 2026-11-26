@@ -6,33 +6,25 @@ The boundaries are pragmatic rather than ceremonial. Modules are split when doin
 
 ## High-level flow
 
-```text
-User / automation
-      │
-      ├── CLI (primary)
-      └── GUI (Alpha Pre-Beta)
-             │
-             ▼
-      Profile + parameters
-             │
-             ▼
-      core infrastructure
-      configuration / logging /
-      sanitization / safe saving
-             │
-             ▼
-           engine
-      transformations +
-      business calculations +
-      workbook rendering
-             │
-             ▼
-        Excel output
+```mermaid
+flowchart TD
+    B["build.prop and lazy launcher"] --> C["CLI package"]
+    B --> G["GUI package"]
+    C --> S["Shared configuration and setup services"]
+    G --> S
+    C --> W["Shared workflows"]
+    G --> W
+    W --> S
+    W --> E["Independent report engines"]
+    E --> X["Excel reports"]
 ```
+
+The launcher imports only the selected interface. GUI persistence does not import CLI utilities. `debug_tools` is discovered only in debug builds and can be physically absent. The existing source builder excludes disabled interfaces and developer packages according to the manifest.
+
 
 ## Layer responsibilities
 
-### Presentation — `cli/`, `cli.py`, `gui/`
+### Presentation — `inventory_toolkit/`, `cli/`, `gui/`
 
 Presentation code may:
 
@@ -41,12 +33,22 @@ Presentation code may:
 - perform lightweight pre-flight checks;
 - inspect workbook headers for setup/autodetection;
 - present Configuration Hub and Guided Setup;
-- call engines;
+- request a workflow and show its result;
 - display progress/errors.
 
 Presentation code should **not** reimplement stock reconciliation, family classification, valuation formulas, or YoY calculations.
 
 The GUI must not rely on terminal input. Long-running GUI operations execute away from the Tk main thread and UI updates return to the main thread.
+
+### Use cases — `workflows/`
+
+Each workflow turns a request into a report through the same steps for every interface:
+
+1. `check(request, confirm_column)` verifies files, options and headers, asking the interface only about default columns, and remembers the selected inputs;
+2. `prepare(request, columns, notify)` settles and remembers the output name;
+3. `job.run(progress, stats)` runs the engine and returns a `RunResult` with the output, duration and warnings, or raises. It asks nothing, so it can run on any thread.
+
+Workflows never print, read a terminal or import an interface. `tests/test_workflow_layers.py` enforces these boundaries: `cli/` and `gui/` cannot import `engine/`.
 
 ### Infrastructure — `core/`
 
@@ -54,9 +56,6 @@ Core owns cross-cutting concerns:
 
 - schema-v3 configuration loading and validation;
 - business-label constants;
-<!-- BEGIN LEGACY_COMPATIBILITY -->
-- legacy configuration transition while it exists;
-<!-- END LEGACY_COMPATIBILITY -->
 - data sanitization helpers;
 - runtime logging and structured debug events;
 - optional progress and final-statistics event contracts;
@@ -80,7 +79,7 @@ Engines are callable directly from Python and must remain independent from CLI p
 
 ### Configuration — `profiles/`
 
-Profile storage is resolved through the canonical application paths in `core/paths.py`; it does not move with the process current working directory. User-supplied relative workbook paths remain caller-CWD-relative.
+Profile storage is resolved through the canonical application paths in `core/runtime/paths.py`; it does not move with the process current working directory. User-supplied relative workbook paths remain caller-CWD-relative.
 
 Profiles hold environment/business differences that should not require source-code forks. Current schema v3 gives each module clear ownership of its configuration.
 
@@ -118,9 +117,6 @@ Current internal configuration uses English keys and version `3`. External workb
 
 `core/business_schema.py` defines canonical v1.x business vocabulary, while profile-owned column mappings may replace those labels at workbook boundaries. Engines should resolve configurable external names once, then operate on stable internal contracts rather than repeatedly hard-coding or threading source labels through business logic. Stock Processing applies this rule explicitly with private article/family pipeline keys and restores the configured labels only when projecting the final workbook.
 
-<!-- BEGIN LEGACY_COMPATIBILITY -->
-Legacy v1/v2 storage and old API projections are temporary compatibility concerns, not the current architecture. See [legacy_compatibility.md](legacy_compatibility.md).
-<!-- END LEGACY_COMPATIBILITY -->
 
 ## Excel strategy
 
@@ -138,9 +134,6 @@ Examples:
 - locked output files use retry/copy behavior in the CLI and a typed non-interactive error for GUI callers;
 - unresolved scanner articles are marked `REVISAR |`;
 - stale golden masters are rejected when demo/profile fingerprints change;
-<!-- BEGIN LEGACY_COMPATIBILITY -->
-- destructive compatibility retirement refuses to run until readiness checks pass.
-<!-- END LEGACY_COMPATIBILITY -->
 
 ## Evolution rule
 
@@ -148,4 +141,12 @@ Before introducing a new abstraction, ask whether it creates a real boundary. Cr
 
 ### Setup ownership
 
-`core/setup_catalog.py` describes labeled configuration steps. `core/setup_service.py` persists reviewed values and derives per-module readiness; `core/workflow_errors.py` exposes stable recovery targets. CLI and GUI own continuation prompts and assistant navigation. Engines own calculations, file validation and export; they do not import frontend components or open setup screens. GUI code is split into shell, advanced configuration, profile creation, shared widgets and the embedded setup wizard.
+`core/setup/setup_catalog.py` describes labeled configuration steps. `core/setup/setup_service.py` persists reviewed values and derives per-module readiness; `core/workflow_errors.py` exposes stable recovery targets. CLI and GUI own continuation prompts and assistant navigation. Engines own calculations, file validation and export; they do not import frontend components or open setup screens. GUI code is split into shell, advanced configuration, profile creation, shared widgets and the embedded setup wizard.
+
+## Build capabilities
+
+`build.prop` is the runtime source of version and distribution capabilities. `ver` controls runtime branding and new profile metadata; the README badge continues to identify the published release. `type` is `debug` or `release`. `control-type` is `cli`, `gui` or `both`; `default-control` must select an included interface. `gui-stage` describes the desktop maturity. Invalid or duplicate properties fail explicitly.
+
+Run `python -m inventory_toolkit --interface gui` (or `cli`). The selected interface loads lazily; core and engines never import a frontend. Direct `python -m cli` and `python -m gui` entry points also respect build capabilities. Changing the manifest does not change an existing profile or report.
+
+Profile JSON and remembered paths are persisted through `core.profiles.profile_store`; GUI and CLI are siblings and must not import one another. Setup state and schema validation belong to core. Interface packages own only their rendering and operator interactions.

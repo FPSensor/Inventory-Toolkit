@@ -1,0 +1,39 @@
+"""Per-run Excel column selection; presentation owns the operator decision."""
+
+from collections.abc import Callable, Mapping
+
+from core.files.table_reader import read_headers
+from core.workflow_errors import ErrorCode, WorkflowError
+
+
+def choose_input_columns(
+    file_path: str,
+    configured: Mapping[str, str],
+    defaults: Mapping[str, str],
+    confirm: Callable[[str, str, str], bool] | None = None,
+) -> dict[str, str]:
+    """Return actual columns by field, offering only named defaults on request.
+
+    A missing configured column never triggers an automatic fallback. The
+    caller may explicitly authorize a default for this run; no profile is edited.
+    """
+    columns = set(read_headers(file_path))
+    resolved = {}
+    for field, wanted in configured.items():
+        if wanted in columns:
+            resolved[field] = wanted
+            continue
+        default = defaults.get(field)
+        if default and default != wanted and default in columns and confirm and confirm(field, wanted, default):
+            resolved[field] = default
+            continue
+        if default and default != wanted and default not in columns and confirm and confirm(field, wanted, default):
+            raise WorkflowError(ErrorCode.INPUT_COLUMN_MISSING,
+                f"{file_path}: configured column {wanted!r} and default {default!r} "
+                f"are both absent for {field}. Available columns: {sorted(map(str, columns))}"
+            )
+        raise WorkflowError(ErrorCode.INPUT_COLUMN_MISSING,
+            f"{file_path}: configured column {wanted!r} is absent for {field}. "
+            f"Default: {default!r}. Available columns: {sorted(map(str, columns))}"
+        )
+    return resolved

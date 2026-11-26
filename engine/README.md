@@ -6,7 +6,7 @@ Inventory Toolkit's analytical/workbook-generation layer.
 
 - `inventory_cross_check/` — physical vs system reconciliation, variable-length article normalization, valuation, discrepancy workbook.
 - `stock_processing/` — cleanup, store/region consolidation, family classification, pricing, valuation, summaries.
-- `yoy_reports/` — current vs previous-year reporting, monthly segmentation, formulas, optional size breakdown.
+- `yoy_reports/` — current vs previous-year reporting, monthly segmentation, formulas, optional variant breakdown.
 - `shared/` — cross-workflow business algorithms such as family prefix classification.
 
 ## Design rule

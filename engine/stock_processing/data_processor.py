@@ -7,8 +7,19 @@ from collections.abc import Mapping
 import numpy as np
 import pandas as pd
 
-from core.business_schema import COST_COLUMN, SALES_VALUE_LABEL
-from core.logger import log_debug_event
+from core.business_schema import (
+    COST_COLUMN,
+    SALES_VALUE_LABEL,
+    UNIT_COST_PREFIX,
+    UNIT_SALES_PREFIX,
+)
+from core.files.data_sanitizer import (
+    describe_unclear_numbers,
+    normalize_article_codes,
+    parse_numbers,
+    read_quantities,
+)
+from core.runtime.logger import log_debug_event
 from engine.shared.families import assign_families
 from engine.stock_processing.contracts import (
     INTERNAL_ARTICLE_COLUMN,
@@ -22,8 +33,51 @@ def _normalize_text(series: pd.Series) -> pd.Series:
 
 
 def _normalize_numeric(series: pd.Series) -> pd.Series:
-    normalized = series.astype(str).str.replace(",", ".", regex=False).str.strip()
-    return pd.to_numeric(normalized, errors="coerce").fillna(0).astype(int)
+    numeric = read_quantities(series)[0].astype(float)
+    # Keep exact whole quantities integral without truncating measured quantities.
+    bounds = np.iinfo(np.int64)
+    if np.isfinite(numeric).all() and numeric.between(bounds.min, bounds.max).all() and numeric.mod(1).eq(0).all():
+        return numeric.astype(np.int64)
+    return numeric
+
+
+def adapt_stock_headers(raw_frame, plan, source_article):
+    """Resolve explicit headers once; never silently fall back to an output label."""
+    if plan.input.get("format") == "long":
+        quantity = plan.input["quantity_column"]
+        branch = plan.input["branch_column"]
+        needed = [source_article, quantity] + ([branch] if branch else [])
+        if not quantity or len(set(needed)) != len(needed) or any(column not in raw_frame.columns for column in needed):
+            raise ValueError("Long stock requires distinct configured product, quantity and optional location columns.")
+        frame = raw_frame.copy()
+        locations = frame[branch].fillna("").astype(str).str.strip() if branch else pd.Series(plan.input["default_store"], index=frame.index)
+        unknown = ~locations.isin(plan.active_stores)
+        if unknown.any():
+            rows = [int(position) + 2 for position in np.flatnonzero(unknown.to_numpy())[:20]]
+            raise ValueError(f"Stock has unknown or missing locations at Excel rows {rows}.")
+        amounts, _ = parse_numbers(frame[quantity])
+        if not np.isfinite(amounts).all():
+            raise ValueError("Long stock contains missing or invalid numeric quantities.")
+        if source_article != plan.article_column and plan.article_column in frame.columns:
+            raise ValueError("Stock product mapping collides with an existing output column.")
+        frame = frame.rename(columns={source_article: plan.article_column})
+        for store in plan.active_stores:
+            if store in frame.columns:
+                raise ValueError(f"Stock location label {store!r} collides with an input column.")
+            frame[store] = amounts.where(locations.eq(store), 0)
+        return frame
+    mappings = [(source_article, plan.article_column), *
+        ((header, store) for store, header in plan.input["quantity_columns"].items())]
+    sources = [source for source, _ in mappings]
+    if len(set(sources)) != len(sources):
+        raise ValueError("Article and store quantities must use distinct input columns.")
+    missing = [source for source in sources if source not in raw_frame.columns]
+    if missing:
+        raise ValueError(f"Stock input is missing configured columns: {missing}")
+    renames = dict(mappings)
+    if any(target in raw_frame.columns and target not in renames for source, target in mappings if source != target):
+        raise ValueError("Stock input mapping collides with another existing column.")
+    return raw_frame.rename(columns=renames)
 
 
 def prepare_stock_frame(raw_frame: pd.DataFrame, plan: StockProcessingPlan) -> pd.DataFrame:
@@ -36,6 +90,10 @@ def prepare_stock_frame(raw_frame: pd.DataFrame, plan: StockProcessingPlan) -> p
         raise ValueError(
             f"Stock cleaning cannot drop the configured article column '{plan.article_column}'."
         )
+    if plan.input.get("family_mode", "rules") == "column":
+        source = plan.input["family_column"]
+        if not source or source not in raw_frame.columns or source in plan.drop_columns:
+            raise ValueError("Choose an existing category column and keep it in stock cleaning.")
     if INTERNAL_ARTICLE_COLUMN in raw_frame.columns or INTERNAL_FAMILY_COLUMN in raw_frame.columns:
         raise ValueError(
             "Stock input contains a reserved Inventory Toolkit internal column name."
@@ -49,13 +107,13 @@ def prepare_stock_frame(raw_frame: pd.DataFrame, plan: StockProcessingPlan) -> p
         if column in frame.columns:
             frame[column] = _normalize_text(frame[column])
 
-    for column in plan.numeric_columns:
+    for column in dict.fromkeys((*plan.numeric_columns, *plan.active_stores, *plan.stock_database_columns.values())):
         if column in frame.columns:
             frame[column] = _normalize_numeric(frame[column])
 
     # The article is an identity key, so it is normalized at the boundary even
     # when a profile forgot to repeat it in cleaning.text_columns.
-    frame[plan.article_column] = _normalize_text(frame[plan.article_column])
+    frame[plan.article_column] = normalize_article_codes(frame[plan.article_column])
     frame = frame.rename(columns={plan.article_column: INTERNAL_ARTICLE_COLUMN})
 
     log_debug_event(
@@ -66,6 +124,27 @@ def prepare_stock_frame(raw_frame: pd.DataFrame, plan: StockProcessingPlan) -> p
         article_internal_column=INTERNAL_ARTICLE_COLUMN,
     )
     return frame
+
+
+def quantity_warnings(raw_frame: pd.DataFrame, plan: StockProcessingPlan) -> list[str]:
+    """Describe quantities whose reading is a guess, with their source rows."""
+    if plan.input.get("format") == "long":
+        quantity = plan.input["quantity_column"]
+        sources = {quantity: raw_frame[quantity]} if quantity in raw_frame.columns else {}
+    else:
+        headers = dict(plan.input["quantity_columns"])
+        names = dict.fromkeys((*plan.numeric_columns, *plan.active_stores, *plan.stock_database_columns.values()))
+        sources = {
+            headers.get(column, column): raw_frame[column]
+            for column in names if column in raw_frame.columns and column not in plan.drop_columns
+        }
+    messages = []
+    for header, values in sources.items():
+        if not pd.api.types.is_numeric_dtype(values):
+            message = describe_unclear_numbers(header, read_quantities(values)[1])
+            if message:
+                messages.append(message)
+    return messages
 
 
 def remove_unidentified_stock(raw_frame: pd.DataFrame, plan: StockProcessingPlan) -> tuple[pd.DataFrame, str | None]:
@@ -79,7 +158,7 @@ def remove_unidentified_stock(raw_frame: pd.DataFrame, plan: StockProcessingPlan
     with_quantity = pd.Series(False, index=raw_frame.index)
     row_totals = pd.Series(0.0, index=raw_frame.index)
     if quantities:
-        numeric = raw_frame[quantities].apply(pd.to_numeric, errors="coerce").fillna(0)
+        numeric = raw_frame[quantities].apply(lambda column: read_quantities(column)[0])
         with_quantity = numeric.ne(0).any(axis=1)
         row_totals = numeric.sum(axis=1)
     affected = raw_frame.index[missing & with_quantity]
@@ -141,14 +220,18 @@ def classify_stock_families(
     family_rules,
     *,
     default_family: str,
+    source_column=None,
+    use_rules=True,
 ) -> pd.DataFrame:
     """Attach the private family key using the shared longest-prefix classifier."""
     result = frame.copy()
-    result[INTERNAL_FAMILY_COLUMN] = assign_families(
-        result[INTERNAL_ARTICLE_COLUMN],
-        family_rules,
-        default_family=default_family,
-    )
+    if source_column:
+        result[INTERNAL_FAMILY_COLUMN] = result[source_column].fillna(default_family).astype(str).str.strip().replace("", default_family)
+    elif use_rules:
+        result[INTERNAL_FAMILY_COLUMN] = assign_families(
+            result[INTERNAL_ARTICLE_COLUMN], family_rules, default_family=default_family)
+    else:
+        result[INTERNAL_FAMILY_COLUMN] = default_family
     family_counts = result[INTERNAL_FAMILY_COLUMN].value_counts(dropna=False)
     log_debug_event(
         "stock_processing_family_assignment",
@@ -160,12 +243,26 @@ def classify_stock_families(
     return result
 
 
-def project_stock_output(frame: pd.DataFrame, plan: StockProcessingPlan) -> pd.DataFrame:
-    """Select the profile-owned final layout and restore catalog-facing labels."""
+def project_stock_output(
+    frame: pd.DataFrame,
+    plan: StockProcessingPlan,
+    *,
+    include_unit_prices: bool = False,
+) -> pd.DataFrame:
+    """Select the profile-owned final layout and restore catalog-facing labels.
+
+    Unit prices are shown as used by the valuation: -1 means the article has no
+    price in that store. Regional groups have no unit price of their own.
+    """
     final_column_order = [plan.internal_base_column(column) for column in plan.base_columns]
     for entity in plan.entities_to_value:
+        unit_prices = (
+            [f"{UNIT_COST_PREFIX}{entity}", f"{UNIT_SALES_PREFIX}{entity}"]
+            if include_unit_prices and entity not in plan.regional_groups
+            else []
+        )
         final_column_order.extend(
-            [entity, f"{entity}.{COST_COLUMN}", f"{entity}.{SALES_VALUE_LABEL}"]
+            [entity, *unit_prices, f"{entity}.{COST_COLUMN}", f"{entity}.{SALES_VALUE_LABEL}"]
         )
 
     selected = frame[
@@ -174,10 +271,10 @@ def project_stock_output(frame: pd.DataFrame, plan: StockProcessingPlan) -> pd.D
     return plan.expose_catalog_columns(selected)
 
 
-def calculate_margin(dataframe, sales_column, cost_column):
+def calculate_margin(dataframe, sales_column, cost_column, cost_factor=1.0):
     return np.where(
         dataframe[sales_column] > 0,
-        (dataframe[sales_column] - dataframe[cost_column]) / dataframe[sales_column],
+        (dataframe[sales_column] - dataframe[cost_column] * cost_factor) / dataframe[sales_column],
         0,
     )
 

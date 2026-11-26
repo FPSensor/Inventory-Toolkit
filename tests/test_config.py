@@ -4,11 +4,11 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from core.config_schemas import CatalogConfig, YoYOutputConfig
-from core.configuration_errors import ConfigurationError
-from core.configuration_manager import ConfigurationManager
-from core import paths as app_paths
-from core.profile_config import CONFIG_VERSION, ensure_profile_config, profile_readiness
+from core.config.config_schemas import CatalogConfig, YoYOutputConfig
+from core.config.configuration_errors import ConfigurationError
+from core.config.configuration_manager import ConfigurationManager
+from core.runtime import paths as app_paths
+from core.config.profile_config import CONFIG_VERSION, ensure_profile_config, profile_readiness
 
 
 def test_configuration_manager_loading(tmp_path, monkeypatch):
@@ -190,69 +190,11 @@ def test_yoy_default_output_path_rejects_legacy_xls():
     with pytest.raises(ValidationError, match="must use the .xlsx format"):
         YoYOutputConfig.model_validate({"default_path": "report.xls"})
 
-# BEGIN LEGACY_COMPATIBILITY
-def _fixture(name):
-    return json.loads((Path(__file__).parent / "fixtures" / name).read_text(encoding="utf-8"))
-
-
-def test_legacy_profile_migrates_without_changing_business_contract(tmp_path, monkeypatch):
-    base = tmp_path / "profiles" / "legacy" / "configs"
-    legacy_files = _fixture("legacy_configuration.json")
-    for relative_path, payload in legacy_files.items():
-        path = base / relative_path
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps(payload), encoding="utf-8")
-
-    monkeypatch.setattr(app_paths, "PROFILES_ROOT", tmp_path / "profiles")
-    config = ConfigurationManager("legacy")
-
-    assert config.get_catalog()["columns"]["article"] == "SKU"
-    assert config.get_family_rules() == {"Shirts": ["01", "001"]}
-    assert config.get_stock_database_columns() == {"A": "DB_A"}
-    assert config.get_stock_cleaning()["drop_columns"] == ["Noise"]
-    assert config.get_stock_pricing()["columns"] == {
-        "article": "SKU",
-        "database": "Origin",
-        "price": "Price",
-    }
-    assert config.get_cross_check_config()["price_lists"]["sales"]["price_column"] == "Retail"
-    assert config.get_stock_output()["raw_data_sheet"] == "Raw"
-    assert config.get_yoy_reports_config()["input"]["date_column"] == "Date"
-    assert (base / "general/catalog.json").exists()
-    assert (base / "stock_processing/settings.json").exists()
-    assert (base / "yoy_reports/settings.json").exists()
-
-
-def test_v2_modular_profile_upgrades_internal_keys_to_english(tmp_path):
-    configs = tmp_path / "configs"
-    stock_path = configs / "stock_processing" / "settings.json"
-    yoy_path = configs / "yoy_reports" / "settings.json"
-    stock_path.parent.mkdir(parents=True)
-    yoy_path.parent.mkdir(parents=True)
-
-    source = _fixture("modular_v2_configuration.json")
-    stock_path.write_text(json.dumps(source["stock"]), encoding="utf-8")
-    yoy_path.write_text(json.dumps(source["yoy"]), encoding="utf-8")
-
-    ensure_profile_config(configs)
-    stock = json.loads(stock_path.read_text(encoding="utf-8"))
-    yoy = json.loads(yoy_path.read_text(encoding="utf-8"))
-
-    assert stock["version"] == CONFIG_VERSION
-    assert stock["output"]["summaries"] == [{
-        "sheet_name": "Summary",
-        "entities": ["A"],
-        "titles": ["Familias"],
-    }]
-    assert yoy["version"] == CONFIG_VERSION
-    assert yoy["input"]["sales_column"] == "Monto"
-    assert yoy["output"]["metrics"] == ["units", "sales"]
-# END LEGACY_COMPATIBILITY
 
 
 def test_yoy_setup_uses_bundled_defaults_and_detection_hints(tmp_path, monkeypatch):
     from cli import wizard
-    from core.profile_config import DEFAULTS
+    from core.config.profile_config import DEFAULTS
 
     configs = _initialize_test_profile(tmp_path, "wizard")
     monkeypatch.setattr(wizard, "clear_screen", lambda: None)
@@ -260,27 +202,28 @@ def test_yoy_setup_uses_bundled_defaults_and_detection_hints(tmp_path, monkeypat
     monkeypatch.setattr("builtins.input", lambda *_: "")
     selections = []
 
-    def pick(label, columns, current, hints):
-        assert isinstance(hints, tuple) and hints
+    def pick(label, columns, current, **kwargs):
+        assert columns == ["Sample"]
         selections.append(current)
         return current
 
     monkeypatch.setattr(wizard, "_pick", pick)
-    wizard._setup_yoy(configs)
+    monkeypatch.setattr(app_paths, "PROFILES_ROOT", tmp_path / "profiles")
+    wizard.run_module_setup("wizard", "yoy_reports", "yoy_period", single_page=True)
     saved = json.loads((configs / "yoy_reports/settings.json").read_text(encoding="utf-8"))
     assert saved["input"] == DEFAULTS["yoy_reports/settings"]["input"]
-    assert len(selections) == len(saved["input"])
+    assert len(selections) == 3
 
 
 def test_cross_check_schema_rejects_empty_quantity_column():
-    from core.config_schemas import CrossCheckConfig
+    from core.config.config_schemas import CrossCheckConfig
 
     with pytest.raises(ValidationError, match="quantity column cannot be empty"):
         CrossCheckConfig.model_validate({"version": CONFIG_VERSION, "input": {"quantity_column": " "}})
 
 
 def test_price_article_tokenization_rejects_unknown_strategy():
-    from core.config_schemas import CrossCheckConfig, StockProcessingConfig
+    from core.config.config_schemas import CrossCheckConfig, StockProcessingConfig
 
     with pytest.raises(ValidationError):
         CrossCheckConfig.model_validate({"version": CONFIG_VERSION, "pricing": {"article_tokenization": "guess"}})
@@ -297,7 +240,7 @@ def test_price_article_tokenization_rejects_unknown_strategy():
     ({"version": CONFIG_VERSION - 1}, "requires migration"),
 ])
 def test_current_schema_header_validation_is_independent_of_migration(tmp_path, payload, message):
-    from core.profile_config import validate_config_header
+    from core.config.profile_config import validate_config_header
 
     path = tmp_path / "settings.json"
     original = json.dumps(payload)

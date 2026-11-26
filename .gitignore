@@ -23,3 +23,6 @@ profiles/*/last_paths.json
 .idea/
 dist/
 build/
+
+# Local configuration checkpoints
+profiles/*/.history/

@@ -5,10 +5,10 @@ The CLI is Inventory Toolkit's primary interface and the most complete surface f
 Entry point:
 
 ```bash
-python cli.py
+python -m cli
 ```
 
-Windows and Linux/macOS launchers ultimately call the same entry point.
+Windows and Linux/macOS launchers call `python -m inventory_toolkit`, which selects the default interface from `build.prop`. Use `python -m cli` or `python -m inventory_toolkit --interface cli` to request the console explicitly.
 
 ## Startup
 
@@ -49,7 +49,7 @@ Two intentionally undisplayed commands also exist:
 - cost list;
 - sales list;
 - output path;
-- consolidation/partial-count options.
+- partial-count option.
 
 It then calls the Cross Check engine. Article normalization/business reconciliation stays inside `engine/inventory_cross_check/`.
 
@@ -57,11 +57,23 @@ It then calls the Cross Check engine. Article normalization/business reconciliat
 
 `cli/stock_processing_launcher.py` collects raw stock, price lists, and output path, then calls `engine/stock_processing/`.
 
-Store mappings, family rules, cleaning rules, pricing mappings, and summary layout come from the active profile.
+Store mappings, family rules, cleaning rules, pricing mappings, and summary layout come from the active profile. Each run asks whether to include unit prices in addition to totals; Enter keeps totals only.
 
 ### YoY Reports
 
-`cli/yoy_reports_launcher.py` collects the historical sales workbook, date range, segmentation/options, and output path, then calls `engine/yoy_reports/`. Enabled unit/sales metrics, annual-comparison behavior, and the default size-breakdown choice come from the active profile; the CLI may override size breakdown for a single run.
+`cli/yoy_reports_launcher.py` collects the historical sales workbook, date range, segmentation/options, and output path, then calls `engine/yoy_reports/`. Enabled unit/sales metrics, annual-comparison behavior, and the default variant-breakdown choice come from the active profile; the CLI may override variant breakdown for a single run.
+
+## Unattended reports
+
+`run` creates a report without questions, in every build:
+
+```bash
+python -m inventory_toolkit run stock --profile NAME --stock a.xlsx --cost b.xlsx --sales c.xlsx --output report.xlsx
+python -m inventory_toolkit run yoy --profile NAME --start 2026-11-01 --end 2026-11-30 --no-has-families --sales-amounts
+python -m inventory_toolkit run cross --profile NAME --partial-count --json
+```
+
+Files and output default to the last ones used by the profile; use `run REPORT --help` for every option. The exit status is 0 when the report was created, 1 when it failed and 2 for an invalid command. `--json` prints the output path and warnings, or a stable error code. Nothing is asked: a missing column or a workbook open in another program is an error.
 
 ## Progress and final statistics
 
@@ -73,46 +85,25 @@ Final results appear in a separate `Stats:` block after completion and before re
 
 Remembered inputs take priority. For the `demo` profile without a remembered input, each launcher suggests the matching workbook under the application-owned `examples/demo/` directory. Press Enter to accept the suggestion. A stale remembered path is not silently replaced; select a new file if it no longer exists.
 
-YoY remembers its input and output alongside Stock and Cross Check. Accepting a demo/default path can also save it as the last-used path: this state records the selected file, not whether the operator typed it. User-supplied relative paths remain relative to the caller's working directory. Extensionless output names are normalized to `.xlsx`; legacy `.xls` remains input-only.
+YoY remembers its input and output alongside Stock and Cross Check. Accepting a demo/default path can also save it as the last-used path: this state records the selected file, not whether the operator typed it. User-supplied relative paths remain relative to the caller's working directory. Output names without `.xlsx` get it added, so `Stock 26.11.2026` saves as `Stock 26.11.2026.xlsx`; names ending in another format such as `.xls` or `.csv` are rejected, and legacy `.xls` remains input-only. In the classic Windows console, status emoji print as `[OK]`, `[X]` and `[!]`; set `ITK_SYMBOLS=emoji` or `ITK_SYMBOLS=plain` to choose.
 
 ## Configuration Hub
 
 Open `K` from the main menu.
 
-The hub is organized by domain instead of by JSON filename:
-
-1. Catalog & families
-2. Stores & network
-3. Stock Processing
-4. Cross Check
-5. YoY Reports
-
-Additional actions:
-
-- Guided Setup;
-- profile validation;
-<!-- BEGIN LEGACY_COMPATIBILITY -->
-- legacy migration/archive while compatibility support exists.
-<!-- END LEGACY_COMPATIBILITY -->
-
-The intent is that a normal user chooses **what concept to configure**, not **which internal JSON file to edit**.
+The menu lists only enabled workflows and offers **M** to change that selection. Select a module for guided setup, validation, search or a section editor. Human-readable labels and help text come from the shared setup catalog; the CLI does not maintain a second copy of configuration forms.
 
 ## Guided Setup
 
-The Guided Setup is module-oriented. It does not assume a single sample workbook describes every workflow.
+Each module owns its samples and column mappings. The assistant shows essential pages first, with additional settings available separately. Conditional pages follow wide/row-based stock and scanner/quantity-table choices. Stock and Cross Check can use source categories, prefix rules or one default category. YoY retains its own sales mappings and report groups.
 
-Each module can inspect the sample that actually belongs to it:
+During the assistant, **B** returns to the previous page and **Q** pauses between pages. Saved pages are retained. Optional text fields can be cleared explicitly with **-**. The final review shows friendly field names and choices. Finishing setup does not execute a report automatically.
 
-- Stock Processing: raw stock + price-list sample;
-- Cross Check: cost/sales-list samples;
-- YoY: historical sales sample;
-- catalog/families and network: independent configuration.
-
-The dashboard shows readiness and saves each section independently.
+Profile creation asks for a display name, optional description and workflows. It generates a portable folder ID and starts from neutral defaults. Module review state and structured recovery remain independent of the presentation frontend.
 
 ## Runtime debug levels
 
-Type `debug` in the main menu.
+In a debug build with the optional `debug_tools` package installed, type `debug` in the main menu. Release builds omit this capability.
 
 ### Level 1 — Operator
 
@@ -131,7 +122,7 @@ The level can be changed while Inventory Toolkit is running. Existing log handle
 Automation can still start directly in a specific level:
 
 ```bash
-python cli.py --debug-level 3
+python -m cli --debug-level 3
 ```
 
 The historical `-debug_level 3` spelling remains supported.
@@ -148,9 +139,6 @@ Current tools:
 4. Full release certification against golden masters
 5. Update golden-master references
 6. Show current session log tail
-<!-- BEGIN LEGACY_COMPATIBILITY -->
-7. Legacy compatibility lifecycle, while the retirement tool still exists
-<!-- END LEGACY_COMPATIBILITY -->
 
 Developer tools run in subprocesses anchored to the application root so their failures and return codes remain isolated from the menu loop. Normal runtime profile/config resolution is independently CWD-safe and does not depend on this subprocess working directory.
 
@@ -158,12 +146,6 @@ Developer tools run in subprocesses anchored to the application root so their fa
 
 The CLI asks for an explicit `UPDATE REFERENCES` confirmation before invoking reference regeneration. This should only be used after intentionally changing expected business/demo output and reviewing the result.
 
-<!-- BEGIN LEGACY_COMPATIBILITY -->
-### Retiring compatibility
-
-Compatibility retirement requires an explicit `RETIRE COMPATIBILITY` confirmation and delegates to `tools/RetireLegacyCompatibility.py`. The tool performs its own readiness checks and validation. If retirement succeeds, it removes its own script and menu blocks.
-
-<!-- END LEGACY_COMPATIBILITY -->
 
 ## Native file picker
 
@@ -177,7 +159,8 @@ CLI file selection may use Tkinter's native file dialog. Tkinter availability th
 
 | File | Responsibility |
 | --- | --- |
-| `cli.py` | top-level entry point |
+| `inventory_toolkit/__main__.py` | build-selected application entry point |
+| `cli/__main__.py` | explicit CLI entry point |
 | `cli/menu.py` | main menu, profile routing, runtime debug selector, easter egg |
 | `cli/profiles.py` | profile discovery/selection |
 | `cli/config_menu.py` | domain-oriented Configuration Hub |
@@ -197,3 +180,21 @@ New profile creation collects profile metadata and returns to the menu. Choosing
 Partial setup warns and offers an explicit continuation or completion choice. Missing mandatory settings carry a stable code and a specific setup destination; the console offers to configure that page. Returning from setup does not automatically retry a workflow. Existing profiles without setup metadata are not forced through the assistant. Enrolling one existing module preserves the other modules' legacy lifecycle.
 
 Missing file headers are a separate `INPUT_COLUMN_MISSING` error: the established default-column confirmation still applies. Unrelated file/output errors do not offer a configuration wizard.
+
+# Excel sample advice
+
+Guided module setup can inspect sample headers, identify absent configured columns, and display unique suggestions based on normalized names and resource-owned vocabulary. Suggestions are informational: enter the desired header or choose its numbered entry before saving that page. Ambiguous matches require a manual choice.
+
+# Profile overview
+
+Press **H** in the main menu to see whether each workflow is ready, how many setup pages have been reviewed, and the next page needing attention. Select a numbered workflow to open its module setup there. Existing profiles without review metadata show as ready after configuration validation; new profiles report their independent review progress. The overview describes configuration review, not whether a particular spreadsheet has matching columns.
+
+From this overview, enter **I1**, **I2** or **I3** to inspect remembered input files for Cross Check, Stock Processing or YoY. Demo defaults are used when no path has been remembered for the demo profile. YoY inspection asks which grouping, Family-column presence, revenue and variant choices to check. Each workbook inspection reads up to five rows and does not alter files or configuration.
+
+## Module settings workspace
+
+Configuration lists enabled workflows and a workflow-selection action. Inside a workflow, choose Guided setup for essential questions, Validate for typed configuration checks, or search by a setting label/help text. Selecting a section edits only that section; it does not force a complete wizard traversal. Columns can be selected by number from a real input sample; `-` clears optional fields. Sample headers are reused only for the same input role. Back and pause are available between pages, and previously saved pages remain available.
+
+## Profile checks and recovery
+
+Open **K → H** for configuration diagnostics and local checkpoints. **D** checks the profile, **C** saves a named checkpoint, and **R** selects a point by number. Restoring asks for `RESTORE` and first saves the current state. History affects configuration/review state, not input workbooks or remembered paths. See [profile_history.md](profile_history.md).

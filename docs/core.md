@@ -41,9 +41,6 @@ Responsibilities:
   - `get_cross_check_config()`;
   - `get_yoy_reports_config()`.
 
-<!-- BEGIN LEGACY_COMPATIBILITY -->
-Old short-name projections are compatibility-only and should not be used by new built-in code.
-<!-- END LEGACY_COMPATIBILITY -->
 
 ## `profile_config.py`
 
@@ -58,19 +55,6 @@ Defines:
 
 Configuration ownership is described in [profiles.md](profiles.md).
 
-<!-- BEGIN LEGACY_COMPATIBILITY -->
-## `compatibility.py`, `legacy_config.py`, `legacy_profile_migration.py`
-
-Temporary transition boundary for older Inventory Toolkit profiles/callers. Supported legacy names are converted explicitly before current-schema validation.
-
-- `compatibility.py` emits deduplicated deprecation diagnostics when debug level 2/3 is enabled.
-- `legacy_profile_migration.py` recognizes/migrates pre-v3 storage.
-- `legacy_config.py` isolates old serialized key projections.
-
-Built-in current modules should not depend on these contracts.
-
-See [legacy_compatibility.md](legacy_compatibility.md) before modifying or removing them.
-<!-- END LEGACY_COMPATIBILITY -->
 
 ## `resource_config.py` and `resources/`
 
@@ -139,9 +123,19 @@ Cross-platform/system helpers and safe workbook saving.
 
 ### Safe savers
 
-`safe_pandas_to_excel()` and `safe_openpyxl_save()` handle output files that are locked/open elsewhere.
+### Input files
+
+`core/files/table_reader.py` is the only module that opens input files; a test enforces it. Excel (`.xlsx`, `.xlsm`, `.xls`) and text (`.csv`, `.tsv`, `.txt`) become the same table. Text delimiters and encoding are detected; a semicolon implies a decimal comma. Identity columns keep leading zeroes. Other sheets repeating the first one's headers are reported, or joined when the caller asks. `parse_dates()` decides day/month order from the values and refuses ambiguous dates.
+
+### Saving
+
+`safe_pandas_to_excel()`, `safe_openpyxl_save()` and `safe_bytes_save()` handle output files that are locked/open elsewhere. The caller may pass `on_locked(path)`, which answers whether to save a copy or try again; without it a locked file raises `OutputFileLockedError`. Core and engines never print or read a terminal.
 
 - Interactive CLI callers can retry or save a numbered copy.
 - Non-interactive callers receive `OutputFileLockedError` and decide how to present recovery in their own interface.
 
 Infrastructure must not assume a terminal exists merely because the CLI was the first frontend.
+
+## Profile persistence guarantees
+
+`core.config.json_documents` rejects duplicate keys and non-finite values instead of accepting silent data loss. Writes serialize every document first, stage sibling temporary files, flush them and atomically replace targets. If a replacement fails, previous files are restored before the error is reported. Setup configuration and review metadata use the same operation. This protects normal single-process editing; it is not a multi-process database, and two applications must not edit the same profile simultaneously. The modular schema remains version 3 with additive typed fields; readers preserve earlier serialized variant keys until that document is explicitly saved.

@@ -149,8 +149,16 @@ During development, `--cross-system PATH` can point release/demo execution at an
 
 See [`../tests/release_reference/README.md`](../tests/release_reference/README.md) for the local golden-master contract.
 
-<!-- BEGIN LEGACY_COMPATIBILITY -->
-## Compatibility verification
+## Small-business setup scenarios
 
-While compatibility exists, tests cover profile migration and deprecated API behavior. The quick release gate also runs the read-only retirement audit. See [legacy_compatibility.md](legacy_compatibility.md).
-<!-- END LEGACY_COMPATIBILITY -->
+See [the synthetic business scenarios](../examples/businesses/README.md) for module-independent mappings, fractional quantities, optional variants and a reproducible setup-service/engine option matrix. Run `python -m pytest -q tests/test_business_scenarios.py`; profiles and workbooks are created only in temporary test directories.
+
+The golden comparator first compares canonical workbook XML. When libraries serialize equivalent styles differently, its object-model fallback hashes cells incrementally and caches effective style signatures. This reduces memory consumption without accepting changed values, formulas or applied styles.
+
+## Real desktop widgets
+
+With a desktop display available, run `python -m pytest -q tests/test_gui_desktop.py`. The checks launch each available backend in a separate process, use temporary profiles, resize to 900×680, apply 130% scaling and exercise configuration/setup/profile navigation. Headless runs skip these checks explicitly. Linux virtual-display coverage does not certify native Windows/macOS rendering.
+
+Before XML normalization, the comparator streams hashes of the same semantic XLSX parts. Byte-identical report parts therefore pass without allocating canonical XML trees; ZIP timestamps and non-semantic document properties remain excluded. Serializer differences still follow the stricter canonical/model paths.
+
+Maintenance coverage exercises read-only diagnostics, byte-exact restore, checksum/schema rejection, missing metadata/documents, rollback of deletions, bounded retention and exclusion of local checkpoints from source distributions. Isolated release-tree tests run headless profile checks without the excluded interface or developer tools.

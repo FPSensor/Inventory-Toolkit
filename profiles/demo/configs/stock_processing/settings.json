@@ -40,7 +40,11 @@
         "aliases": {
             "Origen - Base de datos": "Base"
         },
-        "article_tokenization": "first_token"
+        "article_tokenization": "first_token",
+        "variant_columns": {
+            "Color": "Color",
+            "Talle": "Talle"
+        }
     },
     "output": {
         "raw_data_sheet": "Datos",

@@ -12,15 +12,18 @@
     "price_lists": {
         "cost": {
             "article_column": "Artículo",
-            "price_column": "Precio"
+            "price_column": "Precio",
+            "store_column": "Origen - Base de datos"
         },
         "sales": {
             "article_column": "Artículo",
-            "price_column": "Precio"
+            "price_column": "Precio",
+            "store_column": "Origen - Base de datos"
         }
     },
     "input": {
-        "quantity_column": "Cantidad"
+        "quantity_column": "Cantidad",
+        "store_column": "Base"
     },
     "reconciliation": {
         "ignore_negative_system_stock_when_counted": true

@@ -1,0 +1,10 @@
+from core.runtime.build import BUILD
+BUILD.require("cli")
+
+from cli.menu import main
+
+if __name__ == "__main__":
+    from core.runtime.console import utf8_output
+
+    utf8_output()
+    main()

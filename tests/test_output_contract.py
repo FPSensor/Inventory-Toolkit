@@ -3,7 +3,7 @@ from argparse import Namespace
 import pandas as pd
 import pytest
 
-from core.system_utils import InvalidExcelOutputPathError
+from core.files.system_utils import InvalidExcelOutputPathError
 from engine.inventory_cross_check.generator import run_cross_check
 from engine.stock_processing.generator import run_stock_processing
 from engine.yoy_reports.generator import generate_sales_report
@@ -18,7 +18,6 @@ def test_stock_rejects_xls_output_before_input_validation():
                 shared_sales="missing-sales.xlsx",
                 stock_processing_out="result.xls",
                 stock_processing_profile="demo",
-                non_interactive=True,
             )
         )
 
@@ -33,9 +32,7 @@ def test_cross_rejects_xls_output_before_input_validation():
                 shared_sales="missing-sales.xlsx",
                 cross_check_out="result.xls",
                 cross_check_profile="demo",
-                cross_check_consolidate=False,
                 cross_check_partial=False,
-                non_interactive=True,
             )
         )
 
@@ -57,13 +54,13 @@ def test_yoy_rejects_xls_output_before_reading_sales_data(monkeypatch):
             "grouping_column": "Familias",
             "item_column": "Articulo",
             "branch_column": "Base",
-            "size_column": "Talle",
+            "variant_column": "Talle",
         },
         "output": {
             "default_path": "report.xlsx",
             "metrics": ["units"],
             "annual_comparison": True,
-            "include_sizes": False,
+            "include_variants": False,
         },
         "groups": {"All": ["STORE"]},
     }
@@ -79,5 +76,4 @@ def test_yoy_rejects_xls_output_before_reading_sales_data(monkeypatch):
             False,
             True,
             "demo",
-            non_interactive=True,
         )

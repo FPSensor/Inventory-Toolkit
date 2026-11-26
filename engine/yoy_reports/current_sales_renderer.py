@@ -15,9 +15,9 @@ def render_current_sales_block(
     grouping_column,
     branch_column,
     value_column,
-    size_column,
+    variant_column,
     all_branches,
-    include_sizes=False,
+    include_variants=False,
     *,
     start_row=1,
     metric_label="Sales",
@@ -43,7 +43,7 @@ def render_current_sales_block(
     apply_style(title_cell, is_header=True)
 
     header_row = start_row + 1
-    size_filter = (str(size_column).replace("~", "~~").replace("*", "~*")
+    variant_filter = (str(variant_column).replace("~", "~~").replace("*", "~*")
                    .replace("?", "~?").replace('"', '""'))
     main_headers = [grouping_column] + all_branches + ["Totals"]
     for column_index, header in enumerate(main_headers, 1):
@@ -55,17 +55,17 @@ def render_current_sales_block(
     current_row = start_row + 2
     main_start_row = current_row
 
-    if include_sizes and size_column in current_frame.columns:
+    if include_variants and variant_column in current_frame.columns:
         worksheet.sheet_properties.outlinePr.summaryBelow = False
         clean_current_frame = current_frame.copy()
-        clean_current_frame[size_column] = (
-            clean_current_frame[size_column].fillna("-").astype(str)
+        clean_current_frame[variant_column] = (
+            clean_current_frame[variant_column].fillna("-").astype(str)
         )
 
         pivot = pd.pivot_table(
             clean_current_frame,
             values=value_column,
-            index=[grouping_column, size_column],
+            index=[grouping_column, variant_column],
             columns=branch_column,
             aggfunc="sum",
             fill_value=0,
@@ -86,12 +86,12 @@ def render_current_sales_block(
             worksheet.cell(row=current_row, column=1).font = Font(bold=True)
             current_row += 1
 
-            for size_value, row in family_data.iterrows():
+            for variant_value, row in family_data.iterrows():
                 apply_style(
                     worksheet.cell(
                         row=current_row,
                         column=1,
-                        value=f"  {size_column}: {size_value}",
+                        value=f"  {variant_column}: {variant_value}",
                     ),
                     indent=1,
                 )
@@ -198,9 +198,9 @@ def render_current_sales_block(
     )
     for index in range(len(all_branches) + 1):
         column_letter = get_column_letter(2 + index)
-        if include_sizes and size_column in current_frame.columns:
+        if include_variants and variant_column in current_frame.columns:
             formula = (
-                f'=SUMIF($A${main_start_row}:$A${main_end_row}, "<>  {size_filter}*", '
+                f'=SUMIF($A${main_start_row}:$A${main_end_row}, "<>  {variant_filter}*", '
                 f'${column_letter}${main_start_row}:${column_letter}${main_end_row})'
             )
         else:

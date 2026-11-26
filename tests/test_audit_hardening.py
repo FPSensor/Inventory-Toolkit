@@ -3,15 +3,15 @@ import json
 import pandas as pd
 import pytest
 
-from cli.utils import load_json, save_json
-from core.configuration_errors import ConfigurationFileError
-from core.input_columns import choose_input_columns
-from core.profile_config import DEFAULTS
+from core.profiles.profile_store import load_json, save_json
+from core.config.configuration_errors import ConfigurationFileError
+from core.files.input_columns import choose_input_columns
+from core.config.profile_config import DEFAULTS
 from engine.stock_processing.data_processor import remove_unidentified_stock, validate_stock_network
 from engine.stock_processing.contracts import StockProcessingPlan
 from engine.stock_processing.pricing import process_pricing
-from core.configuration_manager import ConfigurationManager
-from core import paths as app_paths
+from core.config.configuration_manager import ConfigurationManager
+from core.runtime import paths as app_paths
 from tools.BuildDistribution import distribution_files, ROOT
 
 
@@ -80,7 +80,7 @@ def test_distribution_allowlist_keeps_release_inputs_without_personal_workbooks(
     names = {path.relative_to(ROOT).as_posix() for path in distribution_files()}
     assert "examples/demo/cross_check_system_stock.xls" in names
     assert "tests/release_reference/workbooks/stock_processing.xlsx" in names
-    assert "core/input_columns.py" in names
+    assert "core/files/input_columns.py" in names
     assert "core/resources/profile_defaults.json" in names
     assert "core/resources/workbook_labels.json" in names
     assert "core/resources/column_hints.json" in names

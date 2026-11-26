@@ -1,13 +1,13 @@
 """Workbook vocabulary loaded from data, never used as catalog classification rules."""
 
-from core.resource_config import load_resource
+from core.config.resource_config import load_resource
 
 _LABELS = load_resource("workbook_labels.json")
 
 ARTICLE_COLUMN = _LABELS["ARTICLE_COLUMN"]
 FAMILY_COLUMN = _LABELS["FAMILY_COLUMN"]
 QUANTITY_COLUMN = _LABELS["QUANTITY_COLUMN"]
-SIZE_COLUMN = _LABELS["SIZE_COLUMN"]
+VARIANT_COLUMN = _LABELS["VARIANT_COLUMN"]
 PRICE_COLUMN = _LABELS["PRICE_COLUMN"]
 COST_COLUMN = _LABELS["COST_COLUMN"]
 SALES_VALUE_LABEL = _LABELS["SALES_VALUE_LABEL"]

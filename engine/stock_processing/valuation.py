@@ -11,7 +11,8 @@ from core.business_schema import (
     UNIT_COST_PREFIX,
     UNIT_SALES_PREFIX,
 )
-from engine.stock_processing.contracts import INTERNAL_ARTICLE_COLUMN, StockProcessingPlan
+from engine.stock_processing.pricing import VARIANT_KEY_PREFIX
+from engine.stock_processing.contracts import INTERNAL_ARTICLE_COLUMN, INTERNAL_FAMILY_COLUMN, StockProcessingPlan
 
 
 def _merge_price_table(
@@ -19,27 +20,46 @@ def _merge_price_table(
     price_frame: pd.DataFrame | None,
     *,
     prefix: str,
-) -> pd.DataFrame:
+) -> tuple[pd.DataFrame, np.ndarray]:
+    """Attach one list's unit prices; mark the variant rows priced by product."""
+    none = np.zeros(len(stock_frame), dtype=bool)
     if price_frame is None:
-        return stock_frame
+        return stock_frame, none
 
-    renames = {
-        column: f"{prefix}{column}"
-        for column in price_frame.columns
-        if column != INTERNAL_ARTICLE_COLUMN
-    }
-    prepared = price_frame.rename(columns=renames)
-    return pd.merge(stock_frame, prepared, on=INTERNAL_ARTICLE_COLUMN, how="left")
+    keys = [column for column in price_frame.columns if column.startswith(VARIANT_KEY_PREFIX)]
+    stores = [column for column in price_frame.columns if column != INTERNAL_ARTICLE_COLUMN and column not in keys]
+    renames = {store: f"{prefix}{store}" for store in stores}
+    if not keys:
+        prepared = price_frame.rename(columns=renames)
+        return pd.merge(stock_frame, prepared, on=INTERNAL_ARTICLE_COLUMN, how="left"), none
+
+    # A variant's own price wins. Otherwise the product price applies: the rows
+    # without variant, or the average of its variants when there are none.
+    is_variant = price_frame[keys].ne("").any(axis=1)
+    variants = price_frame[is_variant].rename(columns=renames)
+    whole = price_frame[~is_variant].groupby(INTERNAL_ARTICLE_COLUMN)[stores].mean()
+    fallback = whole.combine_first(price_frame.groupby(INTERNAL_ARTICLE_COLUMN)[stores].mean())
+    result = pd.merge(stock_frame, variants, on=[INTERNAL_ARTICLE_COLUMN, *keys], how="left")
+    product = fallback.rename(columns=renames).reindex(result[INTERNAL_ARTICLE_COLUMN]).set_axis(result.index)
+    columns = list(renames.values())
+    by_product = result[keys].ne("").any(axis=1) & result[columns].isna().all(axis=1) & product.notna().any(axis=1)
+    result[columns] = result[columns].fillna(product)
+    return result, by_product.to_numpy()
 
 
 def attach_unit_prices(
     stock_frame: pd.DataFrame,
     cost_frame: pd.DataFrame | None,
     sales_frame: pd.DataFrame | None,
-) -> tuple[pd.DataFrame, list[str]]:
-    """Attach cost/sales unit prices and normalize missing values."""
-    result = _merge_price_table(stock_frame, cost_frame, prefix=UNIT_COST_PREFIX)
-    result = _merge_price_table(result, sales_frame, prefix=UNIT_SALES_PREFIX)
+    stocked: pd.Series | None = None,
+) -> tuple[pd.DataFrame, list[str], list[str]]:
+    """Attach cost/sales unit prices and normalize missing values.
+
+    ``stocked`` marks the rows with stock, the only ones worth a warning.
+    """
+    stocked = np.ones(len(stock_frame), dtype=bool) if stocked is None else stocked.to_numpy()
+    result, cost_fallbacks = _merge_price_table(stock_frame, cost_frame, prefix=UNIT_COST_PREFIX)
+    result, sales_fallbacks = _merge_price_table(result, sales_frame, prefix=UNIT_SALES_PREFIX)
 
     unit_price_columns = [
         column
@@ -48,7 +68,67 @@ def attach_unit_prices(
     ]
     if unit_price_columns:
         result[unit_price_columns] = result[unit_price_columns].fillna(-1).astype(float)
-    return result, unit_price_columns
+    notes = [
+        f"{count} stock rows have no {label} price for their variant; the product price is used."
+        for count, label in (
+            (int((cost_fallbacks & stocked).sum()), "cost"), (int((sales_fallbacks & stocked).sum()), "sales"))
+        if count
+    ]
+    return result, unit_price_columns, notes
+
+
+def missing_price_warnings(stock_frame: pd.DataFrame, plan: StockProcessingPlan) -> list[str]:
+    """Name the stocked products that a store values at 0 for lack of a price.
+
+    Missing costs are left out when the profile saves them in their own list.
+    """
+    messages = []
+    sides = ((UNIT_COST_PREFIX, "cost"), (UNIT_SALES_PREFIX, "sales"))
+    for prefix, label in sides[bool(plan.missing_cost_file):]:
+        # Hidden families stay out of the report, so their prices do not matter.
+        reported = ~stock_frame[INTERNAL_FAMILY_COLUMN].isin(plan.hidden_families)
+        unpriced = pd.Series(False, index=stock_frame.index)
+        units = 0.0
+        for store in plan.active_stores:
+            if store in plan.regional_groups or store not in stock_frame.columns:
+                continue
+            price_column = f"{prefix}{store}"
+            prices = stock_frame[price_column] if price_column in stock_frame.columns else -1
+            missing = reported & stock_frame[store].ne(0) & (prices <= 0)
+            # Negative stock is still stock to value: -1 here and +1 there are 2 units.
+            units += float(stock_frame.loc[missing, store].abs().sum())
+            unpriced |= missing
+        products = stock_frame.loc[unpriced, INTERNAL_ARTICLE_COLUMN].drop_duplicates()
+        if len(products):
+            preview = ", ".join(map(str, products.head(10))) + ("..." if len(products) > 10 else "")
+            messages.append(
+                f"{len(products)} products with stock have no {label} price in at least one store, "
+                f"so {units:,.6g} units are valued at 0: {preview}.")
+    return messages
+
+
+def stock_without_cost(valued: pd.DataFrame, plan: StockProcessingPlan) -> pd.DataFrame:
+    """Rows with stock in a location that has no cost for them, for the people who load prices.
+
+    Each location shows its units and their sales value only where its cost is
+    missing; those units count as cost 0 and raise the margin.
+    """
+    stores = [store for store in plan.active_stores if store not in plan.regional_groups and store in valued.columns]
+    reported = ~valued[INTERNAL_FAMILY_COLUMN].isin(plan.hidden_families)
+    missing = {
+        store: reported & valued[store].ne(0) & (valued.get(f"{UNIT_COST_PREFIX}{store}", -1) <= 0)
+        for store in stores
+    }
+    rows = pd.concat(missing, axis=1).any(axis=1) if missing else pd.Series(False, index=valued.index)
+    base = [plan.internal_base_column(column) for column in plan.base_columns]
+    columns = [column for column in dict.fromkeys(base) if column in valued.columns]
+    result = valued.loc[rows, columns].copy()
+    for store, flagged in missing.items():
+        if flagged[rows].any():
+            result[store] = valued.loc[rows, store].where(flagged[rows])
+            result[f"{store}.{SALES_VALUE_LABEL}"] = valued.loc[rows, f"{store}.{SALES_VALUE_LABEL}"].where(flagged[rows])
+    order = [column for column in (INTERNAL_FAMILY_COLUMN, INTERNAL_ARTICLE_COLUMN) if column in result.columns]
+    return plan.expose_catalog_columns(result.sort_values(order) if order else result)
 
 
 def calculate_inventory_values(
@@ -92,7 +172,3 @@ def calculate_inventory_values(
         )
 
     return result
-
-
-def remove_unit_prices(stock_frame: pd.DataFrame, unit_price_columns: list[str]) -> pd.DataFrame:
-    return stock_frame.drop(columns=unit_price_columns, errors="ignore")

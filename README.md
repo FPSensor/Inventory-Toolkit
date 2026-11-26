@@ -3,19 +3,19 @@
 ![Python](https://img.shields.io/badge/Python-3.10%2B-blue)
 ![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux%20%7C%20macOS-blue)
 ![License](https://img.shields.io/badge/License-MIT-green)
-![Version](https://img.shields.io/badge/Version-1.4.1-orange)
+![Version](https://img.shields.io/badge/Version-2.0.0-orange)
 
 Inventory Toolkit is a profile-driven Python application for retail inventory reconciliation, stock valuation, and Year-over-Year sales reporting from Excel workbooks.
 
 It was built around real operational constraints: legacy `.xls` exports, inconsistent scanner output, variable-length article codes, multiple stores and regional groups, price lists from different sources, Excel files left open by users, and business rules that must change without forking the processing engine.
 
-The project currently exposes a mature CLI, an Alpha Pre-Beta desktop GUI, a typed configuration system, forensic logging, and a reproducible pre-release gate backed by golden-master workbooks.
+The project exposes independent CLI and dark desktop interfaces, guided setup per workflow, typed JSON configuration, optional developer tools and a release gate backed by golden-master workbooks. The desktop is an RC preview under active testing; native Windows/macOS review remains pending.
 
-> **Current release line:** `1.4.x`
+> **Current release line:** `2.0.x`
 > **Primary interface:** CLI
-> **GUI status:** Alpha Pre-Beta / active testing
+> **GUI status:** RC preview / reviewed on Windows, macOS review pending
 > **Configuration schema:** v3
-> **Development state:** post-1.4.1 changes are recorded under `Unreleased` in [CHANGELOG.md](CHANGELOG.md); the release badge identifies the published version.
+> **Development state:** post-2.0.0 changes are recorded under `Unreleased` in [CHANGELOG.md](CHANGELOG.md); the release badge identifies the published version.
 
 ---
 
@@ -27,9 +27,9 @@ Inventory Toolkit contains three production-oriented workflows:
 | --- | --- | --- | --- |
 | **Inventory Cross Check** | Reconcile physical scanner counts against system stock and value the differences | system stock, physical count, cost list, sales list | discrepancy workbook |
 | **Stock Processing** | Clean and consolidate multi-store stock, assign families, attach cost/sales prices, value inventory, and create summaries | raw stock, cost list, sales list | detail + summary workbook |
-| **YoY Sales Reports** | Compare current and previous periods by family/store/group, with optional monthly segmentation and size breakdown | historical sales workbook | multi-sheet comparative report |
+| **YoY Sales Reports** | Compare current and previous periods by family/store/group, with optional monthly segmentation and variant breakdown | historical sales workbook | multi-sheet comparative report |
 
-The same engines can be used from the CLI, the Alpha Pre-Beta GUI, or directly from Python.
+The same engines can be used from the CLI, the RC preview GUI, or directly from Python.
 
 ---
 
@@ -39,7 +39,9 @@ The same engines can be used from the CLI, the Alpha Pre-Beta GUI, or directly f
 
 Profiles under `profiles/<name>/configs/` own store mappings, family prefixes, column mappings, exclusions, report groups, pricing fields, and output layout. The built-in engines consume typed configuration instead of hard-coding one company or dataset.
 
-## Ambiguous scanner data is preserved, not guessed
+## Explicit product matching
+
+New profiles use exact product matching. Cross Check can also select longest-known-prefix matching when scanner suffixes are part of the input contract. The following describes that opt-in mode and existing demo behavior.
 
 `normalize_article()` does **not** assume fixed article-code length. It uses the system-stock article master as the source of truth, accepts exact matches, otherwise selects the **longest valid article prefix**, and preserves unresolved input as `REVISAR | <original value>` for human review.
 
@@ -48,7 +50,7 @@ Example:
 ```text
 scanner value:      11111-261XXLH1
 known article:      11111-261
-size/color suffix:  XXL / H1
+variant/color suffix:  XXL / H1
 normalized result:  11111-261
 ```
 
@@ -62,13 +64,18 @@ Implementation identifiers are English. External workbook labels such as `Artíc
 
 The strict pre-release gate executes all three demo workflows and compares their generated workbooks against committed golden masters in `tests/release_reference/`. Comparison is semantic, not a raw `.xlsx` ZIP hash.
 
+GitHub Actions runs this gate on every push to any branch and on every pull request, on Linux with Python 3.10 and 3.12 and on Windows with Python 3.12 (`.github/workflows/tests.yml`). On Linux the desktop tests run under a virtual display.
+
 ---
 
 # Features
 
 - Three independent Excel-processing engines: Cross Check, Stock Processing, and YoY Reports.
 - Profile-based configuration with schema-v3 validation through Pydantic.
-- Module-oriented Guided Setup with per-workflow sample-file detection.
+- Progressive setup with friendly labels, per-workflow sample mapping, conditional pages and a final review.
+- Select only the workflows a profile needs; configure each input independently.
+- Optional variants, source categories, fractional quantities, row-based stock and measured physical counts.
+- One `build.prop` for version, interfaces and debug/release capabilities.
 - Interactive Configuration Hub for catalog/families, network, Stock Processing, Cross Check, and YoY settings.
 - Shared longest-prefix family classifier backed by a trie implementation.
 - Variable-length article normalization against the system master.
@@ -77,13 +84,11 @@ The strict pre-release gate executes all three demo workflows and compares their
 - Profile-controlled Cross Check quantity/reconciliation settings and price-list article tokenization.
 - Native file picker support from the CLI.
 - Safe Excel saving with retry/copy behavior in interactive CLI mode and non-blocking errors for GUI callers.
+- YoY reports show units by default; sales amounts (revenue) can be added for one run without changing the profile. Revenue compares summed line amounts, not average unit prices.
 - Runtime-selectable debug levels and a hidden level-3 Developer Console.
 - Forensic session logging to `logs/session.log`.
 - Pytest, IntegrityCheck, stress/diagnostic tooling, demo smoke tests, and semantic golden-master certification.
-<!-- BEGIN LEGACY_COMPATIBILITY -->
-- Guarded legacy-configuration migration and a one-shot compatibility-retirement tool, also accessible from the level-3 Developer Console. Compatibility remains active until deliberately retired.
-<!-- END LEGACY_COMPATIBILITY -->
-- Alpha Pre-Beta Tkinter/CustomTkinter desktop GUI.
+- RC preview Tkinter/CustomTkinter desktop GUI.
 - Windows launcher/setup helpers plus Linux/macOS shell launcher.
 
 ---
@@ -94,7 +99,7 @@ The strict pre-release gate executes all three demo workflows and compares their
 
 1. Clone or extract the repository.
 2. Run `Setup Environment.bat` once.
-3. Run `Inventory Toolkit.bat` for normal CLI use.
+3. Run `Inventory Toolkit.bat`; `build.prop` selects its default interface.
 
 `Setup Environment.bat` installs Python 3.11.9 when `python` is not available, upgrades `pip`, and installs `requirements.txt`.
 
@@ -109,7 +114,7 @@ Activate the virtual environment, then:
 ```bash
 python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
-python cli.py
+python -m cli
 ```
 
 Linux/macOS users can also run:
@@ -118,7 +123,7 @@ Linux/macOS users can also run:
 ./Inventory\ Toolkit.sh
 ```
 
-The CLI targets Python 3.10+. The current Windows bootstrap installs Python 3.11.9.
+The CLI targets Python 3.10+; continuous integration certifies 3.10 and 3.12. The current Windows bootstrap installs Python 3.11.9. File prompts accept paths pasted between quotes, as Windows "Copy as path" produces them.
 
 For platform-specific notes, GUI requirements, and troubleshooting, see [docs/installation.md](docs/installation.md).
 
@@ -174,8 +179,8 @@ Available levels:
 The historical startup forms remain available for automation:
 
 ```bash
-python cli.py -debug_level 3
-python cli.py --debug-level 3
+python -m cli -debug_level 3
+python -m cli --debug-level 3
 ```
 
 At level 3, the Developer Console can run pytest, quick verification, demo smoke workflows, full golden-master certification, reference regeneration, session-log inspection.
@@ -184,7 +189,7 @@ See [docs/cli.md](docs/cli.md).
 
 ---
 
-# Alpha Pre-Beta Desktop GUI
+# RC preview Desktop GUI
 
 Launch from the repository root:
 
@@ -202,7 +207,7 @@ The GUI currently covers:
 - one-at-a-time workflow execution with guarded profile/input actions;
 - retained progress/statistics and a last-successful-output panel with report/folder actions.
 
-It uses CustomTkinter when installed and falls back to Tkinter/ttk. The GUI is **Alpha Pre-Beta**, with a dark workspace, graphical per-module setup and inline workflow feedback. Developer/release tooling remains in the CLI. Engine code must therefore remain headless and must not assume that terminal input is available.
+It uses CustomTkinter when installed and falls back to Tkinter/ttk. The GUI is **RC preview**, with a dark workspace, graphical per-module setup and inline workflow feedback. Developer/release tooling remains in the CLI. Engine code must therefore remain headless and must not assume that terminal input is available.
 
 See [docs/gui.md](docs/gui.md).
 
@@ -306,11 +311,17 @@ See [docs/core.md](docs/core.md).
 
 ---
 
+# Profile checks and recovery
+
+The [operation and maintenance guide](docs/maintenance.md) covers independent troubleshooting, configuration recovery and a practical source reading order.
+
+Use `python -m inventory_toolkit doctor --profile demo` to explain configuration contradictions without editing files. Setup keeps the last ten local configuration checkpoints; list them with `python -m inventory_toolkit history list --profile demo`. See [diagnostics](docs/diagnostics.md) and [configuration recovery](docs/profile_history.md).
+
 # Project Structure
 
 ```text
 Inventory-Toolkit/
-├── cli.py                         # CLI entry point
+├── inventory_toolkit/             # build-selected application launcher
 ├── cli/                           # interactive presentation layer
 │   ├── menu.py
 │   ├── debug_menu.py
@@ -325,22 +336,19 @@ Inventory-Toolkit/
 │   ├── profile_config.py
 │   ├── resource_config.py
 │   ├── progress.py
-│   ├── resources/                 # defaults, labels, hints and legacy contracts
+│   ├── resources/                 # defaults, labels and mapping hints
 │   ├── paths.py
 │   ├── logger.py
 │   ├── telemetry.py
 │   ├── data_sanitizer.py
 │   ├── system_utils.py
-<!-- BEGIN LEGACY_COMPATIBILITY -->
-│   └── legacy_*                  # temporary compatibility boundary
-<!-- END LEGACY_COMPATIBILITY -->
 ├── engine/                        # business processing
 │   ├── inventory_cross_check/
 │   ├── stock_processing/
 │   ├── yoy_reports/
 │   └── shared/
 ├── gui/
-│   └── app.py                     # Alpha Pre-Beta desktop shell
+│   └── app.py                     # RC preview desktop shell
 ├── profiles/
 │   └── demo/
 ├── examples/
@@ -353,9 +361,6 @@ Inventory-Toolkit/
 │   ├── StressTests.py
 │   ├── ReleaseCheck.py
 │   ├── release_reference.py
-<!-- BEGIN LEGACY_COMPATIBILITY -->
-│   └── RetireLegacyCompatibility.py
-<!-- END LEGACY_COMPATIBILITY -->
 ├── docs/
 ├── requirements.txt
 ├── pytest.ini
@@ -379,15 +384,12 @@ Start at **[docs/index.md](docs/index.md)**.
 | [Installation](docs/installation.md) | dependencies, launchers, platform notes |
 | [Architecture](docs/architecture.md) | layers, boundaries, design invariants |
 | [CLI](docs/cli.md) | menus, launchers, debug levels, Developer Console |
-| [GUI](docs/gui.md) | Alpha Pre-Beta GUI scope and limitations |
+| [GUI](docs/gui.md) | RC preview GUI scope and limitations |
 | [Core](docs/core.md) | configuration, logging, sanitization, safe savers |
 | [Engine](docs/engine.md) | all three processing pipelines and shared rules |
 | [Profiles](docs/profiles.md) | schema-v3 configuration and Guided Setup |
 | [Testing & Examples](docs/testing_and_examples.md) | pytest, demo fixture, golden masters |
 | [Release Process](docs/release_process.md) | repeatable pre-release procedure |
-<!-- BEGIN LEGACY_COMPATIBILITY -->
-| [Legacy Compatibility](docs/legacy_compatibility.md) | migration warnings and retirement lifecycle |
-<!-- END LEGACY_COMPATIBILITY -->
 | [Troubleshooting](docs/troubleshooting.md) | common installation/runtime/test failures |
 | [Developer Notes](docs/dev_notes.md) | extension rules and engineering conventions |
 
@@ -414,59 +416,24 @@ The roadmap is directional rather than a release-date promise. Business correctn
 
 ## Released baseline and current development
 
-`v1.4.1` is the released stabilization baseline. Subsequent changes are listed under `Unreleased` in [CHANGELOG.md](CHANGELOG.md), including progress/statistics, demo-path suggestions, external JSON resources and retirement-tool improvements.
+`v2.0.0` is the current release. Over `v1.4.1` it adds shared workflows for CLI, GUI and unattended `run`, a dark RC-preview desktop, embedded setup/configuration, neutral module-selected profiles, independent mappings, variants, measured quantities, optional developer packages, continuous integration, and accuracy fixes that change report numbers (see [CHANGELOG.md](CHANGELOG.md)). The pre-v3 compatibility layer has been retired; schema-v3 validation remains strict. Later changes are listed under `Unreleased`.
 
-Next work should build on those features: validate the summaries with operational data, improve GUI usability and configuration parity, and expand targeted coverage when behavior changes.
+`build.prop` is the runtime source for version and capabilities. For a source archive, use the existing `python tools/BuildDistribution.py dist/Inventory-Toolkit.zip`. It excludes local workbooks, logs, caches, Git internals and non-demo profiles; release builds also omit developer tooling and tests. This is preparation for future bundles, not a new binary packaging system.
 
-For a source archive containing only application files, demo inputs, and
-release references, run `python tools/BuildDistribution.py dist/Inventory-Toolkit.zip`.
-The builder excludes local workbooks, logs, caches, Git internals, and
-non-demo profiles. Run `python tools/ReleaseCheck.py --release` before sharing
-the archive.
+## Desktop stabilization
 
-## v1.5.0 — GUI beta and interface parity
+Completed foundations include both real-widget backends, embedded section editors, searchable settings, draft protection and focused activity/statistics panels. Remaining release work is native macOS review (Windows has been reviewed), user feedback on real workbook mapping, keyboard/accessibility review and a supported optional-GUI dependency story. RC preview describes the interface milestone; it does not replace release certification or platform validation.
 
-Target: make the desktop GUI a credible beta from the Alpha Pre-Beta foundation.
+## Next — 2.0.x and 2.1
 
-- Bring profile setup and configuration workflows closer to CLI parity.
-- Finish GUI-safe error/retry handling so no engine path assumes terminal input.
-- Add automated smoke coverage for the GUI's critical paths.
-- Refine the existing progress/activity/statistics presentation through real workflow testing.
-- Define the supported CustomTkinter/Tkinter experience and installation story.
+Directions, not promises:
 
-## v1.6.0 — Distribution readiness
-
-Target: reduce deployment complexity.
-
-<!-- BEGIN LEGACY_COMPATIBILITY -->
-- Retire the legacy configuration compatibility layer **only if** the retirement audit remains clean for active profiles and external consumers.
-<!-- END LEGACY_COMPATIBILITY -->
-- Move toward standard Python packaging (`pyproject.toml`, stable entry points, reproducible release artifacts).
-- Produce a clean portable release bundle with explicit version metadata.
-- Document supported Python/platform combinations from tested release environments rather than assumptions.
-
-## v1.7.0 — Profile portability and diagnostics
-
-Target: make profiles easier to move, inspect, validate, and maintain across installations.
-
-- Document migration by copying profile folders and reviewing machine-specific remembered paths; an import/export tool is not required for the current folder layout.
-- Improve configuration diff/diagnostic output for schema and mapping changes.
-- Consider profile-specific validation fixtures where one global demo no longer covers important deployments.
-- Keep migration/version behavior explicit and testable as schema evolution continues.
-
-## v2.0.0 — Stable application boundary
-
-A 2.0 release should be earned, not used as a cosmetic version bump. Candidate criteria:
-
-- stable, documented CLI and GUI responsibilities;
-- no temporary legacy compatibility layer;
-- standard installation/distribution path;
-- mature profile lifecycle;
-- release certification covering all supported business workflows;
-- documented internal API boundaries so future frontends do not require engine rewrites.
+- Native macOS review of the desktop, then drop its RC-preview label.
+- Standard Python packaging (`pyproject.toml`, entry points) and a portable Windows bundle that does not need a separate Python installation.
+- Clearer configuration diff/diagnostic output for schema and mapping changes.
+- Profile-specific validation fixtures where the global demo does not cover a deployment.
+- Keyboard and accessibility review of the desktop.
 
 # License
 
 Inventory Toolkit is released under the [MIT License](LICENSE).
-
-YoY reports in the CLI and GUI show units by default. Opt into sales amounts (revenue) for the current run to add monetary sections without changing the profile. Revenue compares summed line amounts; it does not represent average unit price.

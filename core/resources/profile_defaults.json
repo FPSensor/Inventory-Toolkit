@@ -24,6 +24,17 @@
     },
     "stock_processing/settings": {
         "version": 3,
+        "input": {
+            "family_mode": "rules",
+            "family_column": "",
+            "article_column": "",
+            "format": "wide",
+            "quantity_columns": {},
+            "deposit_columns": null,
+            "quantity_column": "",
+            "branch_column": "",
+            "default_store": ""
+        },
         "cleaning": {
             "text_columns": [
                 "Artículo"
@@ -32,6 +43,7 @@
             "numeric_columns": []
         },
         "pricing": {
+            "article_tokenization": "first_token",
             "columns": {
                 "article": "Artículo",
                 "database": "Origen - Base de datos",
@@ -40,19 +52,47 @@
             "aliases": {
                 "Origen - Base de datos": "Base"
             },
-            "article_tokenization": "first_token"
+            "cost_columns": null,
+            "sales_columns": null,
+            "default_store": "",
+            "variant_columns": {}
         },
         "output": {
+            "quantity_label": "units",
+            "quantity_format": "#,##0",
             "raw_data_sheet": "Datos",
             "base_columns": [
                 "Artículo",
                 "Familias"
             ],
-            "summaries": []
+            "summaries": [],
+            "template": "",
+            "cost_factor": 1.0,
+            "hidden_families": [],
+            "totals_label": "",
+            "missing_cost_file": ""
         }
     },
     "cross_check/settings": {
         "version": 3,
+        "pricing": {
+            "article_tokenization": "first_token"
+        },
+        "input": {
+            "family_mode": "rules",
+            "family_column": "",
+            "article_column": "",
+            "count_mode": "scans",
+            "count_article_column": "",
+            "count_quantity_column": "",
+            "matching": "longest_prefix",
+            "store_column": "",
+            "quantity_column": "Cantidad"
+        },
+        "reconciliation": {
+            "quantity_tolerance": 0.0,
+            "ignore_negative_system_stock_when_counted": true
+        },
         "filters": {
             "ignored_articles": [],
             "ignored_terms": [
@@ -62,21 +102,14 @@
         "price_lists": {
             "cost": {
                 "article_column": "Artículo",
-                "price_column": "Precio"
+                "price_column": "Precio",
+                "store_column": ""
             },
             "sales": {
                 "article_column": "Artículo",
-                "price_column": "Precio"
+                "price_column": "Precio",
+                "store_column": ""
             }
-        },
-        "input": {
-            "quantity_column": "Cantidad"
-        },
-        "reconciliation": {
-            "ignore_negative_system_stock_when_counted": true
-        },
-        "pricing": {
-            "article_tokenization": "first_token"
         }
     },
     "yoy_reports/settings": {
@@ -88,16 +121,22 @@
             "grouping_column": "Familias",
             "item_column": "Articulo",
             "branch_column": "Base",
-            "size_column": "Talle"
+            "variant_column": "Talle",
+            "branch_aliases": {},
+            "code_tokenization": "whole",
+            "sales_values": "line_total",
+            "all_sheets": false
         },
         "output": {
+            "quantity_label": "Units Sold",
+            "quantity_format": "#,##0",
             "default_path": "analysis_report.xlsx",
             "metrics": [
                 "units",
                 "sales"
             ],
             "annual_comparison": true,
-            "include_sizes": false
+            "include_variants": false
         },
         "groups": {}
     }

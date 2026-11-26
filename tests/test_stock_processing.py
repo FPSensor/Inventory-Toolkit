@@ -102,7 +102,7 @@ def test_stock_formats_follow_column_roles_after_title_aliases(tmp_path):
         str(path), frame,
         [{"sheet_name": "Summary", "entities": ["TOTAL STORE"],
           "titles": ["Category", "Units", "Amount A", "Amount B", "Rate"]}],
-        list(frame.columns), "Raw", family_column="Category", interactive=False,
+        list(frame.columns), "Raw", family_column="Category",
     )
     workbook = load_workbook(path)
     summary = workbook["Summary"]

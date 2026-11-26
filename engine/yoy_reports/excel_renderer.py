@@ -3,9 +3,9 @@
 import openpyxl
 import pandas as pd
 
-from core.logger import log_debug_event
-from core.progress import report_progress
-from core.system_utils import safe_openpyxl_save
+from core.runtime.logger import log_debug_event
+from core.runtime.progress import report_progress
+from core.files.system_utils import safe_openpyxl_save
 from engine.yoy_reports.sheet_renderer import render_report_sheet
 
 
@@ -19,8 +19,8 @@ def render_yoy_sales_excel(
     yoy_config,
     grouping_column,
     segmented,
-    include_sizes=False,
-    interactive=True,
+    include_variants=False,
+    on_locked=None,
     progress=None,
 ):
     log_debug_event(
@@ -30,8 +30,7 @@ def render_yoy_sales_excel(
         previous_shape=previous_frame.shape,
         grouping_column=grouping_column,
         segmented=segmented,
-        include_sizes=include_sizes,
-        interactive=interactive,
+        include_variants=include_variants,
     )
     workbook = openpyxl.Workbook()
     workbook.remove(workbook.active)
@@ -105,7 +104,7 @@ def render_yoy_sales_excel(
                 period_previous_start,
                 yoy_config,
                 grouping_column,
-                include_sizes,
+                include_variants,
             )
             rendered_sheets += 1
 
@@ -135,7 +134,7 @@ def render_yoy_sales_excel(
                 year_previous_start,
                 yoy_config,
                 grouping_column,
-                include_sizes,
+                include_variants,
             )
             rendered_sheets += 1
     else:
@@ -151,7 +150,7 @@ def render_yoy_sales_excel(
             previous_start,
             yoy_config,
             grouping_column,
-            include_sizes,
+            include_variants,
         )
         rendered_sheets += 1
 
@@ -166,7 +165,7 @@ def render_yoy_sales_excel(
             previous_start,
             yoy_config,
             grouping_column,
-            include_sizes,
+            include_variants,
         )
         rendered_sheets += 1
 
@@ -179,6 +178,6 @@ def render_yoy_sales_excel(
         progress, 2, 3, f"Prepared {len(workbook.sheetnames)} sheets. Saving workbook...",
         stage_fraction=rendered_sheets / (planned_sheets + 1),
     )
-    final_path = safe_openpyxl_save(workbook, output_path, interactive=interactive)
+    final_path = safe_openpyxl_save(workbook, output_path, on_locked=on_locked)
     log_debug_event("yoy_render_saved", output_path=final_path)
     return final_path

@@ -1,62 +1,52 @@
-"""Dark Alpha Pre-Beta desktop shell with shared engines and guided setup."""
+"""Dark desktop workspace with shared engines and guided setup."""
 
 import os
+from core.runtime.build import BUILD
+from core.profiles.module_preferences import enabled_modules, set_enabled_modules
 import sys
-import json
 import queue
 import threading
 import subprocess
 from pathlib import Path
 import time
-from copy import deepcopy
-from argparse import Namespace
 
 import tkinter as tk
-from tkinter import filedialog, messagebox, simpledialog
+from tkinter import filedialog, messagebox
 
-from gui.widgets import (ctk, ttk, USE_CTK, BaseWindow, BaseToplevel, BaseFrame,
-    BaseButton, BaseLabel, BaseEntry, BaseTextbox, BaseScrollable,
-    _btn, _lbl, _entry, _pack_btn, apply_dark_theme)
+from gui.widgets import (ctk, ttk, USE_CTK, BaseWindow, BaseFrame,
+    BaseTextbox, BaseScrollable,
+    _btn, _lbl, _entry, apply_dark_theme, set_text_scale, COLORS)
 
-try:
-    import pandas as pd
-    PANDAS_AVAILABLE = True
-except ImportError:
-    PANDAS_AVAILABLE = False
-
-from core.business_schema import ARTICLE_COLUMN, DATABASE_ORIGIN_COLUMN, DEFAULT_FAMILY, FAMILY_COLUMN, PRICE_COLUMN, RAW_DATA_SHEET, SIZE_COLUMN
-from core.configuration_manager import ConfigurationManager
-from core.input_columns import choose_input_columns
-from core.profile_config import DEFAULTS
-from core.logger import log
-from core import paths as app_paths
-from core.system_utils import InvalidExcelOutputPathError, normalize_xlsx_output_path
-from cli.wizard import initialize_profile_files, run_setup_wizard
-from cli.utils import save_json, load_json, load_last_paths, save_last_paths
-from engine.inventory_cross_check.generator import run_cross_check
-from engine.stock_processing.generator import run_stock_processing
-from engine.yoy_reports.generator import generate_sales_report
-from engine.yoy_reports.metrics import select_run_metrics
-from core.setup_service import SetupSession, SetupState
-from core.setup_catalog import MODULE_LABELS
+from core.config.configuration_manager import ConfigurationManager
+from core.files.system_utils import unquote_path
+from core.runtime.logger import log
+from core.runtime import paths as app_paths
+from core.profiles.profile_store import load_last_paths
+from core.setup.setup_service import SetupSession, SetupState
+from core.setup.setup_catalog import MODULE_LABELS
+from core.profiles.profile_overview import inspect_profile
+from core.setup.input_doctor import inspect_workflow_inputs
+from core.files.table_reader import FILE_PATTERNS
 from core.workflow_errors import WorkflowError
+from workflows import cross, stock, yoy
 from gui.setup_wizard import SetupWizard
 
 
-from gui.config_hub import ConfigHubWindow
-from gui.profile_dialog import NewProfileModal
+from gui.config_hub import ConfigurationWorkspace
+from gui.profile_dialog import NewProfilePanel
+from gui.profile_recovery import ProfileRecoveryPanel
 
 class InventoryToolkitGUI(BaseWindow):
 
     def __init__(self):
         super().__init__()
-        self.title("Inventory Toolkit v1.4.1 | GUI Alpha Pre-Beta")
+        self.title(f"Inventory Toolkit v{BUILD.version} | GUI {BUILD.gui_stage}")
         apply_dark_theme(self)
-        self.geometry("1160x860")
+        self.geometry("1240x900")
         self.minsize(900, 680)
 
         self._setup_panel = None
-        self._selected_module = "cross_check"
+        self._selected_module = None
         self._partial_permission = None
         self._busy = False
         self._running_profile = None
@@ -67,10 +57,15 @@ class InventoryToolkitGUI(BaseWindow):
         self._build_top_bar()
         self._build_tabs()
         self._apply_yoy_profile_defaults()
+        self._restore_inventory_paths()
         self.active_profile.trace_add("write", self._on_profile_changed)
         self._build_status_bar()
-        self._show_module("cross_check")
+        self.after(50, lambda: self._split.sashpos(0, round(self.winfo_height() * 0.73)) if len(self._split.panes()) == 2 else None)
+        self._show_module("overview")
         self.bind("<Control-Shift-I>", self._show_easter_egg)
+        self.bind('<Control-comma>', lambda _event: self._open_config_hub())
+        self.bind('<Control-n>', lambda _event: self._open_new_profile())
+        self.bind('<Escape>', lambda _event: self._setup_panel._leave() if self._setup_panel is not None else None)
         self.protocol("WM_DELETE_WINDOW", self._request_close)
 
     def _show_easter_egg(self, _event=None):
@@ -101,23 +96,25 @@ class InventoryToolkitGUI(BaseWindow):
         self._split.pack(fill="both", expand=True, padx=12, pady=12)
         self._body = BaseFrame(self._split)
         self._split.add(self._body, weight=3)
-        bar = BaseFrame(self._body, width=210)
+        bar = BaseScrollable(self._body, width=228)
         self._top_bar = bar
         bar.pack(side="left", fill="y", padx=(0, 12))
-        bar.pack_propagate(False)
         _lbl(bar, text="INVENTORY\nTOOLKIT", font=("Arial", 20, "bold")).pack(anchor="w", padx=16, pady=(20, 4))
-        _lbl(bar, text="Alpha Pre-Beta | v1.4.1").pack(anchor="w", padx=16, pady=(0, 20))
+        _lbl(bar, text=f"v{BUILD.version} · {BUILD.gui_stage}", style="Muted.TLabel").pack(anchor="w", padx=16, pady=(0, 20))
         _lbl(bar, text="Active profile").pack(anchor="w", padx=16)
         if USE_CTK:
             self._profile_menu = ctk.CTkOptionMenu(bar, values=self._profiles or [""], variable=self.active_profile, width=175)
         else:
             self._profile_menu = ttk.Combobox(bar, values=self._profiles, textvariable=self.active_profile, state="readonly", width=17)
         self._profile_menu.pack(fill="x", padx=12, pady=8)
-        for module, label in MODULE_LABELS.items():
-            _btn(bar, label, lambda name=module: self._show_module(name)).pack(fill="x", padx=12, pady=5)
+        self._nav_buttons = {}
+        for module, label in [('overview', 'Overview'), ('cross_check', 'Cross Check'), ('stock_processing', 'Stock'), ('yoy_reports', 'YoY Reports')]:
+            button = _btn(bar, label, lambda name=module: self._show_module(name), variant='ghost', anchor='w')
+            button.pack(fill='x', padx=12, pady=4)
+            self._nav_buttons[module] = button
         _btn(bar, "Set up this module", self._open_wizard).pack(fill="x", padx=12, pady=(24, 5))
-        _btn(bar, "New profile", self._open_new_profile).pack(fill="x", padx=12, pady=5)
-        _btn(bar, "Advanced configuration", self._open_config_hub).pack(fill="x", padx=12, pady=5)
+        _btn(bar, "New profile", self._open_new_profile, variant="primary").pack(fill="x", padx=12, pady=5)
+        _btn(bar, "Configuration", self._open_config_hub).pack(fill="x", padx=12, pady=5)
         _lbl(bar, text="Text size").pack(anchor="w", padx=16, pady=(20, 2))
         self._scale_choice = tk.StringVar(value="100%")
         if USE_CTK:
@@ -126,12 +123,12 @@ class InventoryToolkitGUI(BaseWindow):
             scale = ttk.Combobox(bar, values=["100%", "115%", "130%"], textvariable=self._scale_choice, state="readonly")
             scale.bind("<<ComboboxSelected>>", lambda _event: self._change_scale(self._scale_choice.get()))
         scale.pack(fill="x", padx=12, pady=6)
-        _btn(bar, "Exit", self._request_close).pack(side="bottom", fill="x", padx=12, pady=12)
+        _btn(bar, "Exit", self._request_close, variant="ghost").pack(side="bottom", fill="x", padx=12, pady=12)
         self._workspace_root = BaseFrame(self._body)
         self._workspace_root.pack(side="left", fill="both", expand=True)
         self._workspace_root.grid_columnconfigure(0, weight=1)
         self._workspace_root.grid_rowconfigure(2, weight=1)
-        self._page_title = _lbl(self._workspace_root, text="Cross Check", font=("Arial", 22, "bold"))
+        self._page_title = _lbl(self._workspace_root, text="Cross Check", font=("Arial", 26, "bold"))
         self._page_title.grid(row=0, column=0, sticky="w", padx=16, pady=(14, 6))
         self._feedback = BaseFrame(self._workspace_root)
         self._feedback.grid(row=1, column=0, sticky="ew", padx=12, pady=4)
@@ -150,26 +147,65 @@ class InventoryToolkitGUI(BaseWindow):
         if USE_CTK:
             ctk.set_widget_scaling(fraction)
         else:
-            from tkinter import font
-            for name in ("TkDefaultFont", "TkTextFont", "TkMenuFont"):
-                font.nametofont(name).configure(size=round(12 * fraction))
-            ttk.Style(self).configure(".", font=("Arial", round(12 * fraction)))
+            set_text_scale(self, fraction)
+
+    def _set_results_visible(self, visible):
+        if not hasattr(self, '_results'):
+            return
+        included = str(self._results) in {str(pane) for pane in self._split.panes()}
+        if visible and not included:
+            self._split.add(self._results, weight=1)
+            self.after_idle(lambda: self._split.sashpos(0, round(self.winfo_height() * .73)) if len(self._split.panes()) == 2 else None)
+        elif not visible and included:
+            self._split.forget(self._results)
+
+    def _manage_workflows(self):
+        self._module_selector_open = True
+        self._show_module('overview')
 
     def _notify(self, kind, title, message, actions=(), **_kwargs):
-        self._feedback_text.configure(text=f"{title}: {message}")
+        tone = COLORS.get({'error': 'error', 'warning': 'warning', 'success': 'positive'}.get(kind, 'muted'))
+        self._feedback_text.configure(text=f"{title}: {message}", **({'text_color': tone} if USE_CTK else {'foreground': tone}))
         for widget in self._feedback_actions.winfo_children():
             widget.destroy()
+        if actions:
+            self._feedback_actions.pack(fill="x", padx=8, pady=(0, 4))
+        else:
+            self._feedback_actions.pack_forget()
         for label, callback in actions:
             _btn(self._feedback_actions, label, callback).pack(side="left", padx=4, pady=4)
-        if hasattr(self, "_activity"):
+        if hasattr(self, "_activity") and kind in {"warning", "error"}:
             self._append_activity(f"{title}: {message}\n")
 
     def _show_module(self, module):
         if self._setup_panel is not None:
             self._notify("info", "Setup in progress", "Leave or finish the current setup before switching modules.")
             return
+        if module in MODULE_LABELS and module not in enabled_modules(self.active_profile.get()):
+            self._notify("info", "Workflow disabled", "Enable this workflow in Profile overview before opening it.")
+            return
         self._selected_module = module
+        self._set_results_visible(module in MODULE_LABELS)
+        for name, button in getattr(self, '_nav_buttons', {}).items():
+            selected = name == module
+            enabled = name not in MODULE_LABELS or name in enabled_modules(self.active_profile.get())
+            if USE_CTK:
+                button.configure(fg_color=COLORS['border'] if selected else 'transparent', text_color=COLORS['text'] if selected else COLORS['muted'], state='normal' if enabled else 'disabled')
+            else:
+                button.configure(style='NavActive.TButton' if selected else 'Nav.TButton', state='normal' if enabled else 'disabled')
         if hasattr(self, "_pages"):
+            if module == "settings":
+                self._render_settings()
+                self._pages[module].tkraise()
+                self._page_title.configure(text="Configuration")
+                self._notify("info", "Configuration", "Search by what you want to change. Settings use the same guided forms as setup.")
+                return
+            if module == "overview":
+                self._render_overview()
+                self._pages[module].tkraise()
+                self._page_title.configure(text="Profile overview")
+                self._notify("info", "Profile overview", "Choose a workflow to inspect or configure.")
+                return
             self._pages[module].tkraise()
             self._page_title.configure(text=MODULE_LABELS[module])
             try:
@@ -179,36 +215,76 @@ class InventoryToolkitGUI(BaseWindow):
             except Exception as exc:
                 self._notify("error", "Profile configuration", str(exc))
 
+    def _open_profile_recovery(self):
+        if not self._require_idle():
+            return
+        def close_panel():
+            panel = self._setup_panel
+            self._setup_panel = None
+            panel.destroy()
+            self._profile_menu.configure(state='normal' if USE_CTK else 'readonly')
+            self._partial_permission = None
+            self._apply_yoy_profile_defaults()
+            self._show_module('overview')
+        def configure(module, step):
+            close_panel()
+            self._open_wizard(module, step, edit_mode=True, single_page=True)
+        self._set_results_visible(False)
+        self._page_title.configure(text='Profile checks and recovery')
+        self._setup_panel = ProfileRecoveryPanel(self._page_host, self.active_profile.get(), close_panel, configure)
+        self._setup_panel.grid(row=0, column=0, sticky='nsew')
+        self._setup_panel.tkraise()
+        self._profile_menu.configure(state='disabled')
+
     def _open_new_profile(self):
         if not self._require_idle():
             return
+        def close_panel():
+            panel = self._setup_panel
+            self._setup_panel = None
+            panel.destroy()
+            self._profile_menu.configure(state='normal' if USE_CTK else 'readonly')
         def on_done(new_id):
+            close_panel()
             self._refresh_profiles()
-            if USE_CTK:
-                self._profile_menu.configure(values=self._profiles)
-            else:
-                self._profile_menu["values"] = self._profiles
+            self._profile_menu.configure(values=self._profiles)
             self.active_profile.set(new_id)
-            self._notify("info", "Profile Ready", f"Active profile set to [{new_id}].", parent=self)
-        NewProfileModal(self, on_done)
+            self._show_module('overview')
+            self._notify('success', 'Profile created', 'Choose an enabled workflow to set it up with your files.')
+        def cancel():
+            close_panel()
+            self._show_module('overview')
+        self._set_results_visible(False)
+        self._page_title.configure(text="New profile")
+        self._notify("info", "Create a workspace", "Choose only the workflows you need. Other settings come later.")
+        self._setup_panel = NewProfilePanel(self._page_host, self.active_profile.get(), on_done, cancel)
+        self._setup_panel.grid(row=0, column=0, sticky='nsew')
+        self._setup_panel.tkraise()
+        self._profile_menu.configure(state='disabled')
 
-    def _open_wizard(self, module=None, step=None):
+    def _open_wizard(self, module=None, step=None, *, edit_mode=False, single_page=False, return_to_settings=False):
         if not self._require_idle():
             return
         if any(isinstance(child, tk.Toplevel) for child in self.winfo_children()):
             self._notify("info", "Configuration window open", "Close other profile/configuration windows before opening guided setup.")
             return
         module = module or self._selected_module
+        if module not in MODULE_LABELS:
+            self._notify("info", "Select a workflow", "Choose a workflow before opening its setup assistant.")
+            return
         profile = self.active_profile.get()
+        self._set_results_visible(False)
+        self._page_title.configure(text=f"{MODULE_LABELS[module]} settings" if edit_mode else f"Set up {MODULE_LABELS[module]}")
         def finish(message):
             panel = self._setup_panel
             self._setup_panel = None
             panel.destroy()
             self._profile_menu.configure(state="normal" if USE_CTK else "readonly")
-            self._show_module(module)
-            self._notify("info", "Guided setup", message)
+            self._render_overview()
+            self._show_module("settings" if return_to_settings else module)
+            self._notify("info", "Configuration" if edit_mode else "Guided setup", message)
         try:
-            self._setup_panel = SetupWizard(self._page_host, profile, module, finish, step)
+            self._setup_panel = SetupWizard(self._page_host, profile, module, finish, step, edit_mode=edit_mode, single_page=single_page)
             self._setup_panel.grid(row=0, column=0, sticky="nsew")
             self._setup_panel.tkraise()
             self._profile_menu.configure(state="disabled")
@@ -233,7 +309,7 @@ class InventoryToolkitGUI(BaseWindow):
                 return False
             self._partial_permission = None
             session.validate_required(include_sales=self.yoy_sales_amounts.get() if module == "yoy_reports" else False,
-                include_sizes=self.yoy_sizes.get() if module == "yoy_reports" else False)
+                include_variants=self.yoy_variants.get() if module == "yoy_reports" else False)
             return True
         except Exception as exc:
             self._handle_error(exc)
@@ -247,72 +323,146 @@ class InventoryToolkitGUI(BaseWindow):
         self._notify("error", f"Operation stopped{code}", str(exc), actions)
 
     def _open_config_hub(self):
-        if not self._require_idle():
-            return
-        try:
-            ConfigurationManager(self.active_profile.get())
-            ConfigHubWindow(self, self.active_profile.get())
-        except Exception as exc:
-            self._notify("error", "Configuration Error", str(exc), parent=self)
+        if self._require_idle():
+            self._show_module("settings")
 
-    def _select_columns(self, file_path, configured, defaults):
-        def confirm(field, wanted, default):
-            return messagebox.askyesno(
-                "Missing configured column",
-                f"{file_path}\n\nColumn '{wanted}' for {field} is absent.\n"
-                f"Try default '{default}' for this run?",
-                parent=self,
-            )
-        return choose_input_columns(file_path, configured, defaults, confirm)
+    def _render_settings(self):
+        page = self._pages['settings']
+        for child in page.winfo_children():
+            child.destroy()
+        workspace = ConfigurationWorkspace(page, self.active_profile.get(),
+            lambda module, step: self._open_wizard(module, step, edit_mode=True, single_page=True, return_to_settings=True),
+            self._manage_workflows)
+        workspace.pack(fill='both', expand=True)
+
+    def _confirm_column(self, file_path, field, wanted, default):
+        return messagebox.askyesno(
+            "Missing configured column",
+            f"{file_path}\n\nColumn '{wanted}' for {field} is absent.\n"
+            f"Try default '{default}' for this run?",
+            parent=self,
+        )
 
     # ── Tabs ──────────────────────────────────────────────────────────────────
 
     def _build_tabs(self):
-        self._pages = {module: BaseScrollable(self._page_host) for module in MODULE_LABELS}
+        self._pages = {module: (BaseFrame(self._page_host) if module == "settings" else BaseScrollable(self._page_host)) for module in ("overview", "settings", *MODULE_LABELS)}
         for page in self._pages.values():
             page.grid(row=0, column=0, sticky="nsew")
+        self.tab_overview = self._pages["overview"]
         self.tab_cc = self._pages["cross_check"]
         self.tab_stock = self._pages["stock_processing"]
         self.tab_yoy = self._pages["yoy_reports"]
         self._setup_cc_tab()
         self._setup_stock_tab()
         self._setup_yoy_tab()
-        self.tab_cc.tkraise()
+        self.tab_overview.tkraise()
+
+    def _render_overview(self):
+        page = self.tab_overview
+        for child in page.winfo_children():
+            child.destroy()
+        entries = inspect_profile(self.active_profile.get())
+        selected = enabled_modules(self.active_profile.get())
+        if getattr(self, "_module_selector_open", False):
+            chooser = BaseFrame(page)
+            chooser.pack(fill="x", padx=18, pady=12)
+            _lbl(chooser, text="Use only the workflows you need", font=("Arial", 15, "bold")).pack(anchor="w", padx=12, pady=8)
+            choices = {}
+            for name, label in MODULE_LABELS.items():
+                choices[name] = tk.BooleanVar(value=name in selected)
+                cls = ctk.CTkCheckBox if USE_CTK else ttk.Checkbutton
+                cls(chooser, text=label, variable=choices[name]).pack(anchor="w", padx=12, pady=4)
+            def apply_modules():
+                if not self._require_idle():
+                    return
+                try:
+                    set_enabled_modules(self.active_profile.get(), [name for name, variable in choices.items() if variable.get()])
+                    self._module_selector_open = False
+                    self._render_overview()
+                    self._notify("info", "Workflows updated", "Disabled workflows keep their settings for later.")
+                except ValueError as exc:
+                    self._notify("error", "Choose workflows", str(exc))
+            _btn(chooser, "Apply workflow selection", apply_modules).pack(anchor="w", padx=12, pady=10)
+        else:
+            _btn(page, "Choose workflows", self._manage_workflows, variant="ghost").pack(anchor="w", padx=20, pady=12)
+        _btn(page, "Check profile / restore configuration", self._open_profile_recovery, variant="ghost").pack(anchor='w', padx=20, pady=(0, 8))
+        ready = sum(entry.state == SetupState.COMPLETE for entry in entries)
+        _lbl(page, text=f"{ready} of {len(selected)} enabled workflows ready", font=("Arial", 17, "bold")
+            ).pack(anchor="w", padx=20, pady=(12, 5))
+        _lbl(page, text="Review setup pages by workflow. 'Ready' reflects configuration review; input headers are checked when you select a file.",
+            wraplength=650, justify="left").pack(anchor="w", padx=20, pady=(0, 10))
+        for entry in entries:
+            if not entry.enabled:
+                continue
+            card = BaseFrame(page)
+            card.pack(fill="x", padx=18, pady=7)
+            _lbl(card, text=f"{entry.label}   |   {entry.status}", font=("Arial", 16, "bold")
+                ).pack(anchor="w", padx=12, pady=(10, 4))
+            count = f"{entry.reviewed}/{entry.total} pages reviewed" if entry.reviewed is not None else "Existing profile"
+            detail = (entry.issue or (f"Next: {entry.pending_titles[0]}"
+                + (f" · {len(entry.pending_titles) - 1} more" if len(entry.pending_titles) > 1 else "")
+                if entry.pending_titles else "Configuration reviewed. Select a workflow to choose files and run."))
+            _lbl(card, text=f"{count}   |   {detail}", wraplength=620, justify="left"
+                ).pack(anchor="w", padx=12, pady=(0, 6))
+            buttons = BaseFrame(card)
+            buttons.pack(anchor="w", padx=10, pady=(0, 10))
+            _btn(buttons, "Open workflow", lambda name=entry.module: self._show_module(name)
+                ).pack(side="left", padx=3)
+            if entry.enabled and not entry.issue:
+                _btn(buttons, "Review setup", lambda name=entry.module, step=entry.pending_step: self._open_wizard(name, step)
+                    ).pack(side="left", padx=3)
 
     def _on_profile_changed(self, *_args):
         if getattr(self, "_setup_panel", None) is not None:
-            self.active_profile.set(self._setup_panel.session.profile) if self.active_profile.get() != self._setup_panel.session.profile else None
+            guarded_profile = getattr(self._setup_panel, "profile", None) or self._setup_panel.session.profile
+            if self.active_profile.get() != guarded_profile:
+                self.active_profile.set(guarded_profile)
             return
         if self._busy:
             if self.active_profile.get() != self._running_profile:
                 self.active_profile.set(self._running_profile)
             return
-        if hasattr(self, "yoy_sizes"):
+        if hasattr(self, "yoy_variants"):
             self._apply_yoy_profile_defaults()
+        if hasattr(self, "sp_raw"):
+            self._restore_inventory_paths()
+        if hasattr(self, '_pages'):
+            selected = self._selected_module or 'overview'
+            if selected in MODULE_LABELS and selected not in enabled_modules(self.active_profile.get()):
+                selected = 'overview'
+            self._show_module(selected)
+            return
+        if getattr(self, "_selected_module", None) == "overview" and hasattr(self, "tab_overview"):
+            self._render_overview()
+        elif getattr(self, "_selected_module", None) == "settings":
+            self._render_settings()
+
+    def _restore_inventory_paths(self):
+        """Restore each profile's explicit selections without sharing paths across profiles."""
+        saved = load_last_paths(self.active_profile.get())
+        for module, fields in {
+            'stock_processing': {'stock': self.sp_raw, 'cost': self.sp_cost, 'sales': self.sp_sales},
+            'cross_check': {'system': self.cc_sys, 'count': self.cc_count, 'cost': self.cc_cost, 'sales': self.cc_sales},
+        }.items():
+            for role, variable in fields.items():
+                variable.set(saved.get(module, {}).get(role, ''))
+        self.sp_out.set(saved.get('stock_processing', {}).get('out') or 'Stock_Valuation_Report.xlsx')
+        self.cc_out.set(saved.get('cross_check', {}).get('out') or 'Cross_Check_Output.xlsx')
 
     def _apply_yoy_profile_defaults(self):
         """Restore YoY file paths and profile-owned defaults for the active profile."""
         try:
             profile = self.active_profile.get()
-            output = ConfigurationManager(profile).get_yoy_reports_config()["output"]
+            output = ConfigurationManager(profile, module="yoy_reports").get_yoy_reports_config()["output"]
             saved = load_last_paths(profile).get("yoy_reports", {})
         except Exception:
             return
-        self.yoy_sizes.set(bool(output.get("include_sizes", False)))
+        self.yoy_variants.set(bool(output.get("include_variants", False)))
         self.yoy_compare.set(False)
         self.yoy_sales_amounts.set(False)
         self.yoy_file.set(saved.get("file", ""))
         self.yoy_out.set(saved.get("out") or str(output.get("default_path", "yoy_analysis.xlsx")))
-
-    def _resolve_xlsx_output(self, value: str, default: str):
-        try:
-            return normalize_xlsx_output_path(
-                value.strip() or default,
-                notify=lambda message: self._notify("warning", "Output File", message, parent=self),
-            )
-        except InvalidExcelOutputPathError as exc:
-            self._notify("error", "Invalid Output File", str(exc), parent=self)
-            return None
 
     def _file_row(self, parent, label_text: str, var: tk.StringVar,
                   is_output: bool = False, row: int = 0):
@@ -323,6 +473,14 @@ class InventoryToolkitGUI(BaseWindow):
              ).pack(side="left", padx=5)
         _entry(frame, textvariable=var).pack(side="left", fill="x", expand=True, padx=5)
 
+        def unquote(*_):
+            # Windows "Copy as path" pastes the path between quotes.
+            text = var.get()
+            if unquote_path(text) != text.strip():
+                var.set(unquote_path(text))
+
+        var.trace_add("write", unquote)
+
         def browse():
             if is_output:
                 f = filedialog.asksaveasfilename(
@@ -331,7 +489,7 @@ class InventoryToolkitGUI(BaseWindow):
             else:
                 f = filedialog.askopenfilename(
                     title="Select file",
-                    filetypes=[("Excel Files", "*.xlsx *.xls"), ("All files", "*.*")],
+                    filetypes=[("Tables", FILE_PATTERNS), ("All files", "*.*")],
                     parent=self)
             if f:
                 var.set(f)
@@ -341,12 +499,12 @@ class InventoryToolkitGUI(BaseWindow):
     # ── Tab 1: Cross Check ────────────────────────────────────────────────────
 
     def _setup_cc_tab(self):
+        _lbl(self.tab_cc, text="Compare recorded stock with your physical count and value the differences.", wraplength=700, justify="left", style="Muted.TLabel").pack(anchor="w", padx=20, pady=(12, 4))
         self.cc_sys    = tk.StringVar()
         self.cc_count  = tk.StringVar()
         self.cc_cost   = tk.StringVar()
         self.cc_sales  = tk.StringVar()
         self.cc_out    = tk.StringVar(value="Cross_Check_Output.xlsx")
-        self.cc_consol = tk.BooleanVar(value=False)
         self.cc_partial= tk.BooleanVar(value=False)
 
         _lbl(self.tab_cc, text="Input Files", font=("Arial", 11, "bold") if not USE_CTK else None
@@ -363,81 +521,34 @@ class InventoryToolkitGUI(BaseWindow):
         opts = BaseFrame(self.tab_cc)
         opts.pack(fill="x", padx=15, pady=10)
         if USE_CTK:
-            ctk.CTkCheckBox(opts, text="Consolidate multiple databases", variable=self.cc_consol
-                            ).pack(side="left", padx=10)
             ctk.CTkCheckBox(opts, text="Partial count (scanned only)", variable=self.cc_partial
                             ).pack(side="left", padx=10)
             ctk.CTkButton(self.tab_cc, text="▶  Run Inventory Cross Check",
                           fg_color="#28a745", hover_color="#218838", height=40,
                           command=self._exec_cc).pack(pady=18)
         else:
-            ttk.Checkbutton(opts, text="Consolidate databases", variable=self.cc_consol
-                            ).pack(side="left", padx=10)
             ttk.Checkbutton(opts, text="Partial count filter", variable=self.cc_partial
                             ).pack(side="left", padx=10)
             ttk.Button(self.tab_cc, text="▶  Run Inventory Cross Check",
                        command=self._exec_cc).pack(pady=18)
+        _btn(self.tab_cc, "Inspect selected files", lambda: self._inspect_inputs("cross_check")
+            ).pack(pady=(0, 14))
 
     def _exec_cc(self):
-        if not self._require_idle():
-            return
-        if not self._gate_setup("cross_check"):
-            return
-        if not PANDAS_AVAILABLE:
-            self._notify("error", "Missing Dependency", "pandas is required.", parent=self)
-            return
-        files = [self.cc_sys.get(), self.cc_count.get(), self.cc_cost.get(), self.cc_sales.get()]
-        for f in files:
-            if not f or not os.path.exists(f):
-                self._notify("error", "Missing File",
-                                     f"Required file not found:\n'{f}'", parent=self)
-                return
-
-        if PANDAS_AVAILABLE:
-            try:
-                cm = ConfigurationManager(self.active_profile.get())
-                cross_config = cm.get_cross_check_config()
-                mappings = cross_config["price_lists"]
-                defaults = DEFAULTS["cross_check/settings"]["price_lists"]
-                overrides = {
-                    "system": self._select_columns(self.cc_sys.get(),
-                        { "article": cm.get_catalog_columns()["article"],
-                          "quantity": cross_config["input"]["quantity_column"]},
-                        {"article": DEFAULTS["general/catalog"]["columns"]["article"],
-                         "quantity": DEFAULTS["cross_check/settings"]["input"]["quantity_column"]}),
-                    "cost": self._select_columns(self.cc_cost.get(), mappings["cost"], defaults["cost"]),
-                    "sales": self._select_columns(self.cc_sales.get(), mappings["sales"], defaults["sales"]),
-                }
-            except Exception as exc:
-                self._notify("error",
-                    "Cross Check Preflight Error",
-                    str(exc),
-                    parent=self,
-                )
-                return
-
-
-        out = self._resolve_xlsx_output(self.cc_out.get(), "Cross_Check_Output.xlsx")
-        if not out:
-            return
-
-        args = Namespace(
-            cross_check_system=self.cc_sys.get(),
-            cross_check_count=self.cc_count.get(),
-            shared_cost=self.cc_cost.get(),
-            shared_sales=self.cc_sales.get(),
-            cross_check_out=out,
-            cross_check_profile=self.active_profile.get(),
-            cross_check_consolidate=self.cc_consol.get(),
-            cross_check_partial=self.cc_partial.get(),
-            non_interactive=True,
-            column_overrides=overrides,
-        )
-        self._run_async(lambda progress, stats: run_cross_check(args), "Cross Check completed!", progress_target=args)
+        self._run_workflow("cross_check", cross, lambda: cross.CrossRequest(
+            profile=self.active_profile.get(),
+            system=self.cc_sys.get(),
+            count=self.cc_count.get(),
+            cost=self.cc_cost.get(),
+            sales=self.cc_sales.get(),
+            output=self.cc_out.get(),
+            partial_count=self.cc_partial.get(),
+        ), "Cross Check completed!")
 
     # ── Tab 2: Stock Processing ───────────────────────────────────────────────
 
     def _setup_stock_tab(self):
+        _lbl(self.tab_stock, text="Prepare quantities, classify products and value inventory by location.", wraplength=700, justify="left", style="Muted.TLabel").pack(anchor="w", padx=20, pady=(12, 4))
         self.sp_raw   = tk.StringVar()
         self.sp_cost  = tk.StringVar()
         self.sp_sales = tk.StringVar()
@@ -453,6 +564,11 @@ class InventoryToolkitGUI(BaseWindow):
              ).pack(anchor="w", padx=15, pady=(10, 2))
         self._file_row(self.tab_stock, "4. Output report name:",    self.sp_out, is_output=True)
 
+        self.sp_unit_prices = tk.BooleanVar(value=False)
+        check_class = ctk.CTkCheckBox if USE_CTK else ttk.Checkbutton
+        check_class(self.tab_stock, text="Include unit prices in the detail, in addition to totals",
+                    variable=self.sp_unit_prices).pack(anchor="w", padx=20, pady=4)
+
         if USE_CTK:
             ctk.CTkButton(self.tab_stock, text="▶  Run Stock Processing & Valuation",
                           fg_color="#007bff", hover_color="#0069d9", height=40,
@@ -460,47 +576,18 @@ class InventoryToolkitGUI(BaseWindow):
         else:
             ttk.Button(self.tab_stock, text="▶  Run Stock Processing",
                        command=self._exec_stock).pack(pady=25)
+        _btn(self.tab_stock, "Inspect selected files", lambda: self._inspect_inputs("stock_processing")
+            ).pack(pady=(0, 14))
 
     def _exec_stock(self):
-        if not self._require_idle():
-            return
-        if not self._gate_setup("stock_processing"):
-            return
-        files = [self.sp_raw.get(), self.sp_cost.get(), self.sp_sales.get()]
-        for f in files:
-            if not f or not os.path.exists(f):
-                self._notify("error", "Missing File",
-                                     f"Required file not found:\n'{f}'", parent=self)
-                return
-        out = self._resolve_xlsx_output(self.sp_out.get(), "Stock_Valuation_Report.xlsx")
-        if not out:
-            return
-        try:
-            cm = ConfigurationManager(self.active_profile.get())
-            pricing = cm.get_stock_pricing()["columns"]
-            defaults = DEFAULTS["stock_processing/settings"]["pricing"]["columns"]
-            overrides = {
-                "stock": self._select_columns(self.sp_raw.get(),
-                    {"article": cm.get_catalog_columns()["article"]},
-                    {"article": DEFAULTS["general/catalog"]["columns"]["article"]}),
-                "cost": self._select_columns(self.sp_cost.get(), pricing, defaults),
-                "sales": self._select_columns(self.sp_sales.get(), pricing, defaults),
-            }
-        except Exception as exc:
-            self._handle_error(exc)
-            return
-        warnings = []
-        args = Namespace(
-            stock_processing_raw=self.sp_raw.get(),
-            shared_cost=self.sp_cost.get(),
-            shared_sales=self.sp_sales.get(),
-            stock_processing_out=out,
-            stock_processing_profile=self.active_profile.get(),
-            non_interactive=True,
-            column_overrides=overrides,
-            warnings=warnings,
-        )
-        self._run_async(lambda progress, stats: run_stock_processing(args), "Stock Processing completed!", warnings=warnings, progress_target=args)
+        self._run_workflow("stock_processing", stock, lambda: stock.StockRequest(
+            profile=self.active_profile.get(),
+            stock=self.sp_raw.get(),
+            cost=self.sp_cost.get(),
+            sales=self.sp_sales.get(),
+            output=self.sp_out.get(),
+            unit_prices=self.sp_unit_prices.get(),
+        ), "Stock Processing completed!")
 
     # ── Tab 3: YoY Reports ────────────────────────────────────────────────────
 
@@ -513,7 +600,7 @@ class InventoryToolkitGUI(BaseWindow):
         self.yoy_seg     = tk.BooleanVar(value=False)
         self.yoy_compare = tk.BooleanVar(value=False)
         self.yoy_sales_amounts = tk.BooleanVar(value=False)
-        self.yoy_sizes   = tk.BooleanVar(value=False)
+        self.yoy_variants   = tk.BooleanVar(value=False)
         self.yoy_out     = tk.StringVar(value="yoy_analysis.xlsx")
 
         _lbl(self.tab_yoy, text="Sales Data File", font=("Arial", 11, "bold") if not USE_CTK else None
@@ -546,7 +633,7 @@ class InventoryToolkitGUI(BaseWindow):
         for text, variable, row, column in [
             ("File has Family column", self.yoy_has_fam, 0, 1),
             ("Segment by Month", self.yoy_seg, 1, 0),
-            ("Size breakdown", self.yoy_sizes, 1, 1),
+            ("Variant breakdown", self.yoy_variants, 1, 1),
         ]:
             check_class(opts, text=text, variable=variable).grid(row=row, column=column, sticky="w", padx=10, pady=8)
 
@@ -591,95 +678,85 @@ class InventoryToolkitGUI(BaseWindow):
         else:
             ttk.Button(self.tab_yoy, text="▶  Generate YoY Sales Report",
                        command=self._exec_yoy).pack(pady=20)
+        _btn(self.tab_yoy, "Inspect selected file", lambda: self._inspect_inputs("yoy_reports")
+            ).pack(pady=(0, 14))
 
-    def _exec_yoy(self):
+    def _inspect_inputs(self, module):
         if not self._require_idle():
             return
-        if not self._gate_setup("yoy_reports"):
-            return
-        f_path = self.yoy_file.get().strip()
-        if not f_path or not os.path.exists(f_path):
-            self._notify("error", "Missing File", "Sales data file not found.", parent=self)
-            return
-
-        if not PANDAS_AVAILABLE:
-            self._notify("error", "Missing Dependency", "pandas is required.", parent=self)
-            return
-
-        try:
-            s_dt = pd.to_datetime(self.yoy_start.get().strip(), format="%Y-%m-%d")
-            e_dt = pd.to_datetime(self.yoy_end.get().strip(),   format="%Y-%m-%d")
-            if s_dt > e_dt:
-                self._notify("error", "Date Error", "Start date must be before end date.", parent=self)
-                return
-            e_dt = e_dt + pd.Timedelta(days=1, seconds=-1)
-        except Exception as err:
-            self._notify("error", "Invalid Date", f"Dates must be YYYY-MM-DD format:\n{err}", parent=self)
-            return
-
-        config_manager = ConfigurationManager(self.active_profile.get())
-        yoy_config = deepcopy(config_manager.get_yoy_reports_config())
-        if not yoy_config or "input" not in yoy_config:
-            self._notify("error", "Config Error",
-                                 f"YoY config missing for profile '{self.active_profile.get()}'.\n"
-                                 "Run the Setup Wizard or edit YoY Reports in Config Hub.", parent=self)
-            return
-
-        try:
-            yoy_config = select_run_metrics(yoy_config, self.yoy_sales_amounts.get())
-        except ValueError as exc:
-            self._handle_error(exc)
-            return
-
-        input_config = yoy_config["input"]
-        grouping_column = (
-            input_config["grouping_column"]
-            if self.yoy_group.get() == "Family"
-            else input_config["item_column"]
-        )
-        out = self._resolve_xlsx_output(
-            self.yoy_out.get(), yoy_config["output"].get("default_path", "yoy_analysis.xlsx")
-        )
-        if not out:
-            return
-
-        # Capture every Tk variable on the UI thread before starting the worker.
-        segmented = self.yoy_seg.get()
-        if not segmented:
-            yoy_config["output"]["annual_comparison"] = self.yoy_compare.get()
-        has_families = self.yoy_has_fam.get()
+        paths = {
+            "cross_check": lambda: {"system": self.cc_sys.get(), "count": self.cc_count.get(),
+                "cost": self.cc_cost.get(), "sales": self.cc_sales.get()},
+            "stock_processing": lambda: {"stock": self.sp_raw.get(), "cost": self.sp_cost.get(),
+                "sales": self.sp_sales.get()},
+            "yoy_reports": lambda: {"file": self.yoy_file.get()},
+        }[module]()
+        options = ({"include_sales": self.yoy_sales_amounts.get(),
+            "include_variants": self.yoy_variants.get(), "grouping": self.yoy_group.get().lower(),
+            "has_families": self.yoy_has_fam.get()} if module == "yoy_reports" else {})
         profile = self.active_profile.get()
-        include_sizes = self.yoy_sizes.get()
-        required_fields = ["date_column", "branch_column"]
-        required_fields += ["quantity_column" if m == "units" else "sales_column" for m in yoy_config["output"]["metrics"]]
-        required_fields.append("grouping_column" if self.yoy_group.get() == "Family" and has_families else "item_column")
-        if include_sizes:
-            required_fields.append("size_column")
+        result = queue.Queue(maxsize=1)
+        self._set_busy(True)
+        self._set_status("Inspecting selected workbook samples...")
+
+        def worker():
+            try:
+                result.put((True, inspect_workflow_inputs(profile, module, paths, **options)))
+            except Exception as exc:
+                result.put((False, exc))
+
+        def poll():
+            try:
+                ok, payload = result.get_nowait()
+            except queue.Empty:
+                self.after(100, poll)
+                return
+            self._set_busy(False)
+            if ok:
+                self._append_activity("\n" + payload.render() + "\n")
+                self._set_status("Input inspection complete.")
+                self._notify("info" if payload.ready else "warning", "Input inspection",
+                    "Selected files look compatible." if payload.ready else
+                    "Some files or configured headers need review. Details are in the activity area.")
+            else:
+                self._set_status("Input inspection failed.")
+                self._notify("error", "Input inspection", str(payload))
+
         try:
-            resolved = self._select_columns(f_path,
-                {key: yoy_config["input"][key] for key in dict.fromkeys(required_fields)},
-                DEFAULTS["yoy_reports/settings"]["input"])
-            yoy_config["input"].update(resolved)
-            grouping_column = yoy_config["input"]["grouping_column" if self.yoy_group.get() == "Family" else "item_column"]
+            threading.Thread(target=worker, daemon=True).start()
+        except RuntimeError as exc:
+            self._set_busy(False)
+            self._notify("error", "Input inspection", str(exc))
+            return
+        self.after(100, poll)
+
+    def _exec_yoy(self):
+        self._run_workflow("yoy_reports", yoy, lambda: yoy.YoYRequest(
+            profile=self.active_profile.get(),
+            sales=self.yoy_file.get().strip(),
+            start=self.yoy_start.get(),
+            end=self.yoy_end.get(),
+            by_family=self.yoy_group.get() == "Family",
+            has_families=self.yoy_has_fam.get(),
+            sales_amounts=self.yoy_sales_amounts.get(),
+            by_month=self.yoy_seg.get(),
+            annual_comparison=self.yoy_compare.get(),
+            variants=self.yoy_variants.get(),
+            output=self.yoy_out.get(),
+        ), "YoY Sales Report generated!")
+
+    def _run_workflow(self, module, workflow, build_request, success_msg):
+        """Read every control and ask on the UI thread; only the job runs off it."""
+        if not self._require_idle() or not self._gate_setup(module):
+            return
+        try:
+            request = build_request()
+            job = workflow.prepare(request, workflow.check(request, self._confirm_column),
+                lambda message: self._notify("warning", "Output File", message, parent=self))
         except Exception as exc:
             self._handle_error(exc)
             return
-
-        try:
-            save_last_paths(profile, {"yoy_reports": {"file": f_path, "out": out}})
-        except Exception as exc:
-            self._notify("error", "Path Persistence Error", str(exc), parent=self)
-            return
-
-        def task(progress, stats):
-            return generate_sales_report(
-                f_path, out, s_dt, e_dt, yoy_config, grouping_column,
-                segmented, has_families, profile, include_sizes,
-                non_interactive=True,
-                progress=progress,
-                stats=stats,
-            )
-        self._run_async(task, "YoY Sales Report generated!")
+        self._run_async(lambda progress, stats: job.run(progress=progress, stats=stats), success_msg)
 
     # ── Status bar & async runner ─────────────────────────────────────────────
 
@@ -702,12 +779,17 @@ class InventoryToolkitGUI(BaseWindow):
         self._open_folder_button.pack(side="left", padx=3)
         self._open_report_button.configure(state="disabled")
         self._open_folder_button.configure(state="disabled")
-        if USE_CTK:
-            self._activity = ctk.CTkTextbox(self._results, height=140, wrap="word")
-        else:
-            self._activity = tk.Text(self._results, height=7, wrap="word")
-        self._activity.pack(side="bottom", fill="both", expand=True, padx=12, pady=(0, 6))
-        self._activity.configure(state="disabled")
+        self._result_tabs = ttk.Notebook(self._results)
+        self._result_tabs.pack(side='bottom', fill='both', expand=True, padx=12, pady=(0, 6))
+        activity_page, stats_page = BaseFrame(self._result_tabs), BaseFrame(self._result_tabs)
+        self._result_tabs.add(activity_page, text='Activity')
+        self._result_tabs.add(stats_page, text='Statistics')
+        self._stats_page = stats_page
+        self._activity = BaseTextbox(activity_page, height=140 if USE_CTK else 7, wrap='word')
+        self._statistics = BaseTextbox(stats_page, height=140 if USE_CTK else 7, wrap='word')
+        for text in (self._activity, self._statistics):
+            text.pack(fill='both', expand=True)
+            text.configure(state='disabled')
         if USE_CTK:
             bar = ctk.CTkFrame(self._results, height=34, corner_radius=0)
             bar.pack(side="bottom", fill="x")
@@ -737,12 +819,17 @@ class InventoryToolkitGUI(BaseWindow):
         self._activity.configure(state="disabled")
 
     def _show_stats(self, event):
-        """Keep final results visible after the task status changes."""
+        """Keep final statistics separate from the stage event history."""
         rendered = event.render()
-        self._activity.configure(state="normal")
-        self._activity.insert("end", f"\n{rendered}\n")
-        self._activity.see("end")
-        self._activity.configure(state="disabled")
+        target = getattr(self, '_statistics', self._activity)
+        target.configure(state='normal')
+        if hasattr(self, '_statistics'):
+            target.delete('1.0', 'end')
+        target.insert('end', f'\n{rendered}\n')
+        target.see('end')
+        target.configure(state='disabled')
+        if hasattr(self, '_result_tabs'):
+            self._result_tabs.select(self._stats_page)
         return rendered
 
     def _set_status(self, text: str):
@@ -828,7 +915,7 @@ class InventoryToolkitGUI(BaseWindow):
                 for child in widget.winfo_children():
                     disable_tree(child)
 
-            for root in (self._top_bar, self.tab_cc, self.tab_stock, self.tab_yoy, self._result_frame):
+            for root in (self._top_bar, self.tab_overview, self.tab_cc, self.tab_stock, self.tab_yoy, self._result_frame):
                 disable_tree(root)
         else:
             for widget, state in self._locked_controls:
@@ -837,7 +924,7 @@ class InventoryToolkitGUI(BaseWindow):
             self._locked_controls = []
             self._running_profile = None
 
-    def _run_async(self, func, success_msg: str, warnings=None, progress_target=None):
+    def _run_async(self, func, success_msg: str):
         """Run engine work off-thread while keeping every Tk call on the UI thread."""
         if not self._require_idle():
             return
@@ -867,16 +954,7 @@ class InventoryToolkitGUI(BaseWindow):
 
         def worker():
             try:
-                if progress_target is not None:
-                    progress_target.progress = progress_queue.put
-                    progress_target.stats = stats_queue.put
-                out_path = func(progress_queue.put, stats_queue.put)
-                if not out_path:
-                    raise RuntimeError(
-                        "The operation finished without producing an output file. "
-                        "Check logs/session.log for the validation error."
-                    )
-                result_queue.put(("success", out_path, time.time() - t_start))
+                result_queue.put(("success", func(progress_queue.put, stats_queue.put), time.time() - t_start))
             except Exception as exc:
                 log.error(f"Async error: {exc}")
                 result_queue.put(("error", exc, time.time() - t_start))
@@ -904,14 +982,14 @@ class InventoryToolkitGUI(BaseWindow):
             drain_updates()
             self._set_busy(False)
             if kind == "success":
-                out_path = payload
+                out_path = payload.output
                 self._set_status(f"✅ Done in {elapsed:.1f}s  |  {out_path}")
                 self._finish_progress(True)
                 self._record_result(out_path, run_profile, elapsed)
                 self._notify("info",
                     "Done",
                     f"{success_msg}\n\nTime: {elapsed:.1f}s\nOutput: {out_path}"
-                    + ("\n\nWarnings:\n" + "\n".join(warnings) if warnings else ""),
+                    + ("\n\nWarnings:\n" + "\n".join(payload.warnings) if payload.warnings else ""),
                     parent=self,
                 )
             else:
@@ -935,6 +1013,7 @@ class InventoryToolkitGUI(BaseWindow):
 # ── Entry point ───────────────────────────────────────────────────────────────
 
 def launch_gui():
+    BUILD.require("gui")
     app = InventoryToolkitGUI()
     app.mainloop()
 

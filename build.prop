@@ -1,0 +1,6 @@
+# Runtime/distribution capabilities. This is data, never executable code.
+ver = 2.0.0
+type = debug
+control-type = both
+default-control = cli
+gui-stage = RC preview

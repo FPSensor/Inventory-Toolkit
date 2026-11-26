@@ -3,37 +3,43 @@
 from __future__ import annotations
 
 import os
+from dataclasses import replace
+from functools import partial
 
 import pandas as pd
 
 from core.business_schema import COST_COLUMN, SALES_VALUE_LABEL
-from core.configuration_manager import ConfigurationManager
-from core.logger import log, log_debug_event
-from core.progress import report_progress, report_stats
-from core.system_utils import normalize_xlsx_output_path
-from core.telemetry import execution_timer
+from core.config.configuration_manager import ConfigurationManager
+from core.runtime.logger import log, log_debug_event
+from core.runtime.progress import report_progress, report_stats, report_warning
+from core.files.system_utils import normalize_xlsx_output_path, require_input_files
+from core.files.table_reader import read_table
+from core.runtime.telemetry import execution_timer
 from engine.shared.families import build_family_rules
 from engine.stock_processing.contracts import INTERNAL_ARTICLE_COLUMN, INTERNAL_FAMILY_COLUMN, StockProcessingPlan
 from engine.stock_processing.data_processor import (
+    adapt_stock_headers,
     add_regional_groups,
     classify_stock_families,
     merge_stock_database_columns,
     prepare_stock_frame,
+    quantity_warnings,
     project_stock_output,
     remove_unidentified_stock,
     validate_stock_network,
 )
-from engine.stock_processing.excel_renderer import render_stock_excel
-from engine.stock_processing.pricing import process_pricing
+from engine.stock_processing.excel_renderer import build_summary, render_stock_excel, render_stock_without_cost
+from engine.stock_processing.pricing import price_key, process_pricing, variant_keys
 from engine.stock_processing.valuation import (
     attach_unit_prices,
     calculate_inventory_values,
-    remove_unit_prices,
+    missing_price_warnings,
+    stock_without_cost,
 )
 
 
 def _load_plan(profile: str) -> StockProcessingPlan:
-    config = ConfigurationManager(profile)
+    config = ConfigurationManager(profile, module="stock_processing")
     return StockProcessingPlan.from_manager(config)
 
 
@@ -55,6 +61,20 @@ def _log_plan(plan: StockProcessingPlan) -> None:
     )
 
 
+def _hidden_stock_warning(result_frame, plan):
+    """Say how much stock the profile leaves out of the report totals."""
+    stores = [store for store in plan.active_stores if store in result_frame.columns]
+    rows = result_frame[result_frame[plan.family_column].isin(plan.hidden_families)]
+    units = rows.groupby(plan.family_column)[stores].sum().sum(axis=1) if stores else pd.Series(dtype=float)
+    units = units[units != 0]
+    if units.empty:
+        return None
+    detail = ", ".join(
+        f"{family}: {value:,.6f}".rstrip("0").rstrip(".") for family, value in units.items()
+    )
+    return f"Hidden families have stock that is not included in the report totals ({detail} {plan.quantity_label})."
+
+
 def _stock_stats(result_frame, stock_frame, plan, input_rows, input_columns, excluded_rows):
     default_articles = stock_frame.loc[
         stock_frame[INTERNAL_FAMILY_COLUMN] == plan.default_family,
@@ -68,6 +88,8 @@ def _stock_stats(result_frame, stock_frame, plan, input_rows, input_columns, exc
         f"Articles in default family ({plan.default_family}): {default_articles:,}",
         "Stock by active store (valuations):",
     ]
+    # The same rows as the report totals: hidden families are left out.
+    result_frame = result_frame[~result_frame[plan.family_column].isin(plan.hidden_families)]
     total_units = total_cost = total_sales = 0
     for store in plan.active_stores:
         units = result_frame[store].sum()
@@ -76,15 +98,15 @@ def _stock_stats(result_frame, stock_frame, plan, input_rows, input_columns, exc
         total_units += units
         total_cost += cost
         total_sales += sales
-        lines.append(f"  {store}: {units:,.0f} units | cost {cost:,.2f} | sale {sales:,.2f}")
-    lines.append(f"Total active stores: {total_units:,.0f} units | cost {total_cost:,.2f} | sale {total_sales:,.2f}")
+        lines.append(f"  {store}: {units:,.6f}".rstrip('0').rstrip('.') + f" {plan.quantity_label} | cost {cost:,.2f} | sale {sales:,.2f}")
+    lines.append(f"Total active stores: {total_units:,.6f}".rstrip('0').rstrip('.') + f" {plan.quantity_label} | cost {total_cost:,.2f} | sale {total_sales:,.2f}")
     return lines
 
 
 def run_stock_processing(args):
     """Execute the profile-driven stock cleanup, pricing, valuation and export pipeline."""
     output_path = normalize_xlsx_output_path(args.stock_processing_out)
-    interactive = not getattr(args, "non_interactive", False)
+    on_locked = getattr(args, "on_locked", None)
     progress = getattr(args, "progress", None)
     stats = getattr(args, "stats", None)
     report_progress(progress, 0, 4, "Reading stock and checking input columns...")
@@ -95,52 +117,39 @@ def run_stock_processing(args):
         cost_file=args.shared_cost,
         sales_file=args.shared_sales,
         output_file=output_path,
-        interactive=interactive,
     )
 
-    required_files = [args.stock_processing_raw, args.shared_cost, args.shared_sales]
-    for file_path in required_files:
-        if not os.path.exists(file_path):
-            log.error("Data file '%s' not found.", file_path)
-            return None
-
+    require_input_files(args.stock_processing_raw, args.shared_cost, args.shared_sales)
     log.info("Loading configurations for profile: %s...", args.stock_processing_profile)
     plan = _load_plan(args.stock_processing_profile)
     overrides = getattr(args, "column_overrides", {})
+    if "family" in overrides.get("stock", {}):
+        plan = replace(plan, input={**plan.input, "family_column": overrides["stock"]["family"]})
     family_rules = build_family_rules(plan.family_rules)
     _log_plan(plan)
 
     with execution_timer("Stock Input & Cleaning"):
         log.info("Processing Stock data...")
-        raw_frame = pd.read_excel(args.stock_processing_raw)
+        source_article = overrides.get("stock", {}).get("article", plan.input["article_column"])
+        raw_frame = read_table(
+            args.stock_processing_raw, text=[source_article, *(plan.pricing.get("variant_columns") or {})],
+            on_notice=partial(report_warning, args))
         input_rows, input_columns = raw_frame.shape
-        source_article = overrides.get("stock", {}).get("article", plan.article_column)
-        if source_article != plan.article_column:
-            raw_frame = raw_frame.rename(columns={source_article: plan.article_column})
-        raw_frame, missing_article_warning = remove_unidentified_stock(raw_frame, plan)
-        excluded_rows = input_rows - len(raw_frame)
-        if missing_article_warning:
-            log.warning(missing_article_warning)
-            warnings = getattr(args, "warnings", None)
-            if warnings is not None:
-                warnings.append(missing_article_warning)
-            else:
-                print(f"\n⚠️ {missing_article_warning}")
-        log_debug_event(
-            "stock_processing_input_loaded",
-            shape=raw_frame.shape,
-            columns=list(raw_frame.columns),
-        )
         try:
+            raw_frame = adapt_stock_headers(raw_frame, plan, source_article)
+            unclear_quantities = quantity_warnings(raw_frame, plan)
+            raw_frame, missing_article_warning = remove_unidentified_stock(raw_frame, plan)
             stock_frame = prepare_stock_frame(raw_frame, plan)
             validate_stock_network(stock_frame, plan)
         except ValueError as exc:
-            log.error("APB Error: %s", exc)
-            print(
-                f"\n❌ APB Error: The file '{os.path.basename(args.stock_processing_raw)}' "
-                f"is NOT a valid Stock file. {exc}"
-            )
-            return None
+            raise ValueError(
+                f"The file '{os.path.basename(args.stock_processing_raw)}' is not a valid Stock file. {exc}"
+            ) from exc
+        excluded_rows = input_rows - len(raw_frame)
+        report_warning(args, missing_article_warning)
+        for message in unclear_quantities:
+            report_warning(args, message)
+        log_debug_event("stock_processing_input_loaded", shape=raw_frame.shape, columns=list(raw_frame.columns))
     report_progress(progress, 1, 4, "Stock loaded and cleaned. Classifying stores and families...")
 
     with execution_timer("Stock Network & Classification"):
@@ -159,13 +168,21 @@ def run_stock_processing(args):
             stock_frame,
             family_rules,
             default_family=plan.default_family,
+            source_column=plan.input["family_column"] if plan.input["family_mode"] == "column" else None,
+            use_rules=plan.input["family_mode"] == "rules",
         )
     report_progress(progress, 2, 4, "Stores and families ready. Reading prices and valuing stock...")
 
     with execution_timer("Stock Pricing & Valuation"):
         log.info("Processing pricing files...")
-        cost_frame = process_pricing(args.shared_cost, {**plan.pricing, "columns": overrides.get("cost", plan.pricing["columns"])})
-        sales_frame = process_pricing(args.shared_sales, {**plan.pricing, "columns": overrides.get("sales", plan.pricing["columns"])})
+        # Conflicting prices matter only where they value the report: products
+        # with stock in an active store and outside the hidden families.
+        priced_stores = [store for store in plan.active_stores if store in stock_frame.columns]
+        reported = (stock_frame[priced_stores].ne(0).any(axis=1)
+                    & ~stock_frame[INTERNAL_FAMILY_COLUMN].isin(plan.hidden_families))
+        reported_articles = stock_frame.loc[reported, INTERNAL_ARTICLE_COLUMN]
+        cost_frame = process_pricing(args.shared_cost, {**plan.pricing, "columns": overrides.get("cost", plan.pricing.get("cost_columns") or plan.pricing["columns"])}, partial(report_warning, args), stores=plan.active_stores, warn_for=reported_articles)
+        sales_frame = process_pricing(args.shared_sales, {**plan.pricing, "columns": overrides.get("sales", plan.pricing.get("sales_columns") or plan.pricing["columns"])}, partial(report_warning, args), stores=plan.active_stores, warn_for=reported_articles)
         log_debug_event(
             "stock_processing_pricing_ready",
             cost_shape=getattr(cost_frame, "shape", None),
@@ -174,11 +191,23 @@ def run_stock_processing(args):
             sales_columns=list(sales_frame.columns) if sales_frame is not None else None,
         )
 
-        stock_frame, unit_price_columns = attach_unit_prices(
+        variants = plan.pricing.get("variant_columns") or {}
+        missing = [column for column in variants if column not in stock_frame.columns]
+        if missing:
+            raise ValueError(f"Stock is missing the variant columns used for prices: {missing}.")
+        keys = variant_keys(variants)
+        for key, column in zip(keys, variants):
+            stock_frame[key] = price_key(stock_frame[column], plan.pricing.get("article_tokenization", "first_token"))
+        stores = [store for store in plan.active_stores if store in stock_frame.columns]
+        stock_frame, unit_price_columns, price_notes = attach_unit_prices(
             stock_frame,
             cost_frame,
             sales_frame,
+            stocked=stock_frame[stores].ne(0).any(axis=1),
         )
+        stock_frame = stock_frame.drop(columns=keys)
+        for message in price_notes:
+            report_warning(args, message)
         log_debug_event(
             "stock_processing_pricing_merged",
             shape=stock_frame.shape,
@@ -191,26 +220,74 @@ def run_stock_processing(args):
             unit_price_column_count=len(unit_price_columns),
         )
 
+        for message in missing_price_warnings(stock_frame, plan):
+            report_warning(args, message)
         stock_frame = calculate_inventory_values(stock_frame, plan)
-        stock_frame = remove_unit_prices(stock_frame, unit_price_columns)
-        result_frame = project_stock_output(stock_frame, plan)
+        without_cost = stock_without_cost(stock_frame, plan) if plan.missing_cost_file else None
+        result_frame = project_stock_output(
+            stock_frame, plan, include_unit_prices=getattr(args, "include_unit_prices", False)
+        )
         log_debug_event(
             "stock_processing_result_ready",
             shape=result_frame.shape,
             columns=list(result_frame.columns),
         )
+    report_warning(args, _hidden_stock_warning(result_frame, plan))
     report_progress(progress, 3, 4, "Valuation complete. Writing workbook...")
 
     with execution_timer("Stock Excel Rendering"):
-        final_path = render_stock_excel(
-            output_path,
-            result_frame,
-            plan.summaries,
-            result_frame.columns,
-            plan.raw_data_sheet,
-            family_column=plan.family_column,
-            interactive=interactive,
-        )
+        presentation = {
+            "cost_factor": plan.cost_factor,
+            "hidden_families": plan.hidden_families,
+            "totals_label": plan.totals_label,
+        }
+        if plan.template_path is not None:
+            # Imported on demand: only template reports need direct package editing.
+            from engine.stock_processing.template_renderer import render_stock_template
+
+            summaries = {
+                summary["sheet_name"]: build_summary(
+                    result_frame, summary, plan.family_column,
+                    blank_undefined_margin=True, **presentation,
+                )[0]
+                for summary in plan.summaries
+            }
+            final_path, template_warnings = render_stock_template(
+                plan.template_path,
+                output_path,
+                result_frame,
+                summaries,
+                plan.raw_data_sheet,
+                family_column=plan.family_column,
+                hidden_families=plan.hidden_families,
+                totals_label=plan.totals_label,
+                on_locked=on_locked,
+            )
+            for message in template_warnings:
+                report_warning(args, message)
+        else:
+            final_path = render_stock_excel(
+                output_path,
+                result_frame,
+                plan.summaries,
+                result_frame.columns,
+                plan.raw_data_sheet,
+                family_column=plan.family_column,
+                quantity_format=plan.quantity_format,
+                quantity_columns=plan.entities_to_value,
+                on_locked=on_locked,
+                **presentation,
+            )
+
+        if without_cost is not None and not without_cost.empty:
+            list_path = render_stock_without_cost(
+                f"{os.path.splitext(final_path)[0]} - {plan.missing_cost_file}.xlsx",
+                without_cost, plan.missing_cost_file, plan.active_stores,
+                quantity_format=plan.quantity_format, on_locked=on_locked,
+            )
+            report_warning(args, (
+                f"{without_cost[plan.article_column].nunique()} products with stock have no cost in some location "
+                f"and count as cost 0 in the margin. List saved in {list_path}."))
 
     log.info("Process completed. File saved at: %s", final_path)
     report_progress(progress, 4, 4, "Stock report saved.")

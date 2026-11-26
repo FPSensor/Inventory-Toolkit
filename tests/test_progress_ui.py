@@ -1,7 +1,7 @@
 from types import SimpleNamespace
 
 from cli.progress import show_progress, show_stats
-from core.progress import ProgressEvent, StatsEvent
+from core.runtime.progress import ProgressEvent, StatsEvent
 from gui.app import InventoryToolkitGUI
 
 

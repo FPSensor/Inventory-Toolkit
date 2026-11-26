@@ -1,6 +1,6 @@
 from core.business_schema import DIFFERENCE_COLUMN, COST_TOTAL_COLUMN, SALES_TOTAL_COLUMN
-from core.logger import log, log_debug_event
-from core.system_utils import safe_openpyxl_save
+from core.runtime.logger import log, log_debug_event
+from core.files.system_utils import safe_openpyxl_save
 
 try:
     from openpyxl import load_workbook
@@ -10,11 +10,10 @@ except ImportError:
     import sys
     sys.exit(1)
 
-def apply_excel_formatting(output_file, interactive=True):
+def apply_excel_formatting(output_file, on_locked=None):
     log_debug_event(
         "cross_check_format_start",
         output_file=output_file,
-        interactive=interactive,
     )
     wb = load_workbook(output_file)
     ws = wb.active
@@ -54,7 +53,7 @@ def apply_excel_formatting(output_file, interactive=True):
                     elif cell.value > 0: cell.fill = green_fill
                 if col_name in [COST_TOTAL_COLUMN, SALES_TOTAL_COLUMN]:
                     cell.number_format = '#,##0.00'
-    final_path = safe_openpyxl_save(wb, output_file, interactive=interactive)
+    final_path = safe_openpyxl_save(wb, output_file, on_locked=on_locked)
     log_debug_event(
         "cross_check_format_saved",
         output_file=final_path,

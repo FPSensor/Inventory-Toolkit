@@ -1,11 +1,70 @@
 """Data preparation for Year-over-Year sales reports."""
 
+import re
+
 import pandas as pd
 
-from core.logger import log_debug_event
+from core.runtime.logger import log_debug_event
 from core.business_schema import UNMATCHED_FAMILY
+from core.files.data_sanitizer import describe_unclear_numbers, read_quantities
+from core.files.table_reader import parse_dates, read_table
 from engine.shared.families import assign_families
 from engine.yoy_reports.metrics import resolve_metric_specs
+
+
+def _exported_numbers(value):
+    """Return every reading of a figure that exports store as localized text.
+
+    ``1.234`` is a thousand in some countries and a fraction in others, so both
+    are offered and the data decides which one the file uses.
+    """
+    if not isinstance(value, str):
+        return [] if pd.isna(value) else [float(value)]
+    text = value.strip()
+    readings = set()
+    for thousands, decimal in ((".", ","), (",", ".")):
+        pattern = rf"-?(\d{{1,3}}({re.escape(thousands)}\d{{3}})+|\d+)({re.escape(decimal)}\d+)?"
+        if re.fullmatch(pattern, text):
+            readings.add(float(text.replace(thousands, "").replace(decimal, ".")))
+    return sorted(readings)
+
+
+def check_exported_totals(dataframe, input_config):
+    """Verify and drop the totals row some systems append to a sales export.
+
+    The row identifies itself: no item or location, and either figures stored as
+    text or no date.
+    A mismatch means rows were lost, added or could not be read as numbers.
+    """
+    identity = [input_config["item_column"], input_config["branch_column"]]
+    figures = [
+        column for column in (
+            input_config["quantity_column"],
+            # Adding up unit prices says nothing about the file.
+            None if input_config.get("sales_values") == "unit_price" else input_config.get("sales_column"),
+        )
+        if column in dataframe.columns
+    ]
+    if dataframe.empty or not figures or any(column not in dataframe.columns for column in identity):
+        return dataframe
+    last = dataframe.iloc[-1]
+    is_text = all(isinstance(last[column], str) for column in figures)
+    has_date = pd.notna(pd.to_datetime(last.get(input_config["date_column"]), errors="coerce", format="mixed"))
+    if last[identity].notna().any() or (has_date and not is_text):
+        return dataframe
+    rows = dataframe.iloc[:-1]
+    for column in figures:
+        expected = _exported_numbers(last[column])
+        if not expected:
+            return dataframe
+        found = pd.to_numeric(rows[column], errors="coerce").fillna(0).sum()
+        if all(abs(found - reading) > 0.01 for reading in expected):
+            raise ValueError(
+                f"Sales file totals do not match: '{column}' adds up to {found:,.2f} but the file's own total "
+                f"row says {last[column]}. Export the file again, or remove the total row if you edited it on purpose."
+            )
+    log_debug_event("yoy_exported_totals_verified", rows=len(rows), columns=figures)
+    return rows
 
 
 def process_sales_data(
@@ -16,13 +75,21 @@ def process_sales_data(
     family_rules=None,
     default_family=UNMATCHED_FAMILY,
     grouping_column=None,
+    on_notice=None,
 ):
     input_config = yoy_config["input"]
     date_column = input_config["date_column"]
     quantity_column = input_config["quantity_column"]
     metric_specs = resolve_metric_specs(yoy_config)
 
-    dataframe = pd.read_excel(yoy_file_path, sheet_name=0)
+    text_columns = [input_config[key] for key in ("item_column", "branch_column", "variant_column") if input_config.get(key)]
+    # Keep figures as stored: a localized total such as "1.234" must not be
+    # converted before it is compared with the rows.
+    figures = [input_config[key] for key in ("quantity_column", "sales_column") if input_config.get(key)]
+    dataframe = read_table(
+        yoy_file_path, text=text_columns, as_stored=figures,
+        all_sheets=input_config.get("all_sheets", False), on_notice=on_notice,
+    )
     log_debug_event(
         "yoy_input_loaded",
         file_path=yoy_file_path,
@@ -34,6 +101,17 @@ def process_sales_data(
 
     if date_column in dataframe.columns:
         dataframe = dataframe[dataframe[date_column] != date_column]
+    dataframe = check_exported_totals(dataframe, input_config)
+    if input_config.get("code_tokenization", "whole") == "first_token":
+        for column in (input_config["item_column"], input_config.get("variant_column")):
+            if column in dataframe.columns:
+                dataframe = dataframe.assign(**{column: dataframe[column].str.split().str[0]})
+    aliases = input_config.get("branch_aliases") or {}
+    branch_column = input_config["branch_column"]
+    if aliases and branch_column in dataframe.columns:
+        dataframe = dataframe.assign(
+            **{branch_column: dataframe[branch_column].str.strip().replace(aliases)}
+        )
     resolved_grouping_column = grouping_column or input_config["grouping_column"]
     grouping_source_column = (
         input_config["item_column"] if family_rules is not None else resolved_grouping_column
@@ -44,15 +122,30 @@ def process_sales_data(
         grouping_source_column,
         *(metric.column for metric in metric_specs),
     }
+    if yoy_config["output"].get("include_variants", False):
+        required_columns.add(input_config["variant_column"])
     missing_columns = sorted(column for column in required_columns if column not in dataframe.columns)
     if missing_columns:
         raise ValueError(f"YoY input is missing required columns: {missing_columns}")
 
-    dataframe[date_column] = pd.to_datetime(dataframe[date_column], errors="coerce")
-    for metric in metric_specs:
-        dataframe[metric.column] = pd.to_numeric(
-            dataframe[metric.column], errors="coerce"
-        ).fillna(0)
+    dataframe = dataframe.copy()
+    dataframe[date_column] = parse_dates(dataframe[date_column])
+    undated = int(dataframe[date_column].isna().sum())
+    if undated and on_notice:
+        on_notice(f"{undated:,} sales rows have no readable date and were not counted.")
+    # Figures exported as local text, such as "1.234,50", are read instead of
+    # silently counting as 0; anything still unreadable or doubtful is named.
+    figure_columns = dict.fromkeys(
+        [metric.column for metric in metric_specs]
+        + [column for column in (quantity_column, input_config.get("sales_column")) if column in dataframe.columns])
+    for column in figure_columns:
+        dataframe[column], needs_review = read_quantities(dataframe[column])
+        message = describe_unclear_numbers(column, needs_review, "figures")
+        if message and on_notice:
+            on_notice(message)
+    sales_column = input_config.get("sales_column")
+    if input_config.get("sales_values") == "unit_price" and sales_column in dataframe.columns:
+        dataframe[sales_column] = dataframe[quantity_column] * dataframe[sales_column]
 
     if family_rules is not None:
         item_column = input_config["item_column"]

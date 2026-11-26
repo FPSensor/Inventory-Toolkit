@@ -1,6 +1,6 @@
 """Compact progress output for interactive workflows."""
 
-from core.progress import ProgressEvent, StatsEvent
+from core.runtime.progress import ProgressEvent, StatsEvent
 
 
 def show_progress(event: ProgressEvent) -> None:

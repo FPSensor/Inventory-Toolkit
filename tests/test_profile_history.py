@@ -1,0 +1,135 @@
+"""Configuration checkpoints must preserve bytes and validate before restore."""
+import json
+
+import pytest
+
+from core.runtime import paths
+from core.config.json_documents import read_document, write_documents
+from core.profiles.profile_creation import create_profile
+from core.profiles import profile_history as history
+
+
+@pytest.fixture
+def profile(tmp_path, monkeypatch):
+    monkeypatch.setattr(paths, 'PROFILES_ROOT', tmp_path)
+    return create_profile('History test', '', ['cross_check'])
+
+
+def test_restore_recovers_exact_bytes_and_retains_current_state(profile):
+    root = paths.profile_root(profile)
+    target = root / 'configs/cross_check/settings.json'
+    original = target.read_bytes().replace(b'\n', b'\r\n')
+    target.write_bytes(original)
+    last = root / 'last_paths.json'; last.write_text('{"custom": {"file": "local.xlsx"}}')
+    checkpoint = history.create_checkpoint(profile)
+    data = read_document(target); data['input']['quantity_column'] = 'Changed'
+    write_documents({target: data})
+    changed = target.read_bytes()
+    safety = history.restore_checkpoint(profile, checkpoint)
+    assert target.read_bytes() == original
+    assert 'local.xlsx' in last.read_text()
+    assert safety in history.list_checkpoints(profile)
+    history.restore_checkpoint(profile, safety)
+    assert target.read_bytes() == changed
+
+
+def test_damaged_snapshot_cannot_change_live_profile(profile):
+    root = paths.profile_root(profile)
+    checkpoint = history.create_checkpoint(profile)
+    path = root / '.history' / f'{checkpoint}.json'
+    data = read_document(path)
+    data['documents']['profile.json']['sha256'] = 'broken'
+    write_documents({path: data})
+    before = (root / 'profile.json').read_bytes()
+    with pytest.raises(ValueError, match='damaged'):
+        history.restore_checkpoint(profile, checkpoint)
+    assert (root / 'profile.json').read_bytes() == before
+    assert len(history.list_checkpoints(profile)) == 1
+
+
+def test_missing_live_document_can_be_recovered(profile):
+    target = paths.profile_configs_root(profile) / 'cross_check/settings.json'
+    original = target.read_bytes()
+    checkpoint = history.create_checkpoint(profile)
+    target.unlink()
+    history.restore_checkpoint(profile, checkpoint)
+    assert target.read_bytes() == original
+
+
+def test_retention_and_path_ownership(profile, monkeypatch):
+    monkeypatch.setattr(history, 'HISTORY_LIMIT', 3)
+    for _ in range(5):
+        latest = history.create_checkpoint(profile)
+    assert len(history.list_checkpoints(profile)) == 3
+    assert latest in history.list_checkpoints(profile)
+    with pytest.raises(ValueError):
+        history.restore_checkpoint(profile, '../profile')
+    with pytest.raises(ValueError):
+        history.create_checkpoint('../outside')
+
+
+def test_restore_preserves_disabled_invalid_settings(profile):
+    target = paths.profile_configs_root(profile) / 'yoy_reports/settings.json'
+    target.write_bytes(b'not JSON')
+    checkpoint = history.create_checkpoint(profile)
+    target.write_bytes(b'other disabled data')
+    history.restore_checkpoint(profile, checkpoint)
+    assert target.read_bytes() == b'not JSON'
+
+
+def test_setup_creates_checkpoint_only_when_a_saved_page_changes(profile):
+    from core.setup.setup_service import SetupSession
+    from core.setup.setup_catalog import get_value
+    assert history.list_checkpoints(profile) == ()
+    session = SetupSession(profile, 'cross_check')
+    step = session.steps[0]
+    values = {'.'.join(field.path): get_value(session.data(step), field.path) for field in step.fields}
+    session.save_step(step.id, values)
+    first = history.list_checkpoints(profile)
+    assert len(first) == 1
+    session.save_step(step.id, values)
+    assert history.list_checkpoints(profile) == first
+    history.restore_checkpoint(profile, first[0])
+    assert session.reviewed() == {}
+
+
+def test_restore_retains_absent_metadata_for_existing_unenrolled_profiles(profile):
+    metadata = paths.profile_root(profile) / 'profile.json'
+    metadata.unlink()
+    checkpoint = history.create_checkpoint(profile)
+    write_documents({metadata: {'name': 'Enrolled later'}})
+    history.restore_checkpoint(profile, checkpoint)
+    assert not metadata.exists()
+
+
+def test_valid_checksum_does_not_bypass_schema_validation(profile):
+    import base64, hashlib
+    from core.config.configuration_errors import ConfigurationFileError
+    root = paths.profile_root(profile)
+    identifier = history.create_checkpoint(profile)
+    snapshot = root / '.history' / f'{identifier}.json'
+    document = read_document(snapshot)
+    name = 'configs/cross_check/settings.json'
+    changed = json.loads(base64.b64decode(document['documents'][name]['content']))
+    changed['version'] = 999
+    raw = json.dumps(changed).encode('utf-8')
+    document['documents'][name] = {'content': base64.b64encode(raw).decode('ascii'), 'sha256': hashlib.sha256(raw).hexdigest()}
+    write_documents({snapshot: document})
+    before = (root / name).read_bytes()
+    with pytest.raises(ConfigurationFileError, match='newer than supported'):
+        history.restore_checkpoint(profile, identifier)
+    assert (root / name).read_bytes() == before
+    assert len(history.list_checkpoints(profile)) == 1
+
+
+def test_missing_checkpoint_entry_fields_are_not_treated_as_an_absent_file(profile):
+    root = paths.profile_root(profile)
+    identifier = history.create_checkpoint(profile)
+    snapshot = root / '.history' / f'{identifier}.json'
+    data = read_document(snapshot)
+    data['documents']['profile.json'] = {}
+    write_documents({snapshot: data})
+    before = (root / 'profile.json').read_bytes()
+    with pytest.raises(ValueError, match='structure'):
+        history.restore_checkpoint(profile, identifier)
+    assert (root / 'profile.json').read_bytes() == before

@@ -2,13 +2,17 @@ from __future__ import annotations
 
 from pathlib import Path
 import subprocess
+import os
 import sys
 
 from cli import profiles as cli_profiles
 from cli import cross_check_launcher, stock_processing_launcher, yoy_reports_launcher
-from cli.utils import input_default, load_last_paths, save_last_paths, validate_files_exist
-from core import paths as app_paths
-from core.configuration_manager import ConfigurationManager
+from core.workflow_errors import ErrorCode, WorkflowError
+from workflows.base import require_files
+from cli.utils import input_default
+from core.profiles.profile_store import load_last_paths, save_last_paths
+from core.runtime import paths as app_paths
+from core.config.configuration_manager import ConfigurationManager
 from gui.app import InventoryToolkitGUI
 
 
@@ -65,7 +69,7 @@ def test_gui_yoy_restores_saved_paths_for_each_profile(tmp_path, monkeypatch):
     save_last_paths("first", {"yoy_reports": {"file": "sales.xlsx", "out": "report.xlsx"}})
     monkeypatch.setattr(
         "gui.app.ConfigurationManager",
-        lambda _profile: SimpleNamespace(
+        lambda _profile, **_kwargs: SimpleNamespace(
             get_yoy_reports_config=lambda: {"output": {"default_path": "default.xlsx"}}
         ),
     )
@@ -73,7 +77,7 @@ def test_gui_yoy_restores_saved_paths_for_each_profile(tmp_path, monkeypatch):
         active_profile=Variable("first"),
         yoy_file=Variable(),
         yoy_out=Variable(),
-        yoy_sizes=Variable(),
+        yoy_variants=Variable(),
         yoy_compare=Variable(),
         yoy_sales_amounts=Variable(True),
     )
@@ -94,7 +98,7 @@ def test_user_relative_paths_still_follow_caller_cwd(tmp_path, monkeypatch):
     user_file.write_bytes(b"placeholder")
     monkeypatch.chdir(tmp_path)
 
-    assert validate_files_exist(["relative-input.xlsx"])
+    require_files({"Input": "relative-input.xlsx"})
 
 
 def test_cross_check_demo_prompts_resolve_bundled_inputs_from_foreign_cwd(tmp_path, monkeypatch):
@@ -108,7 +112,7 @@ def test_cross_check_demo_prompts_resolve_bundled_inputs_from_foreign_cwd(tmp_pa
         return default
 
     monkeypatch.setattr(cross_check_launcher, "ask_file", accept_default)
-    monkeypatch.setattr(cross_check_launcher, "validate_files_exist", lambda _paths: False)
+    monkeypatch.setattr(cross_check_launcher.cross, "check", _stop_after_inputs)
     monkeypatch.setattr("builtins.input", lambda _prompt: "")
 
     cross_check_launcher.launch_cross_check("demo")
@@ -117,6 +121,10 @@ def test_cross_check_demo_prompts_resolve_bundled_inputs_from_foreign_cwd(tmp_pa
     assert all(Path(path).is_file() for path in offered)
     assert all(Path(path).parent == app_paths.demo_root() for path in offered)
     assert input_default("demo", "my-count.xlsx", "cross_check_physical_count.xlsx") == "my-count.xlsx"
+
+
+def _stop_after_inputs(*_args):
+    raise WorkflowError(ErrorCode.INPUT_FILE_MISSING, "stop")
 
 
 def test_stock_demo_prompts_resolve_bundled_inputs_from_foreign_cwd(tmp_path, monkeypatch):
@@ -130,7 +138,7 @@ def test_stock_demo_prompts_resolve_bundled_inputs_from_foreign_cwd(tmp_path, mo
         return default
 
     monkeypatch.setattr(stock_processing_launcher, "ask_file", accept_default)
-    monkeypatch.setattr(stock_processing_launcher, "validate_files_exist", lambda _paths: False)
+    monkeypatch.setattr(stock_processing_launcher.stock, "check", _stop_after_inputs)
     monkeypatch.setattr("builtins.input", lambda _prompt: "")
 
     stock_processing_launcher.launch_stock_processing("demo")
@@ -144,7 +152,6 @@ def test_stock_demo_prompts_resolve_bundled_inputs_from_foreign_cwd(tmp_path, mo
 def test_yoy_demo_prompt_resolves_bundled_input_from_foreign_cwd(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(yoy_reports_launcher, "load_last_paths", lambda _profile: {})
-    monkeypatch.setattr(yoy_reports_launcher, "save_last_paths", lambda *_args: None)
     offered = []
 
     def accept_default(_prompt, default):
@@ -152,12 +159,8 @@ def test_yoy_demo_prompt_resolves_bundled_input_from_foreign_cwd(tmp_path, monke
         return default
 
     monkeypatch.setattr(yoy_reports_launcher, "ask_file", accept_default)
-    def reject_header(*_args, **_kwargs):
-        raise ValueError("stop after selecting input")
-
-    monkeypatch.setattr(yoy_reports_launcher.pd, "read_excel", reject_header)
-    responses = iter(("i", "", ""))
-    monkeypatch.setattr("builtins.input", lambda _prompt: next(responses))
+    monkeypatch.setattr(yoy_reports_launcher.yoy, "check_file", _stop_after_inputs)
+    monkeypatch.setattr("builtins.input", lambda _prompt: "")
 
     yoy_reports_launcher.launch_yoy_reports("demo")
 
@@ -181,9 +184,12 @@ def test_cli_profile_discovery_is_application_owned(tmp_path, monkeypatch):
 
 
 def test_cli_entrypoint_imports_cleanly_from_foreign_cwd(tmp_path):
+    environment = os.environ.copy()
+    environment["PYTHONPATH"] = str(app_paths.APPLICATION_ROOT) + os.pathsep + environment.get("PYTHONPATH", "")
     result = subprocess.run(
-        [sys.executable, str(app_paths.APPLICATION_ROOT / "cli.py"), "--help"],
+        [sys.executable, "-m", "cli", "--help"],
         cwd=tmp_path,
+        env=environment,
         capture_output=True,
         text=True,
         check=False,
@@ -193,3 +199,16 @@ def test_cli_entrypoint_imports_cleanly_from_foreign_cwd(tmp_path):
     assert "Inventory Toolkit CLI" in result.stdout
     for app_dir in ("profiles", "logs", "examples", "tests", "tools"):
         assert not (tmp_path / app_dir).exists()
+
+
+def test_invalid_remembered_paths_are_reported_without_rewriting(tmp_path, monkeypatch):
+    import pytest
+    from core.config.configuration_errors import ConfigurationFileError
+    monkeypatch.setattr(app_paths, 'PROFILES_ROOT', tmp_path)
+    path = tmp_path / 'broken' / 'last_paths.json'
+    path.parent.mkdir()
+    path.write_text('{"stock_processing": []}')
+    before = path.read_bytes()
+    with pytest.raises(ConfigurationFileError, match='remembered paths'):
+        load_last_paths('broken')
+    assert path.read_bytes() == before

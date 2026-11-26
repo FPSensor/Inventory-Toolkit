@@ -5,8 +5,8 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from core import paths as app_paths
-from core.profile_config import DEFAULTS, _write, config_path
+from core.runtime import paths as app_paths
+from core.config.profile_config import DEFAULTS, _write, config_path
 from engine.inventory_cross_check.generator import run_cross_check
 from engine.stock_processing.generator import run_stock_processing
 
@@ -112,7 +112,6 @@ def test_stock_processing_honors_custom_catalog_and_pricing_columns(tmp_path, mo
             shared_sales=str(sales_path),
             stock_processing_out=str(output_path),
             stock_processing_profile=profile,
-            non_interactive=True,
             warnings=warnings,
             progress=events.append,
             stats=stats.append,
@@ -209,9 +208,7 @@ def test_cross_check_honors_catalog_article_and_family_columns(tmp_path, monkeyp
             shared_sales=str(sales_path),
             cross_check_out=str(output_path),
             cross_check_profile=profile,
-            cross_check_consolidate=True,
             cross_check_partial=False,
-            non_interactive=True,
             progress=events.append,
             stats=stats.append,
         )
@@ -273,8 +270,7 @@ def test_cross_check_price_article_tokenization_controls_valuation(
         cross_check_system=str(system), cross_check_count=str(scanner),
         shared_cost=str(cost), shared_sales=str(sales),
         cross_check_out=str(output), cross_check_profile=profile,
-        cross_check_consolidate=True, cross_check_partial=False,
-        non_interactive=True,
+        cross_check_partial=False,
     )
     assert run_cross_check(args) == str(output)
     result = pd.read_excel(output)
@@ -284,7 +280,7 @@ def test_cross_check_price_article_tokenization_controls_valuation(
 def test_catalog_column_contract_rejects_empty_or_colliding_names():
     from pydantic import ValidationError
 
-    from core.config_schemas import CatalogConfig
+    from core.config.config_schemas import CatalogConfig
 
     with pytest.raises(ValidationError):
         CatalogConfig.model_validate(

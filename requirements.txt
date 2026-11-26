@@ -1,5 +1,8 @@
-pandas
-openpyxl
+pandas>=2.2,<4
+openpyxl>=3.1
 xlrd
+python-calamine
 numpy
 pydantic>=2,<3
+lxml
+customtkinter>=5.2

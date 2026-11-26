@@ -4,10 +4,10 @@ import json
 
 import pytest
 
-from core import paths
-from core.profile_config import ensure_profile_config
-from core.setup_catalog import STEPS, get_value
-from core.setup_service import SetupSession, SetupState, initialize_setup, write_json
+from core.runtime import paths
+from core.config.profile_config import ensure_profile_config
+from core.setup.setup_catalog import STEPS, get_value
+from core.setup.setup_service import SetupSession, SetupState, initialize_setup, write_json
 from core.workflow_errors import WorkflowError, ErrorCode
 
 
@@ -34,7 +34,7 @@ def test_new_profiles_save_and_resume_each_module_independently(profile):
     assert session.state() == SetupState.NOT_CONFIGURED
     session.save_step('catalog', values(session, session.steps[0]))
     assert SetupSession(profile, 'cross_check').state() == SetupState.PARTIAL
-    assert session.first_pending() == 'families'
+    assert session.first_pending() == 'classification'
     assert SetupSession(profile, 'stock_processing').state() == SetupState.NOT_CONFIGURED
     for step in session.steps[1:]:
         session.save_step(step.id, values(session, step))
@@ -100,3 +100,13 @@ def test_corrupt_progress_cannot_change_config(profile):
     with pytest.raises(WorkflowError):
         session.save_step(step.id, values(session, step))
     assert session.data(step) == before
+
+
+def test_numeric_normalization_does_not_make_saved_page_stale(profile):
+    initialize_setup(profile)
+    session = SetupSession(profile, 'cross_check', include_advanced=True)
+    step = next(step for step in session.steps if step.id == 'cross_policy')
+    data = values(session, step)
+    data['reconciliation.quantity_tolerance'] = 0
+    session.save_step(step.id, data)
+    assert session.effective_reviews()[step.id] == session.fingerprint(step)

@@ -9,11 +9,11 @@ Linear new-profile flow:
 """
 
 import os
+from core.setup.setup_catalog import MODULE_LABELS
 import sys
-from cli.utils import clear_screen, load_json, save_json, ask_yes_no
-from cli.wizard import initialize_profile_files, run_setup_wizard
-from core import paths as app_paths
-from core.setup_service import initialize_setup
+from cli.utils import clear_screen
+from core.profiles.profile_store import load_json
+from core.runtime import paths as app_paths
 
 
 # ── Internal helpers ──────────────────────────────────────────────────────────
@@ -38,54 +38,30 @@ def _list_profiles():
 # ── New profile ───────────────────────────────────────────────────────────────
 
 def _create_new_profile() -> str | None:
-    """
-    Linear new-profile creation.
-    Returns the folder name of the created profile, or None if cancelled.
-    """
-    print("\n" + "=" * 50)
-    print("  ➕  CREATE NEW PROFILE")
-    print("=" * 50)
-
-    # 1. Folder name
+    from core.profiles.profile_creation import create_profile
+    print("\n  CREATE A PROFILE — choose only what you use\n")
+    name = input("  Profile name (Enter cancels): ").strip()
+    if not name:
+        return None
+    description = input("  Description (optional): ").strip()
+    choices = list(MODULE_LABELS)
+    for index, module in enumerate(choices, 1):
+        print(f"  {index}. {MODULE_LABELS[module]}")
     while True:
-        folder = (
-            input("  Folder name (e.g. my_company): ")
-            .strip()
-            .lower()
-            .replace(" ", "_")
-        )
-        if not folder or folder in {".", ".."} or "/" in folder or "\\" in folder:
-            print("  ❌ Name cannot be empty.")
-            continue
-        profile_path = app_paths.profile_root(folder)
-        if os.path.exists(profile_path):
-            print(f"  ❌ A profile named '{folder}' already exists.")
-            continue
-        break
-
-    # 2. Display name + description
-    display_name = input(f"  Display name [{folder}]: ").strip() or folder
-    description  = input("  Description (optional): ").strip()
-
-    # 3. Create structure
-    configs_path = profile_path / "configs"
-    configs_path.mkdir(parents=True, exist_ok=True)
-    initialize_profile_files(configs_path)
-
-    save_json(str(profile_path / "profile.json"), {
-        "name":        display_name,
-        "description": description,
-        "version":     "1.4.1"
-    })
-
-    print(f"\n  ✅ Profile '{display_name}' created at: {profile_path}\n")
-
-    initialize_setup(folder)
-    print("  Select a module from the main menu to configure only what you use.")
-    print("  Setup progress is saved independently for each module.")
-    input("  Press Enter to continue...")
-
-    return folder
+        raw = input("  Workflows, comma-separated [Enter=all]: ").strip()
+        parts = [part.strip() for part in raw.split(',')] if raw else ['1', '2', '3']
+        if all(part in {'1', '2', '3'} for part in parts):
+            break
+        print("  Choose workflow numbers 1, 2 or 3.")
+    try:
+        profile = create_profile(name, description, [choices[int(part) - 1] for part in parts])
+    except (ValueError, OSError) as exc:
+        print(f"  Could not create profile: {exc}")
+        input("  Press Enter...")
+        return None
+    print("  Profile created. Choose a workflow to configure it with your own files.")
+    input("  Press Enter...")
+    return profile
 
 
 # ── Profile selector ──────────────────────────────────────────────────────────

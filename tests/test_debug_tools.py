@@ -5,7 +5,7 @@ from types import SimpleNamespace
 
 from cli import debug_menu
 from cli import menu
-from core.logger import DEBUG_LEVEL_ENV, set_debug_level
+from core.runtime.logger import DEBUG_LEVEL_ENV, set_debug_level
 
 
 def test_hidden_debug_selector_can_enable_level_three(monkeypatch):

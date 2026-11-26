@@ -61,9 +61,9 @@ def resolve_metric_specs(yoy_config: dict) -> list[MetricSpec]:
         resolved.append(
             MetricSpec(
                 key=metric_key,
-                label=template["label"],
+                label=yoy_config["output"].get("quantity_label", template["label"]) if metric_key == "units" else template["label"],
                 column=column,
-                number_format=template["number_format"],
+                number_format=yoy_config["output"].get("quantity_format", template["number_format"]) if metric_key == "units" else template["number_format"],
             )
         )
     return resolved
