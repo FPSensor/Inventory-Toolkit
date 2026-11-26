@@ -53,3 +53,15 @@ def test_usage_errors_are_not_ignored(arguments, files):
     with pytest.raises(SystemExit) as error:
         run(*arguments)
     assert error.value.code == 2
+
+
+def test_missing_packages_explain_how_to_install_them(monkeypatch, capsys):
+    import importlib.util
+
+    import inventory_toolkit.__main__ as entry
+
+    real = importlib.util.find_spec
+    monkeypatch.setattr(entry.importlib.util, "find_spec", lambda name: None if name == "pandas" else real(name))
+    assert entry.main(["--interface", "cli"]) == 1
+    message = capsys.readouterr().err
+    assert "not installed: pandas." in message and "Setup Environment.bat" in message

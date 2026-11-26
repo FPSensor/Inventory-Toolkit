@@ -7,3 +7,6 @@ set PYTHONIOENCODING=utf-8
 
 :: The build manifest selects the interface without importing the other frontend.
 python -m inventory_toolkit %*
+
+:: Keep the window open after an error so the message can be read.
+if errorlevel 1 pause
