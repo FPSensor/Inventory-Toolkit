@@ -173,8 +173,8 @@ def run_stock_processing(args):
 
     with execution_timer("Stock Pricing & Valuation"):
         log.info("Processing pricing files...")
-        cost_frame = process_pricing(args.shared_cost, {**plan.pricing, "columns": overrides.get("cost", plan.pricing.get("cost_columns") or plan.pricing["columns"])}, partial(report_warning, args))
-        sales_frame = process_pricing(args.shared_sales, {**plan.pricing, "columns": overrides.get("sales", plan.pricing.get("sales_columns") or plan.pricing["columns"])}, partial(report_warning, args))
+        cost_frame = process_pricing(args.shared_cost, {**plan.pricing, "columns": overrides.get("cost", plan.pricing.get("cost_columns") or plan.pricing["columns"])}, partial(report_warning, args), stores=plan.active_stores)
+        sales_frame = process_pricing(args.shared_sales, {**plan.pricing, "columns": overrides.get("sales", plan.pricing.get("sales_columns") or plan.pricing["columns"])}, partial(report_warning, args), stores=plan.active_stores)
         log_debug_event(
             "stock_processing_pricing_ready",
             cost_shape=getattr(cost_frame, "shape", None),

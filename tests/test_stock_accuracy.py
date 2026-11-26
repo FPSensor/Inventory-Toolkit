@@ -131,3 +131,20 @@ def test_stock_without_cost_is_listed_in_its_own_workbook(tmp_path, monkeypatch)
     assert any("2 products with stock have no cost" in message for message in warnings)
     assert not any("no cost price in at least one store" in message for message in warnings)
     assert pd.read_excel(report, sheet_name="Datos")["NORTH.Costo"].tolist() == [0, 0, 10]
+
+
+def test_price_lists_only_read_active_stores(tmp_path):
+    from engine.stock_processing.pricing import process_pricing
+
+    path = tmp_path / "prices.xlsx"
+    pd.DataFrame({
+        "Artículo": ["A1", "A1", "A1", "A2"],
+        "Base": ["STORE", "CLOSED", "CLOSED", "CLOSED"],
+        "Precio": [100, 10, 20, "abc"],
+    }).to_excel(path, index=False)
+    notices = []
+    config = {"columns": {"article": "Artículo", "database": "Base", "price": "Precio"}}
+    prices = process_pricing(str(path), config, notices.append, stores=["STORE"])
+    assert prices.set_index("__itk_article")["STORE"].to_dict() == {"A1": 100}
+    assert "CLOSED" not in prices.columns
+    assert not [notice for notice in notices if notice and "more than one price" in notice]

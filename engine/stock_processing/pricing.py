@@ -35,8 +35,11 @@ def variant_keys(variant_columns) -> list[str]:
     return [f"{VARIANT_KEY_PREFIX}{index}" for index, _ in enumerate(variant_columns)]
 
 
-def process_pricing(file_path, pricing_config=None, on_notice=None):
+def process_pricing(file_path, pricing_config=None, on_notice=None, stores=None):
     """Load and pivot one price list into the Stock pipeline's private article key.
+
+    With ``stores`` only the rows of those stores are read: other databases,
+    such as a closed store, never value the report and their prices are ignored.
 
     With ``variant_columns`` the pivot also carries one key per variant column,
     blank on rows that price the whole product.
@@ -68,6 +71,8 @@ def process_pricing(file_path, pricing_config=None, on_notice=None):
             database_column = "__itk_price_origin"
             dataframe[database_column] = default_store
         dataframe[database_column] = dataframe[database_column].astype(str).str.strip().replace(pricing_config.get("aliases", {}))
+        if stores is not None:
+            dataframe = dataframe[dataframe[database_column].isin(set(stores))].copy()
 
         missing = [column for column in variants.values() if column not in dataframe.columns]
         if missing:
