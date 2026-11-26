@@ -84,6 +84,7 @@ GitHub Actions runs this gate on every push to any branch and on every pull requ
 - Profile-controlled Cross Check quantity/reconciliation settings and price-list article tokenization.
 - Native file picker support from the CLI.
 - Safe Excel saving with retry/copy behavior in interactive CLI mode and non-blocking errors for GUI callers.
+- YoY reports show units by default; sales amounts (revenue) can be added for one run without changing the profile. Revenue compares summed line amounts, not average unit prices.
 - Runtime-selectable debug levels and a hidden level-3 Developer Console.
 - Forensic session logging to `logs/session.log`.
 - Pytest, IntegrityCheck, stress/diagnostic tooling, demo smoke tests, and semantic golden-master certification.
@@ -421,38 +422,18 @@ The roadmap is directional rather than a release-date promise. Business correctn
 
 ## Desktop stabilization
 
-Completed foundations include both real-widget backends, embedded section editors, searchable settings, draft protection and focused activity/statistics panels. Remaining release work is native Windows/macOS review, user feedback on real workbook mapping, keyboard/accessibility review and a supported optional-GUI dependency story. RC preview describes the interface milestone; it does not replace release certification or platform validation.
+Completed foundations include both real-widget backends, embedded section editors, searchable settings, draft protection and focused activity/statistics panels. Remaining release work is native macOS review (Windows has been reviewed), user feedback on real workbook mapping, keyboard/accessibility review and a supported optional-GUI dependency story. RC preview describes the interface milestone; it does not replace release certification or platform validation.
 
-## v1.6.0 — Distribution readiness
+## Next — 2.0.x and 2.1
 
-Target: reduce deployment complexity.
+Directions, not promises:
 
-- Move toward standard Python packaging (`pyproject.toml`, stable entry points, reproducible release artifacts).
-- Produce a clean portable release bundle with explicit version metadata.
-- Document supported Python/platform combinations from tested release environments rather than assumptions.
-
-## v1.7.0 — Profile portability and diagnostics
-
-Target: make profiles easier to move, inspect, validate, and maintain across installations.
-
-- Document migration by copying profile folders and reviewing machine-specific remembered paths; an import/export tool is not required for the current folder layout.
-- Improve configuration diff/diagnostic output for schema and mapping changes.
-- Consider profile-specific validation fixtures where one global demo no longer covers important deployments.
-- Keep migration/version behavior explicit and testable as schema evolution continues.
-
-## v2.0.0 — Stable application boundary
-
-A 2.0 release should be earned, not used as a cosmetic version bump. Candidate criteria:
-
-- stable, documented CLI and GUI responsibilities;
-- no temporary legacy compatibility layer;
-- standard installation/distribution path;
-- mature profile lifecycle;
-- release certification covering all supported business workflows;
-- documented internal API boundaries so future frontends do not require engine rewrites.
+- Native macOS review of the desktop, then drop its RC-preview label.
+- Standard Python packaging (`pyproject.toml`, entry points) and a portable Windows bundle that does not need a separate Python installation.
+- Clearer configuration diff/diagnostic output for schema and mapping changes.
+- Profile-specific validation fixtures where the global demo does not cover a deployment.
+- Keyboard and accessibility review of the desktop.
 
 # License
 
 Inventory Toolkit is released under the [MIT License](LICENSE).
-
-YoY reports in the CLI and GUI show units by default. Opt into sales amounts (revenue) for the current run to add monetary sections without changing the profile. Revenue compares summed line amounts; it does not represent average unit price.

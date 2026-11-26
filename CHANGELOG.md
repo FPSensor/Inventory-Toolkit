@@ -82,6 +82,8 @@ Changes since `v1.4.1`. Accuracy fixes change report numbers on purpose; each en
 
 ### Changed
 
+- **dependencies:** Require pandas 2.2 or later and below 4, and openpyxl 3.1 or later, the versions the certification runs on.
+
 - **core: files: speed:** Read Excel inputs with calamine when `python-calamine` is installed (now in `requirements.txt`): about five times faster than openpyxl with identical values. The demo Stock run drops from 33 to 15 seconds. Without it, openpyxl is used as before.
 
 - **cleanup:** Remove functions, re-exports and imports that nothing used.
@@ -151,6 +153,10 @@ Changes since `v1.4.1`. Accuracy fixes change report numbers on purpose; each en
 
 ### Fixed
 
+- **engine: yoy: figures:** Read quantities and amounts exported as local text, such as `1.234,50`, instead of counting them as 0, and name the cells that stay unreadable or ambiguous. Reports from files with numeric cells do not change.
+
+- **launchers:** Explain which packages are missing and how to install them instead of stopping with a traceback, and keep the Windows window open after an error so the message can be read. `Setup Environment.bat` now uses the Python it has just installed instead of failing to find it, and stops with a message when the download or the package installation fails.
+
 - **cli, gui: paths:** Accept file paths pasted between quotes, as Windows "Copy as path" and dragged files produce them, instead of reporting a missing file.
 
 - **windows: output:** Print UTF-8 when output is redirected to a file or another program, as a scheduled `run` or continuous integration does, instead of stopping on symbols the legacy code page cannot encode.
@@ -181,7 +187,6 @@ Changes since `v1.4.1`. Accuracy fixes change report numbers on purpose; each en
 
 - **cross, stock: numbers:** Read quantities and prices in local formats such as `1.234,5`, and warn with row numbers about ambiguous values such as `1.234`, quantities without a product, products with conflicting prices and stock or differences without a price, which are valued at 0. A blank price is a missing price, not zero.
 
-
 - **core: checkpoints:** Reject incomplete checkpoint document entries instead of interpreting missing content/checksum fields as an intentionally absent file. Damaged snapshot metadata cannot silently remove live profile metadata.
 
 - **core: isolation:** Scope CLI preflight and workbook inspection to the selected workflow, so another enabled module with damaged settings does not block it. Keep profile diagnostics aligned with enabled metrics, including revenue-only YoY configurations that do not consume quantity.
@@ -210,6 +215,8 @@ Changes since `v1.4.1`. Accuracy fixes change report numbers on purpose; each en
 - **cli: entrypoint:** Remove the redundant root `cli.py` wrapper. Platform launchers keep using the build-selected `python -m inventory_toolkit`; explicit console startup is `python -m cli`. Update source distributions, documentation and foreign-working-directory coverage.
 
 ### Documentation
+
+- **readme: roadmap:** Replace the finished 1.6, 1.7 and 2.0 goals with what comes after 2.0.0.
 
 - **docs: maintenance:** Add an offline operation/recovery handbook, diagnostic-code lookup and a practical source-reading route. Link it from the README and documentation index so configuration and development workflows remain usable without an online assistant.
 
